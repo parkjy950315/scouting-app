@@ -4,6 +4,7 @@ import requests
 import io
 import re
 import os
+import base64
 from datetime import datetime
 
 # PDF 생성을 위한 reportlab 라이브러리 및 폰트 등록 모듈
@@ -402,7 +403,7 @@ st.title("⚽ 선수 스카우팅 관리 시스템")
 # ----------------------------------------------------
 st.sidebar.title("📌 메뉴")
 
-# 모바일에서 화면이 락 걸릴 때 언제든 탈출할 수 있는 안전망 새로고침 버튼
+# 모바일에서 화면이 잠길 때 언제든 탈출할 수 있는 안전망 새로고침 버튼
 if st.sidebar.button("🔄 앱 새로고침 (홈으로)", use_container_width=True, type="secondary"):
     st.rerun()
 
@@ -563,16 +564,24 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
             with head_col2:
                 try:
                     pdf_bytes = generate_pdf_report(p)
-                    # 모바일에서 사파리/인앱브라우저가 곧바로 창을 띄워 잠기는 현상을 방지하는 MIME 타입 적용
-                    st.download_button(
-                        label="📄 관찰일지 PDF 다운로드",
-                        data=pdf_bytes,
-                        file_name=f"{p.get('선수명', '선수')}_스카우팅관찰일지.pdf",
-                        mime="application/octet-stream",
-                        type="primary",
-                        use_container_width=True
-                    )
-                    st.caption("💡 아이폰/모바일 환경에서는 버튼을 누른 후 뜨는 메뉴에서 **'다운로드'** 또는 **'파일에 저장'**을 선택해 주세요.")
+                    filename = f"{p.get('선수명', '선수')}_스카우팅관찰일지.pdf"
+                    
+                    # 💡 모바일 브라우저 뷰어 강제 열림 및 화면 락(Lock)을 막기 위한 자바스크립트 강제 다운로드 버튼 생성
+                    b64 = base64.b64encode(pdf_bytes.getvalue()).decode()
+                    dl_html = f"""
+                    <div style="display: flex; flex-direction: column; width: 100%;">
+                        <a href="data:application/octet-stream;base64,{b64}" download="{filename}" 
+                           style="background-color: #2563EB; color: white; padding: 10px 16px; text-align: center; 
+                                  text-decoration: none; display: inline-block; font-size: 14px; font-weight: bold; 
+                                  border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%;">
+                            📄 관찰일지 PDF 다운로드
+                        </a>
+                        <span style="font-size: 11px; color: #64748B; text-align: center; margin-top: 5px;">
+                            💡 모바일에서 새 창이 열리지 않고 안전하게 파일로 저장됩니다.
+                        </span>
+                    </div>
+                    """
+                    st.markdown(dl_html, unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f"PDF 생성 중 오류 발생: {e}")
 
