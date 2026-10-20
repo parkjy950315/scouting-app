@@ -64,23 +64,34 @@ def load_data():
 
 def save_data_to_sheet(df):
     try:
-        # 1. 모든 NaN/빈/숫자 형식을 문자열로 안전 치환 (JSON 에러 방지)
-        clean_df = df.fillna("").astype(str)
+        # 1. 오직 정확히 15개 열(A~O)만 강제로 추려내어 오른쪽(AS~BF 등)으로 밀리는 현상 원천 차단
+        expected_cols = [
+            "선수명", "소속팀", "등번호", "포지션", "생년월일", "만 나이", "연 나이", "주발", "신장(cm)", "체중(kg)",
+            "진행 상태", "장점/특기", "보완점/단점", "종합 평가", "작성일자"
+        ]
         
-        # 2. 파이썬 리스트 구조로 변환
-        headers = [str(col) for col in clean_df.columns.tolist()]
-        rows = [[str(val) if pd.notna(val) and str(val).lower() != 'nan' else "" for val in row] for row in clean_df.values.tolist()]
+        for col in expected_cols:
+            if col not in df.columns:
+                df[col] = ""
+        df_clean = df[expected_cols].fillna("").astype(str)
         
+        # 2. 헤더와 데이터 행을 정확히 15개 배열로 변환
+        headers = expected_cols
+        rows = []
+        for _, row in df_clean.iterrows():
+            row_list = [str(row[col]) if pd.notna(row[col]) and str(row[col]).lower() != 'nan' else "" for col in expected_cols]
+            rows.append(row_list)
+            
         data_to_send = [headers] + rows
         
-        # 3. 구글 웹앱으로 POST 전송
+        # 3. 구글 웹앱으로 전송
         if GOOGLE_WEBAPP_URL and "여기에" not in GOOGLE_WEBAPP_URL:
             res = requests.post(GOOGLE_WEBAPP_URL, json=data_to_send)
             if res.status_code == 200:
-                st.session_state['data_cache'] = clean_df
+                st.session_state['data_cache'] = df_clean
                 return True
             else:
-                st.error("구글 시트 저장 서버 응답 실패. 웹앱 URL 및 권한 설정을 확인해 주세요.")
+                st.error("구글 시트 저장 서버 응답 실패.")
                 return False
         else:
             st.warning("⚠️ 구글 웹앱 URL이 설정되지 않았습니다.")
