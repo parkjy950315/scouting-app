@@ -181,12 +181,12 @@ df = load_data()
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 사이드바 설정 (새로고침 버튼 추가)
+# 사이드바 설정 (새로고침 버튼)
 # ----------------------------------------------------
 st.sidebar.title("📌 메뉴")
 
 # 사이드바 최상단에 새로고침 버튼 배치
-if st.sidebar.button("🔄 데이터 새로고침", use_container_width=True):
+if st.sidebar.button("🔄 새로고침", use_container_width=True):
     st.rerun()
 
 st.sidebar.markdown("---")
