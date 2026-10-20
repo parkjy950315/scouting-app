@@ -103,7 +103,7 @@ def safe_int(val, default_val):
     except:
         return default_val
 
-# 팩트 기반 AI 스카우팅 리포트 생성기 (없는 내용 지어내지 않도록 수정)
+# 메모 기반 플레이스타일 분석 및 요약 리포트 생성기
 def generate_ai_scouting_summary(player):
     name = player.get('선수명', '미확인')
     team = player.get('소속팀', '소속미상')
@@ -119,7 +119,6 @@ def generate_ai_scouting_summary(player):
     cons = str(player.get('보완점/단점', '')).strip()
     overall = str(player.get('종합 평가', '')).strip()
     
-    # 누적 관찰 일지 횟수 계산
     obs_count = len(re.findall(r'\[\d{4}-\d{2}-\d{2}\s*관찰\]', pros + cons + overall))
     if obs_count == 0 and (pros or cons or overall):
         obs_count = 1
@@ -128,34 +127,53 @@ def generate_ai_scouting_summary(player):
     if weight:
         physical_info += f" / {weight}kg"
         
-    # 작성된 내용만 팩트 기반으로 정리
-    pros_display = f"```text\n{pros}\n```" if pros else "❌ *작성된 장점 메모가 없습니다.*"
-    cons_display = f"```text\n{cons}\n```" if cons else "❌ *작성된 보완점 메모가 없습니다.*"
-    overall_display = f"```text\n{overall}\n```" if overall else "❌ *작성된 종합 코멘트가 없습니다.*"
+    # 메모 내용을 바탕으로 한 플레이스타일 분석 문장 도출 (키워드 매칭 분석)
+    combined_notes = (pros + " " + cons + " " + overall).lower()
+    
+    style_keywords = []
+    if any(k in combined_notes for k in ["빌드업", "패스", "시야", "전개", "킥"]):
+        style_keywords.append("• **패스 및 빌드업 성향**: 후방 또는 중원에서 정확한 킥과 시야를 바탕으로 공격 전개를 주도하는 플레이를 선호합니다.")
+    if any(k in combined_notes for k in ["스피드", "주력", "빠른", "돌파", "침투", "속도"]):
+        style_keywords.append("• **속도 및 기동력**: 뛰어난 주력과 순간 스피드를 활용해 측면 돌파나 뒷공간 침투에 강점을 보입니다.")
+    if any(k in combined_notes for k in ["피지컬", "경합", "몸싸움", "제공권", "대인", "수비"]):
+        style_keywords.append("• **피지컬 및 경합 능력**: 단단한 신체 조건을 바탕으로 한 대인 방어와 공중볼 경합에서 존재감을 드러냅니다.")
+    if any(k in combined_notes for k in ["활동량", "압박", "성실", "수비가담", "체력"]):
+        style_keywords.append("• **활동량 및 전술 이해도**: 경기 내내 성실한 움직임과 적극적인 압박 가담으로 팀에 기여하는 스타일입니다.")
+    if any(k in combined_notes for k in ["결정력", "슈팅", "골문", "마무리", "찬스"]):
+        style_keywords.append("• **결정력 및 파이널 서드 영향력**: 박스 안팎에서 위협적인 슈팅과 침착한 마무리를 보여줍니다.")
+
+    if not style_keywords and (pros or overall):
+        style_keywords.append("• **종합 플레이 성향**: 작성된 관찰 메모를 바탕으로 볼 때, 해당 포지션에서 성실한 플레이와 기본기를 갖춘 자원입니다.")
+    
+    style_analysis_text = "\n".join(style_keywords) if style_keywords else "❌ *분석할 충분한 메모 데이터가 없습니다. 장점이나 평가를 더 기록해 주세요.*"
 
     summary = f"""
-### 📊 [스카우팅 관찰 요약 리포트: {name}]
+### 📊 [{name} 선수 스카우팅 심층 분석 리포트]
 
-#### 1. 인적 사항 & 프로필
-- **기본 정보**: {name} ({team} / 포지션: `{pos}`)
-- **나이 / 주발**: {age} | `{foot}`
-- **피지컬 조건**: {physical_info}
-- **데이터 관리 상태**: 진행 상태 [`{status}`] | 관찰일지 **{obs_count}회** 기록됨 (최근 작성: {date_str})
-
----
-
-#### 2. 관찰 기록: 장점 및 특기 (Technical & Tactical Strengths)
-{pros_display}
+#### 1. 기본 프로필
+- **소속 / 포지션**: {team} / `{pos}` ({age} | 주발: `{foot}`)
+- **피지컬**: {physical_info}
+- **관리 상태**: 진행 상태 [`{status}`] | 총 관찰 기록 **{obs_count}회** (최근 작성: {date_str})
 
 ---
 
-#### 3. 관찰 기록: 보완점 및 약점 (Areas for Development)
-{cons_display}
+#### 2. 🧠 메모 기반 AI 플레이스타일 분석
+{style_analysis_text}
 
 ---
 
-#### 4. 관찰 기록: 스카우터 종합 평가 및 코멘트
-{overall_display}
+#### 3. 🌟 작성된 장점 및 특기 메모
+{f"```text\n{pros}\n```" if pros else "*(작성된 내용 없음)*"}
+
+---
+
+#### 4. ⚠️ 작성된 보완점 및 약점 메모
+{f"```text\n{cons}\n```" if cons else "*(작성된 내용 없음)*"}
+
+---
+
+#### 5. 📋 스카우터 종합 평가 및 코멘트
+{f"```text\n{overall}\n```" if overall else "*(작성된 내용 없음)*"}
 """
     return summary
 
@@ -338,8 +356,8 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
             
             st.markdown("---")
             
-            if st.button("📄 스카우팅 관찰 요약 리포트 생성", type="primary", use_container_width=True):
-                with st.spinner("누적 관찰 일지 불러오는 중..."):
+            if st.button("🧠 메모 기반 플레이스타일 심층 분석 리포트 생성", type="primary", use_container_width=True):
+                with st.spinner("작성된 관찰 메모 분석 중..."):
                     ai_report = generate_ai_scouting_summary(p)
                     st.markdown(ai_report)
 
