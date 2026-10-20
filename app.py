@@ -193,68 +193,65 @@ st.sidebar.markdown("---")
 menu = st.sidebar.radio("이동할 메뉴", ["선수 등록", "🔍 선수 검색 및 리포트 조회", "✏️ 선수 정보/일지 수정 및 추가", "🗑️ 데이터 삭제", "📊 엑셀 다운로드"])
 
 # ----------------------------------------------------
-# 1. 선수 등록 (저장 성공 확인 후 입력값 초기화 로직 적용)
+# 1. 선수 등록 (form 적용 및 성공 후 자동 초기화)
 # ----------------------------------------------------
 if menu == "선수 등록":
     st.header("📋 신규 관찰 선수 등록")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        name = st.text_input("선수명*", key="reg_name")
-        team = st.text_input("소속팀", key="reg_team")
-        position = st.text_input("포지션 (예: FW, CAM, CB)", key="reg_pos")
-        status = st.selectbox("진행 상태", STATUS_OPTIONS, key="reg_status")
-        
-        back_num_options = [""] + [str(i) for i in range(1, 100)]
-        back_num_val = st.selectbox("등번호", options=back_num_options, index=0, placeholder="등번호 선택", key="reg_backnum")
+    # 저장 완료 후 표시될 성공 메시지 핸들러
+    if "reg_success_msg" in st.session_state and st.session_state["reg_success_msg"]:
+        st.success(st.session_state["reg_success_msg"])
+        st.balloons()
+        st.session_state["reg_success_msg"] = None
 
-    with col2:
-        birth_date = st.date_input("생년월일 선택*", value=datetime(2005, 1, 1), min_value=datetime(1980, 1, 1), max_value=datetime.today(), key="reg_birth")
-        age_full_str, age_year_str = calculate_age(birth_date)
-        st.info(f"💡 **자동 계산 나이**: {age_full_str} (연 {age_year_str})")
-        foot = st.selectbox("주발", ["오른발", "왼발", "양발"], key="reg_foot")
-        date = st.date_input("관찰/작성일자", value=datetime.today(), key="reg_date")
-        
-        st.write("---")
-        height_options = [str(h) for h in range(150, 205)] + [""]
-        height_val = st.selectbox("신장 (cm)", options=height_options, index=25, placeholder="신장 선택", key="reg_height")
-        
-        weight_options = [""] + [str(w) for w in range(50, 105)]
-        weight_val = st.selectbox("체중 (kg)", options=weight_options, index=0, placeholder="체중 선택", key="reg_weight")
+    with st.form("player_reg_form", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            name = st.text_input("선수명*")
+            team = st.text_input("소속팀")
+            position = st.text_input("포지션 (예: FW, CAM, CB)")
+            status = st.selectbox("진행 상태", STATUS_OPTIONS)
+            
+            back_num_options = [""] + [str(i) for i in range(1, 100)]
+            back_num_val = st.selectbox("등번호", options=back_num_options, index=0, placeholder="등번호 선택")
 
-    st.subheader("📝 관찰 리포트 / 첫 메모")
-    pros = st.text_area("장점 및 주요 특기", key="reg_pros")
-    cons = st.text_area("보완점 및 약점", key="reg_cons")
-    overall = st.text_area("종합 평가 / 코멘트", key="reg_overall")
-    
-    if st.button("💾 선수 데이터 저장", type="primary", use_container_width=True):
-        if not name.strip():
-            st.error("선수명은 필수 입력 항목입니다.")
-        else:
-            with st.spinner("구글 시트에 데이터를 안전하게 저장하는 중..."):
-                new_data = {
-                    "선수명": name.strip(), "소속팀": team.strip(), "등번호": str(back_num_val),
-                    "포지션": position.strip(), "생년월일": str(birth_date),
-                    "만 나이": age_full_str, "연 나이": age_year_str, "주발": foot,
-                    "신장(cm)": str(height_val), "체중(kg)": str(weight_val),
-                    "진행 상태": status, "장점/특기": pros.strip(), "보완점/단점": cons.strip(),
-                    "종합 평가": overall.strip(), "작성일자": str(date)
-                }
-                updated_df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
-                
-                # 구글 시트 저장 성공 확인
-                if save_data_to_sheet(updated_df):
-                    st.success(f"🎉 '{name}' 선수의 데이터가 구글 시트에 성공적으로 저장되었습니다!")
-                    st.balloons()
-                    
-                    # 저장이 완료된 직후 입력 위젯들의 세션 상태 키를 초기값으로 리셋
-                    st.session_state["reg_name"] = ""
-                    st.session_state["reg_team"] = ""
-                    st.session_state["reg_pos"] = ""
-                    st.session_state["reg_pros"] = ""
-                    st.session_state["reg_cons"] = ""
-                    st.session_state["reg_overall"] = ""
-                    st.rerun() # 화면을 리프레시하여 빈 칸 상태로 반영
+        with col2:
+            birth_date = st.date_input("생년월일 선택*", value=datetime(2005, 1, 1), min_value=datetime(1980, 1, 1), max_value=datetime.today())
+            foot = st.selectbox("주발", ["오른발", "왼발", "양발"])
+            date = st.date_input("관찰/작성일자", value=datetime.today())
+            
+            st.write("---")
+            height_options = [str(h) for h in range(150, 205)] + [""]
+            height_val = st.selectbox("신장 (cm)", options=height_options, index=25, placeholder="신장 선택")
+            
+            weight_options = [""] + [str(w) for w in range(50, 105)]
+            weight_val = st.selectbox("체중 (kg)", options=weight_options, index=0, placeholder="체중 선택")
+
+        st.subheader("📝 관찰 리포트 / 첫 메모")
+        pros = st.text_area("장점 및 주요 특기")
+        cons = st.text_area("보완점 및 약점")
+        overall = st.text_area("종합 평가 / 코멘트")
+        
+        submitted = st.form_submit_button("💾 선수 데이터 저장", type="primary", use_container_width=True)
+        
+        if submitted:
+            if not name.strip():
+                st.error("선수명은 필수 입력 항목입니다.")
+            else:
+                age_full_str, age_year_str = calculate_age(birth_date)
+                with st.spinner("구글 시트에 데이터를 안전하게 저장하는 중..."):
+                    new_data = {
+                        "선수명": name.strip(), "소속팀": team.strip(), "등번호": str(back_num_val),
+                        "포지션": position.strip(), "생년월일": str(birth_date),
+                        "만 나이": age_full_str, "연 나이": age_year_str, "주발": foot,
+                        "신장(cm)": str(height_val), "체중(kg)": str(weight_val),
+                        "진행 상태": status, "장점/특기": pros.strip(), "보완점/단점": cons.strip(),
+                        "종합 평가": overall.strip(), "작성일자": str(date)
+                    }
+                    updated_df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
+                    if save_data_to_sheet(updated_df):
+                        st.session_state["reg_success_msg"] = f"🎉 '{name.strip()}' 선수의 데이터가 구글 시트에 성공적으로 저장되었습니다!"
+                        st.rerun()
 
 # ----------------------------------------------------
 # 2. 선수 검색 및 상세 리포트 조회
