@@ -147,6 +147,20 @@ def load_data():
     try:
         csv_url = get_csv_export_url(GOOGLE_SHEET_URL)
         df = pd.read_csv(csv_url, dtype=str)
+        
+        # 구글 시트의 다양한 컬럼명 변형을 표준 컬럼명으로 자동 정돈
+        rename_map = {}
+        for col in df.columns:
+            clean_col = col.strip()
+            if clean_col in ["종합평가", "종합 평가 코멘트", "종합평가 코멘트", "코멘트", "종합평가(코멘트)"]:
+                rename_map[col] = "종합 평가"
+            elif clean_col in ["장점", "특기", "장점 및 특기"]:
+                rename_map[col] = "장점/특기"
+            elif clean_col in ["보완점", "단점", "약점", "보완점 및 약점"]:
+                rename_map[col] = "보완점/단점"
+        if rename_map:
+            df = df.rename(columns=rename_map)
+
         for col in expected_cols:
             if col not in df.columns:
                 df[col] = ""
@@ -269,7 +283,7 @@ def generate_ai_scouting_summary(player):
 
 ---
 
-#### 2. 🧠 메모 기반 AI 플레이스타일 분석
+#### 2. 🧠 메모 기반 플레이스타일 분석
 {style_analysis_text}
 
 ---
@@ -403,7 +417,6 @@ st.title("⚽ 선수 스카우팅 관리 시스템")
 # ----------------------------------------------------
 st.sidebar.title("📌 메뉴")
 
-# 모바일에서 화면이 잠길 때 언제든 탈출할 수 있는 안전망 새로고침 버튼
 if st.sidebar.button("🔄 앱 새로고침 (홈으로)", use_container_width=True, type="secondary"):
     st.rerun()
 
@@ -566,7 +579,6 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                     pdf_bytes = generate_pdf_report(p)
                     filename = f"{p.get('선수명', '선수')}_스카우팅관찰일지.pdf"
                     
-                    # 💡 모바일 브라우저 뷰어 강제 열림 및 화면 락(Lock)을 막기 위한 자바스크립트 강제 다운로드 버튼 생성
                     b64 = base64.b64encode(pdf_bytes.getvalue()).decode()
                     dl_html = f"""
                     <div style="display: flex; flex-direction: column; width: 100%;">
