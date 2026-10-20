@@ -253,7 +253,7 @@ if menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 리포트 조회 (실시간 검색 적용)
+# 2. 선수 검색 및 상세 리포트 조회 (검색어 형광펜 스타일링 적용)
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 리포트 조회":
     st.header("🔍 관찰 선수 검색 및 상세 리포트 조회")
@@ -275,10 +275,10 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         st.write("---")
         
-        # 2. 검색 및 필터 입력 구역 (key 지정으로 실시간 연동)
+        # 2. 검색 및 필터 입력 구역
         f_col1, f_col2, f_col3 = st.columns([2, 1, 1])
         with f_col1:
-            search_term = st.text_input("🔍 실시간 검색 (선수명, 소속팀, 등번호, 키워드)", key="live_search_input")
+            search_term = st.text_input("🔍 검색 (선수명, 소속팀, 등번호, 키워드)", key="live_search_input")
         with f_col2:
             foot_filter = st.selectbox("⚽ 주발 필터", ["전체", "왼발", "오른발", "양발"], key="live_foot_filter")
         with f_col3:
@@ -286,7 +286,7 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         filtered_df = df.copy()
         
-        # 3. 실시간 통합 검색 적용
+        # 3. 통합 검색 적용
         if search_term:
             filtered_df = filtered_df[
                 filtered_df["선수명"].str.contains(search_term, case=False, na=False) | 
@@ -306,12 +306,27 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         st.subheader(f"📋 선수 목록 (검색 결과: 총 {len(filtered_df)}명)")
         
-        selection = st.dataframe(
-            filtered_df,
-            use_container_width=True,
-            selection_mode="single-row",
-            on_select="rerun"
-        )
+        # 검색어가 있을 때 표 안에서 해당 검색어가 포함된 셀에 형광펜(노란색 배경) 효과 적용
+        def highlight_search(val):
+            if search_term and search_term.strip() and str(search_term).lower() in str(val).lower():
+                return 'background-color: #fff9c4; color: #000000; font-weight: bold;'
+            return ''
+
+        if not filtered_df.empty and search_term:
+            styled_df = filtered_df.style.applymap(highlight_search)
+            selection = st.dataframe(
+                styled_df,
+                use_container_width=True,
+                selection_mode="single-row",
+                on_select="rerun"
+            )
+        else:
+            selection = st.dataframe(
+                filtered_df,
+                use_container_width=True,
+                selection_mode="single-row",
+                on_select="rerun"
+            )
         
         selected_rows = selection.selection.rows if hasattr(selection, "selection") else []
         
@@ -460,7 +475,7 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                             st.success("🎉 선수 정보와 추가 관찰 일지가 성공적으로 수정·저장되었습니다!")
 
 # ----------------------------------------------------
-# 4. 데이터 삭제 (다중 선택 및 삭제 확인 기능)
+# 4. 데이터 삭제
 # ----------------------------------------------------
 elif menu == "🗑️ 데이터 삭제":
     st.header("🗑️ 선수 데이터 삭제")
