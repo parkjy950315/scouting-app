@@ -25,12 +25,10 @@ st.markdown("""
     
     /* 2. 모바일 화면 (화면 폭 768px 이하) 전용 반응형 스타일 */
     @media (max-width: 768px) {
-        /* 사이드바 너비 모바일 감싸기 */
         [data-testid="stSidebar"] {
             min-width: 280px !important;
             max-width: 320px !important;
         }
-        /* 터치 버튼 크기 및 폰트 확대 */
         [data-testid="stSidebar"] .stRadio label p {
             font-size: 18px !important;
             font-weight: 700 !important;
@@ -39,13 +37,11 @@ st.markdown("""
             padding: 14px 18px !important;
             font-size: 17px !important;
         }
-        /* 메인 페이지 패딩 조절 */
         .block-container {
             padding-left: 1rem !important;
             padding-right: 1rem !important;
             padding-top: 1rem !important;
         }
-        /* 메인 제목 크기 조절 */
         h1 {
             font-size: 24px !important;
         }
@@ -74,13 +70,13 @@ STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완�
 POSITION_OPTIONS = ["GK", "CB", "LB", "RB", "MF", "LW", "RW", "CF"]
 
 # ----------------------------------------------------
-# 🏢 성문컴퍼니(SMC) 로고 HTML 렌더링
+# 🏢 성문컴퍼니(SMC) 로고 HTML 완벽 중앙 정렬 렌더링
 # ----------------------------------------------------
 def display_logo():
     logo_html = """
-    <div style="text-align: center; padding: 10px 0; background-color: transparent;">
-        <h1 style="color: #007bff; font-weight: 900; letter-spacing: 3px; margin: 0; font-size: 34px; font-family: sans-serif;">SMC</h1>
-        <p style="color: #6c757d; font-weight: 700; letter-spacing: 4px; margin: 2px 0 0 0; font-size: 11px; font-family: sans-serif;">SUNGMUN COMPANY</p>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 12px 0;">
+        <div style="color: #007bff; font-weight: 900; letter-spacing: 4px; font-size: 34px; font-family: sans-serif; line-height: 1.1;">SMC</div>
+        <div style="color: #6c757d; font-weight: 700; letter-spacing: 4px; font-size: 11px; font-family: sans-serif; margin-top: 4px;">SUNGMUN COMPANY</div>
     </div>
     """
     st.sidebar.markdown(logo_html, unsafe_allow_html=True)
