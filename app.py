@@ -3,37 +3,63 @@ import pandas as pd
 import requests
 import io
 import re
+import os
 from datetime import datetime
 
 # 페이지 기본 설정
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
-# 모바일 환경에서 사이드바 메뉴 터치 및 가독성 대폭 개선을 위한 CSS 스타일 주입
+# ----------------------------------------------------
+# 📱 PC & 모바일 반응형 디자인 (Media Query) 적용
+# ----------------------------------------------------
 st.markdown("""
     <style>
-    /* 사이드바 폭을 모바일에 맞게 넉넉히 확보 */
-    [data-testid="stSidebar"] {
-        min-width: 300px;
-        max-width: 360px;
-    }
-    /* 사이드바 메뉴(라디오 버튼) 글자 크기를 크게 키우고 터치 영역(패딩)을 넓힘 */
+    /* 1. 공통 기본 스타일 */
     [data-testid="stSidebar"] .stRadio label {
-        padding: 14px 18px !important;
-        margin-bottom: 10px !important;
+        padding: 12px 16px !important;
+        margin-bottom: 8px !important;
         border-radius: 10px;
         background-color: rgba(255, 255, 255, 0.08);
         cursor: pointer;
     }
-    [data-testid="stSidebar"] .stRadio label p {
-        font-size: 17px !important;
-        font-weight: 600 !important;
+    
+    /* 2. 모바일 화면 (화면 폭 768px 이하) 전용 반응형 스타일 */
+    @media (max-width: 768px) {
+        /* 사이드바 너비 모바일 감싸기 */
+        [data-testid="stSidebar"] {
+            min-width: 280px !important;
+            max-width: 320px !important;
+        }
+        /* 터치 버튼 크기 및 폰트 확대 */
+        [data-testid="stSidebar"] .stRadio label p {
+            font-size: 18px !important;
+            font-weight: 700 !important;
+        }
+        [data-testid="stSidebar"] button {
+            padding: 14px 18px !important;
+            font-size: 17px !important;
+        }
+        /* 메인 페이지 패딩 조절 */
+        .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            padding-top: 1rem !important;
+        }
+        /* 메인 제목 크기 조절 */
+        h1 {
+            font-size: 24px !important;
+        }
     }
-    /* 새로고침 등 사이드바 버튼 크기 및 터치 영역 확대 */
-    [data-testid="stSidebar"] button {
-        padding: 12px 18px !important;
-        font-size: 17px !important;
-        font-weight: 600 !important;
-        border-radius: 10px !important;
+
+    /* 3. 데스크탑 화면 (화면 폭 769px 이상) 전용 스타일 */
+    @media (min-width: 769px) {
+        [data-testid="stSidebar"] {
+            min-width: 260px;
+            max-width: 300px;
+        }
+        [data-testid="stSidebar"] .stRadio label p {
+            font-size: 15px !important;
+        }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -48,18 +74,16 @@ STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완�
 POSITION_OPTIONS = ["GK", "CB", "LB", "RB", "MF", "LW", "RW", "CF"]
 
 # ----------------------------------------------------
-# 🏢 성문컴퍼니(SMC) 로고 HTML 렌더링 함수
+# 🏢 성문컴퍼니(SMC) 로고 HTML 렌더링
 # ----------------------------------------------------
 def display_logo():
     logo_html = """
-    <div style="text-align: center; padding: 15px 0; background-color: transparent;">
-        <h1 style="color: #007bff; font-weight: 900; letter-spacing: 3px; margin: 0; font-size: 36px; font-family: sans-serif;">SMC</h1>
-        <p style="color: #6c757d; font-weight: 700; letter-spacing: 4px; margin: 4px 0 0 0; font-size: 11px; font-family: sans-serif;">SUNGMUN COMPANY</p>
+    <div style="text-align: center; padding: 10px 0; background-color: transparent;">
+        <h1 style="color: #007bff; font-weight: 900; letter-spacing: 3px; margin: 0; font-size: 34px; font-family: sans-serif;">SMC</h1>
+        <p style="color: #6c757d; font-weight: 700; letter-spacing: 4px; margin: 2px 0 0 0; font-size: 11px; font-family: sans-serif;">SUNGMUN COMPANY</p>
     </div>
     """
-    # 사이드바 상단에 로고 삽입
     st.sidebar.markdown(logo_html, unsafe_allow_html=True)
-    # 메인 화면 상단에 로고 삽입
     st.markdown(logo_html, unsafe_allow_html=True)
 
 def calculate_age(born_date):
@@ -239,7 +263,7 @@ def generate_ai_scouting_summary(player):
 
 df = load_data()
 
-# 로고 출력 실행
+# 로고 출력
 display_logo()
 
 st.title("⚽ 선수 스카우팅 관리 시스템")
