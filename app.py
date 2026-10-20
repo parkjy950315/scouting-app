@@ -147,7 +147,6 @@ def load_data():
     ]
     try:
         base_csv_url = get_csv_export_url(GOOGLE_SHEET_URL)
-        # 타임스탬프를 붙여 브라우저 및 스트림릿 캐시 강제 우회 (실시간 반영 보장)
         import time
         csv_url = f"{base_csv_url}&t={int(time.time())}" if "?" in base_csv_url else f"{base_csv_url}?t={int(time.time())}"
         
@@ -641,10 +640,10 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                 else:
                     st.write("등록된 내용이 없습니다.")
                     
-                st.markdown("#### 📋 [스카우터 종합 평가 코멘트]")
+                st.markdown("#### 📋 [스카우터 종합 평가 및 코멘트]")
                 overall_text = p.get('종합 평가', '')
                 if pd.notna(overall_text) and str(overall_text).strip():
-                    st.success(overall_text)
+                    st.success(overall_text) # 이제 종합 평가 내용이 화면에 정상 출력됩니다!
                 else:
                     st.write("등록된 내용이 없습니다.")
         else:
