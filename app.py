@@ -10,34 +10,35 @@ from datetime import datetime
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 디자인 및 상단 여백(스크롤 잘림 방지) 적용
+# 📱 PC & 모바일 상단 넉넉한 여백 확보 (Padding & Margin 최적화)
 # ----------------------------------------------------
 st.markdown("""
     <style>
-    /* 1. 사이드바 내부 상단 여백 확보 (로고가 잘리지 않도록) */
-    [data-testid="stSidebar"] > div:first-child {
-        padding-top: 2rem !important;
+    /* 1. 메인 컨테이너 상단 여백 대폭 확장 (스크롤 시 답답함 해소) */
+    .block-container {
+        padding-top: 3.5rem !important;
+        padding-bottom: 3rem !important;
     }
     
-    /* 2. 메인 컨테이너 상단 여백 확보 */
-    .block-container {
-        padding-top: 2rem !important;
+    /* 2. 사이드바 최상단 여백 확보 */
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 3rem !important;
     }
 
-    /* 3. 공통 사이드바 메뉴 스타일 */
+    /* 3. 사이드바 메뉴 간격 및 라디오 버튼 폼 조절 */
     [data-testid="stSidebar"] .stRadio label {
-        padding: 12px 16px !important;
-        margin-bottom: 8px !important;
-        border-radius: 10px;
+        padding: 14px 18px !important;
+        margin-bottom: 10px !important;
+        border-radius: 12px;
         background-color: rgba(255, 255, 255, 0.08);
         cursor: pointer;
     }
     
-    /* 4. 모바일 화면 (화면 폭 768px 이하) 전용 반응형 스타일 */
+    /* 4. 모바일 화면 (화면 폭 768px 이하) 반응형 상세 여백 설정 */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
-            min-width: 280px !important;
-            max-width: 320px !important;
+            min-width: 290px !important;
+            max-width: 330px !important;
         }
         [data-testid="stSidebar"] .stRadio label p {
             font-size: 18px !important;
@@ -48,16 +49,18 @@ st.markdown("""
             font-size: 17px !important;
         }
         .block-container {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            padding-top: 1.5rem !important;
+            padding-left: 1.2rem !important;
+            padding-right: 1.2rem !important;
+            padding-top: 2.5rem !important;
         }
         h1 {
-            font-size: 24px !important;
+            font-size: 23px !important;
+            margin-top: 10px !important;
+            margin-bottom: 20px !important;
         }
     }
 
-    /* 5. 데스크탑 화면 (화면 폭 769px 이상) 전용 스타일 */
+    /* 5. 데스크탑 화면 전용 여백 설정 */
     @media (min-width: 769px) {
         [data-testid="stSidebar"] {
             min-width: 260px;
@@ -80,13 +83,13 @@ STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완�
 POSITION_OPTIONS = ["GK", "CB", "LB", "RB", "MF", "LW", "RW", "CF"]
 
 # ----------------------------------------------------
-# 🏢 성문컴퍼니(SMC) 로고 HTML 완벽 중앙 정렬 렌더링
+# 🏢 성문컴퍼니(SMC) 로고 HTML 여유있는 렌더링
 # ----------------------------------------------------
 def display_logo():
     logo_html = """
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 10px 0 20px 0;">
-        <div style="color: #007bff; font-weight: 900; letter-spacing: 4px; font-size: 34px; font-family: sans-serif; line-height: 1.1;">SMC</div>
-        <div style="color: #6c757d; font-weight: 700; letter-spacing: 4px; font-size: 11px; font-family: sans-serif; margin-top: 4px;">SUNGMUN COMPANY</div>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 10px 0 25px 0; margin-bottom: 10px;">
+        <div style="color: #007bff; font-weight: 900; letter-spacing: 4px; font-size: 32px; font-family: sans-serif; line-height: 1.1;">SMC</div>
+        <div style="color: #6c757d; font-weight: 700; letter-spacing: 4px; font-size: 11px; font-family: sans-serif; margin-top: 5px;">SUNGMUN COMPANY</div>
     </div>
     """
     st.sidebar.markdown(logo_html, unsafe_allow_html=True)
