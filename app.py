@@ -12,7 +12,7 @@ st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout=
 GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1WSbVkwCr5Dv5hN3zU0Bw5tzzbNjMmlFyZiOCpG5DRjI/edit?usp=sharing"
 
 # 🔗 2. 1단계에서 얻은 구글 Apps Script 웹앱 URL을 아래 따옴표 안에 넣어주세요!
-GOOGLE_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyc5RUSDf7qGZtpV76zO3ojSuTQwlhWd8LIviGn-ay_iRc0OUffoMFVckDYDdrqFhx0/exec"
+GOOGLE_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxTTvgJqNnmBxwuCGvT3agMEo0_0Fon0JGWdREyR7usEIu4Mfw9M1lq66njtr8S_cbP/exec"
 
 STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완료", "계약 검토", "보류 / 제외"]
 
