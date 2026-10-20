@@ -6,15 +6,38 @@ import re
 import os
 from datetime import datetime
 
-# PDF 생성을 위한 reportlab 라이브러리
+# PDF 생성을 위한 reportlab 라이브러리 및 폰트 등록 모듈
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 # 페이지 기본 설정
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
+
+# ----------------------------------------------------
+# 🔤 PDF 한글 폰트 자동 등록 함수 (검은 네모 방지)
+# ----------------------------------------------------
+def register_korean_font():
+    font_path = "NanumGothic.ttf"
+    # 폰트 파일이 없으면 깃허브 오픈소스 저장소 등에서 무료 나눔고딕 폰트 다운로드
+    if not os.path.exists(font_path):
+        try:
+            font_url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Regular.ttf"
+            r = requests.get(font_url)
+            if r.status_code == 200:
+                with open(font_path, "wb") as f:
+                    f.write(r.content)
+        except Exception:
+            pass
+            
+    if os.path.exists(font_path):
+        pdfmetrics.registerFont(TTFont('NanumGothic', font_path))
+        return 'NanumGothic'
+    return 'Helvetica' # 기본 fallback
 
 # ----------------------------------------------------
 # 📱 PC & 모바일 상단 여백 및 스타일 설정
@@ -189,27 +212,104 @@ def parse_team_info(team_str):
         return current_team, past_teams
     return team_str, ""
 
+# 🧠 메모 기반 플레이스타일 분석 및 요약 리포트 생성기
+def generate_ai_scouting_summary(player):
+    name = player.get('선수명', '미확인')
+    full_team_str = player.get('소속팀', '소속미상')
+    current_team, past_teams = parse_team_info(full_team_str)
+    team_display = f"{current_team} {past_teams}".strip()
+    
+    pos = player.get('포지션', '미정')
+    height = player.get('신장(cm)', '')
+    weight = player.get('체중(kg)', '')
+    foot = player.get('주발', '미확인')
+    age = player.get('만 나이', '미확인')
+    status = player.get('진행 상태', '관찰 중')
+    date_str = player.get('작성일자', '-')
+    
+    pros = str(player.get('장점/특기', '')).strip()
+    cons = str(player.get('보완점/단점', '')).strip()
+    overall = str(player.get('종합 평가', '')).strip()
+    
+    obs_count = len(re.findall(r'\[\d{4}-\d{2}-\d{2}\s*관찰\]', pros + cons + overall))
+    if obs_count == 0 and (pros or cons or overall):
+        obs_count = 1
+        
+    physical_info = f"{height}cm" if height else "신장 미입력"
+    if weight:
+        physical_info += f" / {weight}kg"
+        
+    combined_notes = (pros + " " + cons + " " + overall).lower()
+    
+    style_keywords = []
+    if any(k in combined_notes for k in ["빌드업", "패스", "시야", "전개", "킥"]):
+        style_keywords.append("• **패스 및 빌드업 성향**: 후방 또는 중원에서 정확한 킥과 시야를 바탕으로 공격 전개를 주도하는 플레이를 선호합니다.")
+    if any(k in combined_notes for k in ["스피드", "주력", "빠른", "돌파", "침투", "속도"]):
+        style_keywords.append("• **속도 및 기동력**: 뛰어난 주력과 순간 스피드를 활용해 측면 돌파나 뒷공간 침투에 강점을 보입니다.")
+    if any(k in combined_notes for k in ["피지컬", "경합", "몸싸움", "제공권", "대인", "수비"]):
+        style_keywords.append("• **피지컬 및 경합 능력**: 단단한 신체 조건을 바탕으로 한 대인 방어와 공중볼 경합에서 존재감을 드러냅니다.")
+    if any(k in combined_notes for k in ["활동량", "압박", "성실", "수비가담", "체력"]):
+        style_keywords.append("• **활동량 및 전술 이해도**: 경기 내내 성실한 움직임과 적극적인 압박 가담으로 팀에 기여하는 스타일입니다.")
+    if any(k in combined_notes for k in ["결정력", "슈팅", "골문", "마무리", "찬스"]):
+        style_keywords.append("• **결정력 및 파이널 서드 영향력**: 박스 안팎에서 위협적인 슈팅과 침착한 마무리를 보여줍니다.")
+
+    if not style_keywords and (pros or overall):
+        style_keywords.append("• **종합 플레이 성향**: 작성된 관찰 메모를 바탕으로 볼 때, 해당 포지션에서 성실한 플레이와 기본기를 갖춘 자원입니다.")
+    
+    style_analysis_text = "\n".join(style_keywords) if style_keywords else "❌ *분석할 충분한 메모 데이터가 없습니다. 장점이나 평가를 더 기록해 주세요.*"
+
+    summary = f"""
+### 📊 [{name} 선수 스카우팅 심층 분석 리포트]
+
+#### 1. 기본 프로필 및 소속 이력
+- **소속팀**: {team_display}
+- **포지션 / 나이**: `{pos}` ({age} | 주발: `{foot}`)
+- **피지컬**: {physical_info}
+- **관리 상태**: 진행 상태 [`{status}`] | 총 관찰 기록 **{obs_count}회** (최근 작성: {date_str})
+
+---
+
+#### 2. 🧠 메모 기반 AI 플레이스타일 분석
+{style_analysis_text}
+
+---
+
+#### 3. 🌟 작성된 장점 및 특기 메모
+{f"```text\n{pros}\n```" if pros else "*(작성된 내용 없음)*"}
+
+---
+
+#### 4. ⚠️ 작성된 보완점 및 약점 메모
+{f"```text\n{cons}\n```" if cons else "*(작성된 내용 없음)*"}
+
+---
+
+#### 5. 📋 스카우터 종합 평가 및 코멘트
+{f"```text\n{overall}\n```" if overall else "*(작성된 내용 없음)*"}
+"""
+    return summary
+
 # ----------------------------------------------------
-# 📄 PDF 보고서 생성 함수 (reportlab 활용)
+# 📄 PDF 보고서 생성 함수 (한글 폰트 적용)
 # ----------------------------------------------------
 def generate_pdf_report(player_data):
+    korean_font = register_korean_font()
+    
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
     story = []
     
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, leading=22, alignment=1, textColor=colors.HexColor('#007bff'))
-    subtitle_style = ParagraphStyle('SubtitleStyle', parent=styles['Normal'], fontSize=10, leading=14, alignment=1, textColor=colors.HexColor('#6c757d'))
-    h2_style = ParagraphStyle('H2Style', parent=styles['Heading2'], fontSize=12, leading=16, textColor=colors.HexColor('#111111'), spaceBefore=10, spaceAfter=5)
-    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontSize=9, leading=13, textColor=colors.HexColor('#333333'))
+    # 한글 폰트가 지정된 ParagraphStyle 생성
+    title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=18, leading=22, alignment=1, textColor=colors.HexColor('#007bff'))
+    subtitle_style = ParagraphStyle('SubtitleStyle', fontName=korean_font, fontSize=10, leading=14, alignment=1, textColor=colors.HexColor('#6c757d'))
+    h2_style = ParagraphStyle('H2Style', fontName=korean_font, fontSize=12, leading=16, textColor=colors.HexColor('#111111'), spaceBefore=10, spaceAfter=5)
+    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9, leading=13, textColor=colors.HexColor('#333333'))
 
-    # 헤더 로고 텍스트
     story.append(Paragraph("SMC - SUNGMUN COMPANY", title_style))
     story.append(Paragraph("Player Scouting Log & Performance Report", subtitle_style))
     story.append(Spacer(1, 15))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#007bff'), spaceAfter=15))
 
-    # 선수 프로필 표
     curr_team, past_team = parse_team_info(player_data.get('소속팀', ''))
     full_team = f"{curr_team} {past_team}".strip()
     
@@ -230,7 +330,6 @@ def generate_pdf_report(player_data):
     story.append(t)
     story.append(Spacer(1, 15))
 
-    # 관찰일지 상세 영역
     story.append(Paragraph("📌 장점 및 주요 특기 메모", h2_style))
     pros_text = str(player_data.get('장점/특기', '작성 내용 없음')).replace('\n', '<br/>')
     story.append(Paragraph(pros_text, body_style))
@@ -257,7 +356,7 @@ display_logo()
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 사이드바 설정 (엑셀 다운로드 메뉴 제거)
+# 사이드바 설정
 # ----------------------------------------------------
 st.sidebar.title("📌 메뉴")
 
@@ -266,7 +365,6 @@ if st.sidebar.button("🔄 새로고침", use_container_width=True):
 
 st.sidebar.markdown("---")
 
-# 엑셀 다운로드 메뉴 제거 후 4개 메뉴 구성
 menu = st.sidebar.radio("이동할 메뉴", ["선수 등록", "🔍 선수 검색 및 관찰일지 조회", "✏️ 선수 정보/일지 수정 및 추가", "🗑️ 데이터 삭제"])
 
 # ----------------------------------------------------
@@ -330,15 +428,14 @@ if menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 관찰일지 조회 & PDF 다운로드
+# 2. 선수 검색 및 상세 관찰일지 조회 & AI 분석 & PDF 다운로드
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
-    st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
+    st.header("🔍 관찰 선수 검색 및 상세 일지 / AI 분석 / PDF 다운로드")
     
     if df.empty:
         st.info("등록된 선수 데이터가 없습니다.")
     else:
-        # 상단 현황 대시보드
         total_count = len(df)
         watchlist_count = len(df[df["진행 상태"] == "관심 선수 (Watchlist)"])
         observing_count = len(df[df["진행 상태"] == "집중 관찰 중"])
@@ -352,7 +449,6 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
         
         st.write("---")
         
-        # 검색 및 필터 구역
         f_col1, f_col2, f_col3, f_col4 = st.columns([2, 1, 1, 1])
         with f_col1:
             search_term = st.text_input("🔍 검색 (선수명, 소속팀, 등번호, 키워드)", key="live_search_input")
@@ -418,12 +514,10 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
             
             st.write("---")
             
-            # 선수 상단 메인 프로필 및 PDF 다운로드 버튼 영역
             head_col1, head_col2 = st.columns([3, 1])
             with head_col1:
                 st.markdown(f"### ⚽ [{p.get('진행 상태', '')}] {p.get('선수명', '')} 상세 관찰일지")
             with head_col2:
-                # PDF 파일 생성 및 다운로드 버튼
                 try:
                     pdf_bytes = generate_pdf_report(p)
                     st.download_button(
@@ -437,7 +531,6 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                 except Exception as e:
                     st.error(f"PDF 생성 중 오류 발생: {e}")
 
-            # 카드형 기본 프로필
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("현재 소속팀 / 등번호", f"{current_team_name} / {p.get('등번호', '-')}번")
             c2.metric("포지션 / 주발", f"{p.get('포지션', '-')} / {p.get('주발', '-')}")
@@ -452,8 +545,14 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
             st.write(f"• **생년월일**: {p.get('생년월일', '-')} | **최근 업데이트**: {p.get('작성일자', '-')}")
             
             st.markdown("---")
+            
+            if st.button("🧠 메모 기반 플레이스타일 심층 분석 리포트 생성", type="primary", use_container_width=True):
+                with st.spinner("작성된 관찰 메모 분석 중..."):
+                    ai_report = generate_ai_scouting_summary(p)
+                    st.markdown(ai_report)
+            
+            st.markdown("---")
 
-            # 일지 형태 기록 출력
             st.subheader("📚 날짜별 관찰일지 및 누적 메모")
             
             with st.container():
@@ -478,7 +577,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                 else:
                     st.write("등록된 내용이 없습니다.")
         else:
-            st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 관찰일지와 PDF 다운로드 버튼이 나타납니다.")
+            st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 관찰일지와 AI 분석, PDF 다운로드 버튼이 나타납니다.")
 
 # ----------------------------------------------------
 # 3. 선수 정보 수정 및 소속 이력 누적
