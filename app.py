@@ -48,7 +48,6 @@ def load_data():
         csv_url = get_csv_export_url(GOOGLE_SHEET_URL)
         df = pd.read_csv(csv_url, dtype=str)
         
-        # 1. 불필요한 Unnamed 열들을 원천 차단하고 정확히 15개 열만 추출
         for col in expected_cols:
             if col not in df.columns:
                 df[col] = ""
@@ -234,7 +233,7 @@ if menu == "선수 등록":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 리포트 조회
+# 2. 선수 검색 및 상세 리포트 조회 (표 클릭 선택형)
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 리포트 조회":
     st.header("🔍 관찰 선수 검색 및 상세 리포트 조회")
@@ -250,20 +249,25 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
                 filtered_df["등번호"].str.contains(search_term, na=False)
             ]
         
-        st.subheader("📋 선수 목록 요약")
-        st.dataframe(filtered_df, use_container_width=True)
+        st.subheader("📋 선수 목록 (아래 표에서 선수를 클릭하여 선택하세요)")
         
-        st.write("---")
-        st.subheader("👤 상세 리포트를 조회할 선수를 선택하세요")
+        # Streamlit 최신 interactive 데이터프레임 선택 기능 사용
+        selection = st.dataframe(
+            filtered_df,
+            use_container_width=True,
+            selection_mode="single-row",
+            on_select="rerun"
+        )
         
-        player_list = [f"{idx}번 | [{row.get('진행 상태', '')}] {row.get('선수명', '')} ({row.get('소속팀', '')})" for idx, row in filtered_df.iterrows()]
-        selected_player = st.selectbox("선수를 선택하면 상세 프로필과 접이식 리포트가 열립니다.", ["선택하세요..."] + player_list)
+        # 선택된 행(선수)이 있는지 확인
+        selected_rows = selection.selection.rows if hasattr(selection, "selection") else []
         
-        if selected_player != "선택하세요...":
-            target_idx = int(selected_player.split("번 |")[0])
+        if selected_rows:
+            target_idx = filtered_df.index[selected_rows[0]]
             p = df.loc[target_idx]
             
-            st.markdown(f"### ⚽ [{p.get('진행 상태', '')}] {p.get('선수명', '')} 프로필")
+            st.write("---")
+            st.markdown(f"### ⚽ [{p.get('진행 상태', '')}] {p.get('선수명', '')} 상세 프로필")
             
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("소속팀 / 등번호", f"{p.get('소속팀', '-')} / {p.get('등번호', '-')}번")
@@ -305,6 +309,8 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
                     st.success(overall_text)
                 else:
                     st.write("등록된 내용이 없습니다.")
+        else:
+            st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 상세 리포트가 아래에 바로 나타납니다.")
 
 # ----------------------------------------------------
 # 3. 선수 정보 수정 및 관찰 일지 누적
