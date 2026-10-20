@@ -289,13 +289,12 @@ def generate_ai_scouting_summary(player):
     return summary
 
 # ----------------------------------------------------
-# 📄 완벽한 열 정렬이 적용된 프리미엄 PDF 보고서 생성 함수
+# 📄 완벽한 칼각 정렬이 적용된 프리미엄 PDF 보고서 생성 함수
 # ----------------------------------------------------
 def generate_pdf_report(player_data):
     korean_font = register_korean_font()
     
     buffer = io.BytesIO()
-    # A4 여백 고려 정확한 인쇄 가능 폭: 595.27 - 72(좌우 여백 각 36) = 523 -> 정확히 520포인트로 통일
     doc = SimpleDocTemplate(
         buffer, 
         pagesize=A4, 
@@ -306,14 +305,16 @@ def generate_pdf_report(player_data):
     )
     story = []
     
-    # 고급 스타일 정의
+    # 고급 스타일 정의 (왼쪽 들여쓰기 0, 여백 완전 고정)
     title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=20, leading=24, alignment=1, textColor=colors.HexColor('#003366'))
     subtitle_style = ParagraphStyle('SubtitleStyle', fontName=korean_font, fontSize=10, leading=14, alignment=1, textColor=colors.HexColor('#6c757d'))
     
-    section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=11, leading=14, textColor=colors.HexColor('#ffffff'))
-    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, textColor=colors.HexColor('#222222'))
-    table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=9, leading=12, textColor=colors.HexColor('#555555'))
-    table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9.5, leading=13, textColor=colors.HexColor('#111111'))
+    # 핵심 수정: leftIndent=0, firstLineIndent=0으로 제목이 완벽하게 맨 왼쪽 일직선상에서 시작되도록 고정
+    section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=10.5, leading=14, textColor=colors.HexColor('#ffffff'), leftIndent=0, firstLineIndent=0)
+    
+    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, textColor=colors.HexColor('#222222'), leftIndent=0, firstLineIndent=0)
+    table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=9, leading=12, textColor=colors.HexColor('#555555'), leftIndent=0, firstLineIndent=0)
+    table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9.5, leading=13, textColor=colors.HexColor('#111111'), leftIndent=0, firstLineIndent=0)
 
     # 헤더 타이틀
     story.append(Paragraph("SMC — SUNGMUN COMPANY", title_style))
@@ -339,18 +340,17 @@ def generate_pdf_report(player_data):
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f8f9fa')),
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#cbd3da')),
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e6ea')),
-        ('PADDING', (0,0), (-1,-1), 6),
+        ('PADDING', (0,0), (-1,-1), 5),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
     story.append(profile_table)
     story.append(Spacer(1, 15))
 
-    # 굵은 제목과 본문 박스를 하나의 표 구조로 통합하여 열 어긋남 완벽 방지
+    # 제목과 본문의 시작 위치와 패딩을 완벽하게 고정한 통합 섹션 박스 함수
     def add_unified_section_box(title, content, header_bg, body_bg, border_color):
         story.append(Spacer(1, 5))
         cleaned_content = str(content).replace('\n', '<br/>') if content and str(content).strip() else "작성된 관찰 내용이 없습니다."
         
-        # 1행: 제목, 2행: 내용 (폭 520포인트로 정확히 일치)
         section_data = [
             [Paragraph(f"<b>{title}</b>", section_title_style)],
             [Paragraph(cleaned_content, body_style)]
@@ -361,13 +361,16 @@ def generate_pdf_report(player_data):
             ('BACKGROUND', (0,1), (-1,1), colors.HexColor(body_bg)),
             ('BOX', (0,0), (-1,-1), 1, colors.HexColor(border_color)),
             ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(border_color)),
-            ('PADDING', (0,0), (-1,-1), 8),
+            ('TOPPADDING', (0,0), (-1,-1), 6),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ('LEFTPADDING', (0,0), (-1,-1), 8),
+            ('RIGHTPADDING', (0,0), (-1,-1), 8),
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ]))
         story.append(section_table)
         story.append(Spacer(1, 10))
 
-    # 각 관찰 영역 추가 (통합된 박스 구조로 깔끔한 정렬)
+    # 각 관찰 영역 추가
     add_unified_section_box("📌 장점 및 주요 특기 (PROS)", player_data.get('장점/특기', ''), '#003366', '#f1f8ff', '#003366')
     add_unified_section_box("⚠️ 보완점 및 약점 (CONS)", player_data.get('보완점/단점', ''), '#b8860b', '#fffdf4', '#b8860b')
     add_unified_section_box("📋 스카우터 종합 평가 및 코멘트 (OVERALL EVALUATION)", player_data.get('종합 평가', ''), '#495057', '#f4f6f8', '#495057')
@@ -375,7 +378,7 @@ def generate_pdf_report(player_data):
     # 하단 푸터 텍스트 추가
     story.append(Spacer(1, 10))
     story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#ced4da'), spaceAfter=8))
-    footer_style = ParagraphStyle('FooterStyle', fontName=korean_font, fontSize=8, leading=10, alignment=1, textColor=colors.HexColor('#888888'))
+    footer_style = ParagraphStyle('FooterStyle', fontName=korean_font, fontSize=8, leading=10, alignment=1, textColor=colors.HexColor('#888888'), leftIndent=0, firstLineIndent=0)
     story.append(Paragraph("CONFIDENTIAL — This scouting report is exclusively prepared for SUNGMUN COMPANY internal use.", footer_style))
 
     doc.build(story)
