@@ -15,6 +15,7 @@ GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1WSbVkwCr5Dv5hN3zU0Bw
 GOOGLE_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxTTvgJqNnmBxwuCGvT3agMEo0_0Fon0JGWdREyR7usEIu4Mfw9M1lq66njtr8S_cbP/exec"
 
 STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완료", "계약 검토", "보류 / 제외"]
+POSITION_OPTIONS = ["GK", "CB", "LB", "RB", "MF", "LW", "RW", "CF"]
 
 def calculate_age(born_date):
     if not born_date:
@@ -193,7 +194,7 @@ st.sidebar.markdown("---")
 menu = st.sidebar.radio("이동할 메뉴", ["선수 등록", "🔍 선수 검색 및 리포트 조회", "✏️ 선수 정보/일지 수정 및 추가", "🗑️ 데이터 삭제", "📊 엑셀 다운로드"])
 
 # ----------------------------------------------------
-# 1. 선수 등록
+# 1. 선수 등록 (포지션 셀렉트박스 적용)
 # ----------------------------------------------------
 if menu == "선수 등록":
     st.header("📋 신규 관찰 선수 등록")
@@ -208,7 +209,7 @@ if menu == "선수 등록":
         with col1:
             name = st.text_input("선수명*")
             team = st.text_input("소속팀")
-            position = st.text_input("포지션 (예: FW, CAM, CB)")
+            position = st.selectbox("포지션", options=POSITION_OPTIONS)
             status = st.selectbox("진행 상태", STATUS_OPTIONS)
             
             back_num_options = [""] + [str(i) for i in range(1, 100)]
@@ -241,7 +242,7 @@ if menu == "선수 등록":
                 with st.spinner("구글 시트에 데이터를 안전하게 저장하는 중..."):
                     new_data = {
                         "선수명": name.strip(), "소속팀": team.strip(), "등번호": str(back_num_val),
-                        "포지션": position.strip(), "생년월일": str(birth_date),
+                        "포지션": position, "생년월일": str(birth_date),
                         "만 나이": age_full_str, "연 나이": age_year_str, "주발": foot,
                         "신장(cm)": str(height_val), "체중(kg)": str(weight_val),
                         "진행 상태": status, "장점/특기": pros.strip(), "보완점/단점": cons.strip(),
@@ -253,7 +254,7 @@ if menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 리포트 조회 (포지션 필터 포함)
+# 2. 선수 검색 및 상세 리포트 조회 (포지션 필터 적용)
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 리포트 조회":
     st.header("🔍 관찰 선수 검색 및 상세 리포트 조회")
@@ -275,15 +276,12 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         st.write("---")
         
-        # 2. 검색 및 필터 입력 구역 (포지션 필터 추가)
+        # 2. 검색 및 필터 입력 구역
         f_col1, f_col2, f_col3, f_col4 = st.columns([2, 1, 1, 1])
         with f_col1:
             search_term = st.text_input("🔍 검색 (선수명, 소속팀, 등번호, 키워드)", key="live_search_input")
         with f_col2:
-            # 등록된 포지션 목록을 추출하여 중복 제거 후 선택 옵션 구성
-            existing_positions = sorted(list(set(df["포지션"].dropna().str.strip().tolist()))) if "포지션" in df.columns else []
-            pos_options = ["전체"] + [p for p in existing_positions if p]
-            position_filter = st.selectbox("🛡️ 포지션 필터", pos_options, key="live_position_filter")
+            position_filter = st.selectbox("🛡️ 포지션 필터", ["전체"] + POSITION_OPTIONS, key="live_position_filter")
         with f_col3:
             foot_filter = st.selectbox("⚽ 주발 필터", ["전체", "왼발", "오른발", "양발"], key="live_foot_filter")
         with f_col4:
@@ -415,7 +413,10 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
             with col1:
                 edit_name = st.text_input("선수명", value=str(target_row.get("선수명", "")), key=f"edit_name_{target_idx}")
                 edit_team = st.text_input("소속팀", value=str(target_row.get("소속팀", "")), key=f"edit_team_{target_idx}")
-                edit_position = st.text_input("포지션", value=str(target_row.get("포지션", "")), key=f"edit_pos_{target_idx}")
+                
+                cur_pos = str(target_row.get("포지션", "MF"))
+                pos_idx = POSITION_OPTIONS.index(cur_pos) if cur_pos in POSITION_OPTIONS else 4
+                edit_position = st.selectbox("포지션", POSITION_OPTIONS, index=pos_idx, key=f"edit_pos_{target_idx}")
                 
                 default_status = str(target_row.get("진행 상태", STATUS_OPTIONS[0]))
                 status_index = STATUS_OPTIONS.index(default_status) if default_status in STATUS_OPTIONS else 0
@@ -471,7 +472,7 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                         records = df.to_dict('records')
                         records[target_idx] = {
                             "선수명": str(edit_name).strip(), "소속팀": str(edit_team).strip(),
-                            "등번호": str(edit_back_num), "포지션": str(edit_position).strip(),
+                            "등번호": str(edit_back_num), "포지션": str(edit_position),
                             "생년월일": str(edit_birth_date), "만 나이": str(age_full_str),
                             "연 나이": str(age_year_str), "주발": str(edit_foot),
                             "신장(cm)": str(edit_height), "체중(kg)": str(edit_weight),
