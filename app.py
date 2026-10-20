@@ -148,15 +148,15 @@ def load_data():
         csv_url = get_csv_export_url(GOOGLE_SHEET_URL)
         df = pd.read_csv(csv_url, dtype=str)
         
-        # 구글 시트의 다양한 컬럼명 변형을 표준 컬럼명으로 자동 정돈
+        # 구글 시트의 다양한 컬럼명 변형을 표준 컬럼명으로 완벽히 매핑
         rename_map = {}
         for col in df.columns:
-            clean_col = col.strip()
-            if clean_col in ["종합평가", "종합 평가 코멘트", "종합평가 코멘트", "코멘트", "종합평가(코멘트)"]:
+            clean_col = col.strip().replace(" ", "")
+            if clean_col in ["종합평가", "종합평가코멘트", "코멘트", "종합평가(코멘트)", "오버롤"]:
                 rename_map[col] = "종합 평가"
-            elif clean_col in ["장점", "특기", "장점 및 특기"]:
+            elif clean_col in ["장점", "특기", "장점및특기", "장점특기"]:
                 rename_map[col] = "장점/특기"
-            elif clean_col in ["보완점", "단점", "약점", "보완점 및 약점"]:
+            elif clean_col in ["보완점", "단점", "약점", "보완점및약점", "보완점단점"]:
                 rename_map[col] = "보완점/단점"
         if rename_map:
             df = df.rename(columns=rename_map)
