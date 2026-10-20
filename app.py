@@ -180,7 +180,18 @@ df = load_data()
 
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
-menu = st.sidebar.radio("메뉴 선택", ["선수 등록", "🔍 선수 검색 및 리포트 조회", "✏️ 선수 정보/일지 수정 및 추가", "🗑️ 데이터 삭제", "📊 엑셀 다운로드"])
+# ----------------------------------------------------
+# 사이드바 설정 (새로고침 버튼 추가)
+# ----------------------------------------------------
+st.sidebar.title("📌 메뉴")
+
+# 사이드바 최상단에 새로고침 버튼 배치
+if st.sidebar.button("🔄 데이터 새로고침", use_container_width=True):
+    st.rerun()
+
+st.sidebar.markdown("---")
+
+menu = st.sidebar.radio("이동할 메뉴", ["선수 등록", "🔍 선수 검색 및 리포트 조회", "✏️ 선수 정보/일지 수정 및 추가", "🗑️ 데이터 삭제", "📊 엑셀 다운로드"])
 
 # ----------------------------------------------------
 # 1. 선수 등록
@@ -251,7 +262,6 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         st.subheader("📋 선수 목록 (아래 표에서 선수를 클릭하여 선택하세요)")
         
-        # Streamlit 최신 interactive 데이터프레임 선택 기능 사용
         selection = st.dataframe(
             filtered_df,
             use_container_width=True,
@@ -259,7 +269,6 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
             on_select="rerun"
         )
         
-        # 선택된 행(선수)이 있는지 확인
         selected_rows = selection.selection.rows if hasattr(selection, "selection") else []
         
         if selected_rows:
