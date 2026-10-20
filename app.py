@@ -269,7 +269,7 @@ if menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 리포트 조회
+# 2. 선수 검색 및 상세 리포트 조회 (연 나이 제외 및 가운데 정렬)
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 리포트 조회":
     st.header("🔍 관찰 선수 검색 및 상세 리포트 조회")
@@ -328,19 +328,24 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         st.subheader(f"📋 선수 목록 (검색 결과: 총 {len(filtered_df)}명)")
         
-        # 표 출력 시 소속팀에는 '현재 소속팀'만 보이도록 가공
-        display_df = filtered_df.copy()
+        # 표 출력 시 '연 나이'를 제거하고 '소속팀'은 현재 소속팀만 보이게 가공
+        display_cols = [c for c in filtered_df.columns if c != "연 나이"]
+        display_df = filtered_df[display_cols].copy()
         display_df["소속팀"] = display_df["소속팀"].apply(lambda x: parse_team_info(x)[0])
         
-        # 표 전체 셀 글자 가운데 정렬 및 검색어 형광펜 스타일 적용 함수
-        def style_table(val):
-            style = 'text-align: center;'
+        # 검색어 형광펜 스타일링 함수
+        def highlight_search(val):
             if search_term and search_term.strip() and str(search_term).lower() in str(val).lower():
-                style += ' background-color: #fff9c4; color: #000000; font-weight: bold;'
-            return style
+                return 'background-color: #fff9c4; color: #000000; font-weight: bold;'
+            return ''
 
         if not display_df.empty:
-            styled_df = display_df.style.map(style_table)
+            # 강제 가운데 정렬(set_properties) 및 형광펜 스타일 적용
+            styled_df = (
+                display_df.style
+                .set_properties(**{'text-align': 'center'})
+                .map(highlight_search)
+            )
             selection = st.dataframe(
                 styled_df,
                 use_container_width=True,
@@ -370,7 +375,7 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("현재 소속팀 / 등번호", f"{current_team_name} / {p.get('등번호', '-')}번")
             c2.metric("포지션 / 주발", f"{p.get('포지션', '-')} / {p.get('주발', '-')}")
-            c3.metric("나이 (만/연)", f"{p.get('만 나이', '-')} ({p.get('연 나이', '-')})")
+            c3.metric("나이", f"{p.get('만 나이', '-')}") # 연 나이 제거 후 만 나이만 깔끔하게 출력
             
             weight_display = f"{p.get('체중(kg)')}kg" if p.get('체중(kg)') else "미입력"
             c4.metric("피지컬", f"{p.get('신장(cm)', '-')}cm / {weight_display}")
