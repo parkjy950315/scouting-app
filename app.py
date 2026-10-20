@@ -193,12 +193,11 @@ st.sidebar.markdown("---")
 menu = st.sidebar.radio("이동할 메뉴", ["선수 등록", "🔍 선수 검색 및 리포트 조회", "✏️ 선수 정보/일지 수정 및 추가", "🗑️ 데이터 삭제", "📊 엑셀 다운로드"])
 
 # ----------------------------------------------------
-# 1. 선수 등록 (form 적용 및 성공 후 자동 초기화)
+# 1. 선수 등록
 # ----------------------------------------------------
 if menu == "선수 등록":
     st.header("📋 신규 관찰 선수 등록")
     
-    # 저장 완료 후 표시될 성공 메시지 핸들러
     if "reg_success_msg" in st.session_state and st.session_state["reg_success_msg"]:
         st.success(st.session_state["reg_success_msg"])
         st.balloons()
@@ -254,21 +253,39 @@ if menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 리포트 조회
+# 2. 선수 검색 및 상세 리포트 조회 (필터 기능 추가)
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 리포트 조회":
     st.header("🔍 관찰 선수 검색 및 상세 리포트 조회")
     if df.empty:
         st.info("등록된 선수 데이터가 없습니다.")
     else:
-        search_term = st.text_input("선수명, 소속팀 또는 등번호 검색", "")
+        # 검색 및 필터 입력 구역
+        f_col1, f_col2, f_col3 = st.columns([2, 1, 1])
+        with f_col1:
+            search_term = st.text_input("🔍 선수명, 소속팀 또는 등번호 검색", "")
+        with f_col2:
+            foot_filter = st.selectbox("⚽ 주발 필터", ["전체", "왼발", "오른발", "양발"])
+        with f_col3:
+            status_filter = st.selectbox("📌 진행 상태 필터", ["전체"] + STATUS_OPTIONS)
+        
         filtered_df = df.copy()
+        
+        # 1. 텍스트 검색 적용
         if search_term:
             filtered_df = filtered_df[
                 filtered_df["선수명"].str.contains(search_term, na=False) | 
                 filtered_df["소속팀"].str.contains(search_term, na=False) |
                 filtered_df["등번호"].str.contains(search_term, na=False)
             ]
+            
+        # 2. 주발 필터 적용
+        if foot_filter != "전체":
+            filtered_df = filtered_df[filtered_df["주발"] == foot_filter]
+            
+        # 3. 진행 상태 필터 적용
+        if status_filter != "전체":
+            filtered_df = filtered_df[filtered_df["진행 상태"] == status_filter]
         
         st.subheader("📋 선수 목록 (아래 표에서 선수를 클릭하여 선택하세요)")
         
