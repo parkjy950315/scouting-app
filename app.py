@@ -305,14 +305,11 @@ def generate_pdf_report(player_data):
     )
     story = []
     
-    # 모던 컬러 팔레트 정의
-    PRIMARY_COLOR = colors.HexColor('#0F172A')  # 딥 슬레이트 (네이비 계열)
-    ACCENT_BLUE = colors.HexColor('#2563EB')    # 로열 블루
-    TEXT_COLOR = colors.HexColor('#334155')     # 본문 차콜
-    BG_LIGHT = colors.HexColor('#F8FAFC')       # 연한 배경 그레이
-    BORDER_COLOR = colors.HexColor('#CBD5E1')   # 테두리 그레이
+    PRIMARY_COLOR = colors.HexColor('#0F172A')
+    TEXT_COLOR = colors.HexColor('#334155')
+    BG_LIGHT = colors.HexColor('#F8FAFC')
+    BORDER_COLOR = colors.HexColor('#CBD5E1')
 
-    # 폰트 스타일 (좌측 정렬 0, 들여쓰기 0으로 완벽 고정)
     title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=16, leading=20, alignment=0, textColor=PRIMARY_COLOR)
     header_date = ParagraphStyle('HeaderDate', fontName=korean_font, fontSize=8.5, leading=11, alignment=2, textColor=colors.HexColor('#64748B'))
     
@@ -322,7 +319,6 @@ def generate_pdf_report(player_data):
     table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=8.5, leading=11, alignment=0, textColor=colors.HexColor('#64748B'), leftIndent=0, firstLineIndent=0)
     table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=PRIMARY_COLOR, leftIndent=0, firstLineIndent=0)
 
-    # 1. 상단 헤더 (회사명 및 발급일자)
     header_data = [
         [Paragraph("<b>SMC SCOUTING REPORT</b>", title_style), Paragraph(f"<b>발급일:</b> {datetime.today().strftime('%Y-%m-%d')}", header_date)]
     ]
@@ -334,7 +330,6 @@ def generate_pdf_report(player_data):
     story.append(header_table)
     story.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY_COLOR, spaceAfter=12))
 
-    # 2. 선수 프로필 정보 그리드
     curr_team, past_team = parse_team_info(player_data.get('소속팀', ''))
     full_team = f"{curr_team} {past_team}".strip()
     weight_val = f"{player_data.get('체중(kg)')}kg" if player_data.get('체중(kg)') else "미입력"
@@ -347,7 +342,7 @@ def generate_pdf_report(player_data):
         [Paragraph("최근 관찰일자", table_label), Paragraph(f"{player_data.get('작성일자', '-')}", table_value), Paragraph("문서 보안", table_label), Paragraph("CONFIDENTIAL", table_value)]
     ]
     
-    profile_table = Table(profile_data, colWidths=[90, 170, 90, 170]) # 총합 520
+    profile_table = Table(profile_data, colWidths=[90, 170, 90, 170])
     profile_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT),
         ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR),
@@ -359,7 +354,6 @@ def generate_pdf_report(player_data):
     story.append(profile_table)
     story.append(Spacer(1, 14))
 
-    # 3. 모던 카드 섹션 빌더 (제목 칼각 및 포인트 하단 바 적용)
     def add_modern_card(title, content, accent_hex):
         story.append(Spacer(1, 4))
         cleaned_content = str(content).replace('\n', '<br/>') if content and str(content).strip() else "작성된 관찰 내용이 없습니다."
@@ -370,13 +364,13 @@ def generate_pdf_report(player_data):
         ]
         card_table = Table(card_data, colWidths=[520])
         card_table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F1F5F9')), # 통일된 연한 그레이 헤더 배경
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F1F5F9')),
             ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#FFFFFF')),
             ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR),
-            ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(accent_hex)), # 항목별 포인트 하단 라인
+            ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(accent_hex)),
             ('TOPPADDING', (0,0), (-1,-1), 7),
             ('BOTTOMPADDING', (0,0), (-1,-1), 7),
-            ('LEFTPADDING', (0,0), (-1,-1), 12),  # 좌측 패딩 12포인트로 완벽 고정
+            ('LEFTPADDING', (0,0), (-1,-1), 12),
             ('RIGHTPADDING', (0,0), (-1,-1), 12),
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
             ('ALIGN', (0,0), (-1,-1), 'LEFT'),
@@ -384,12 +378,10 @@ def generate_pdf_report(player_data):
         story.append(card_table)
         story.append(Spacer(1, 8))
 
-    # 각 관찰 영역 추가 (포인트 컬러: 블루, 앰버, 슬레이트)
     add_modern_card("장점 및 주요 특기 (PROS)", player_data.get('장점/특기', ''), '#2563EB')
     add_modern_card("보완점 및 약점 (CONS)", player_data.get('보완점/단점', ''), '#D97706')
     add_modern_card("스카우터 종합 평가 및 코멘트 (OVERALL EVALUATION)", player_data.get('종합 평가', ''), '#475569')
 
-    # 4. 하단 푸터
     story.append(Spacer(1, 8))
     story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER_COLOR, spaceAfter=6))
     footer_style = ParagraphStyle('FooterStyle', fontName=korean_font, fontSize=8, leading=10, alignment=1, textColor=colors.HexColor('#94A3B8'), leftIndent=0, firstLineIndent=0)
@@ -401,7 +393,6 @@ def generate_pdf_report(player_data):
 
 df = load_data()
 
-# 로고 출력
 display_logo()
 
 st.title("⚽ 선수 스카우팅 관리 시스템")
@@ -575,10 +566,11 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                         label="📄 관찰일지 PDF 다운로드",
                         data=pdf_bytes,
                         file_name=f"{p.get('선수명', '선수')}_스카우팅관찰일지.pdf",
-                        mime="application/pdf",
+                        mime="application/octet-stream",  # 브라우저 강제 열기 방지 및 안전한 파일 다운로드 처리
                         type="primary",
                         use_container_width=True
                     )
+                    st.caption("💡 모바일에서는 버튼을 누른 후 **'다운로드'** 또는 **'파일에 저장'**을 선택해 주세요.")
                 except Exception as e:
                     st.error(f"PDF 생성 중 오류 발생: {e}")
 
