@@ -10,11 +10,21 @@ from datetime import datetime
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 디자인 (Media Query) 적용
+# 📱 PC & 모바일 반응형 디자인 및 상단 여백(스크롤 잘림 방지) 적용
 # ----------------------------------------------------
 st.markdown("""
     <style>
-    /* 1. 공통 기본 스타일 */
+    /* 1. 사이드바 내부 상단 여백 확보 (로고가 잘리지 않도록) */
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 2rem !important;
+    }
+    
+    /* 2. 메인 컨테이너 상단 여백 확보 */
+    .block-container {
+        padding-top: 2rem !important;
+    }
+
+    /* 3. 공통 사이드바 메뉴 스타일 */
     [data-testid="stSidebar"] .stRadio label {
         padding: 12px 16px !important;
         margin-bottom: 8px !important;
@@ -23,7 +33,7 @@ st.markdown("""
         cursor: pointer;
     }
     
-    /* 2. 모바일 화면 (화면 폭 768px 이하) 전용 반응형 스타일 */
+    /* 4. 모바일 화면 (화면 폭 768px 이하) 전용 반응형 스타일 */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 280px !important;
@@ -40,14 +50,14 @@ st.markdown("""
         .block-container {
             padding-left: 1rem !important;
             padding-right: 1rem !important;
-            padding-top: 1rem !important;
+            padding-top: 1.5rem !important;
         }
         h1 {
             font-size: 24px !important;
         }
     }
 
-    /* 3. 데스크탑 화면 (화면 폭 769px 이상) 전용 스타일 */
+    /* 5. 데스크탑 화면 (화면 폭 769px 이상) 전용 스타일 */
     @media (min-width: 769px) {
         [data-testid="stSidebar"] {
             min-width: 260px;
@@ -74,7 +84,7 @@ POSITION_OPTIONS = ["GK", "CB", "LB", "RB", "MF", "LW", "RW", "CF"]
 # ----------------------------------------------------
 def display_logo():
     logo_html = """
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 12px 0;">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 10px 0 20px 0;">
         <div style="color: #007bff; font-weight: 900; letter-spacing: 4px; font-size: 34px; font-family: sans-serif; line-height: 1.1;">SMC</div>
         <div style="color: #6c757d; font-weight: 700; letter-spacing: 4px; font-size: 11px; font-family: sans-serif; margin-top: 4px;">SUNGMUN COMPANY</div>
     </div>
