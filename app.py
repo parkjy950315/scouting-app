@@ -3,7 +3,6 @@ import pandas as pd
 import requests
 import io
 import re
-import os
 from datetime import datetime
 
 # 페이지 기본 설정
@@ -49,20 +48,19 @@ STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완�
 POSITION_OPTIONS = ["GK", "CB", "LB", "RB", "MF", "LW", "RW", "CF"]
 
 # ----------------------------------------------------
-# 🏢 회사 로고 불러오기 함수
+# 🏢 성문컴퍼니(SMC) 로고 HTML 렌더링 함수
 # ----------------------------------------------------
 def display_logo():
-    logo_filename = None
-    for name in ["logo.png", "logo.jpg", "logo.jpeg", "SMC.JPG", "SMC.jpg", "SMC.png"]:
-        if os.path.exists(name):
-            logo_filename = name
-            break
-            
-    if logo_filename:
-        # 사이드바 상단 로고
-        st.sidebar.image(logo_filename, use_container_width=True)
-        # 메인 상단 로고
-        st.image(logo_filename, width=220)
+    logo_html = """
+    <div style="text-align: center; padding: 15px 0; background-color: transparent;">
+        <h1 style="color: #007bff; font-weight: 900; letter-spacing: 3px; margin: 0; font-size: 36px; font-family: sans-serif;">SMC</h1>
+        <p style="color: #6c757d; font-weight: 700; letter-spacing: 4px; margin: 4px 0 0 0; font-size: 11px; font-family: sans-serif;">SUNGMUN COMPANY</p>
+    </div>
+    """
+    # 사이드바 상단에 로고 삽입
+    st.sidebar.markdown(logo_html, unsafe_allow_html=True)
+    # 메인 화면 상단에 로고 삽입
+    st.markdown(logo_html, unsafe_allow_html=True)
 
 def calculate_age(born_date):
     if not born_date:
@@ -241,7 +239,7 @@ def generate_ai_scouting_summary(player):
 
 df = load_data()
 
-# 로고 출력
+# 로고 출력 실행
 display_logo()
 
 st.title("⚽ 선수 스카우팅 관리 시스템")
