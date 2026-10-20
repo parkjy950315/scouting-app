@@ -19,11 +19,10 @@ from reportlab.pdfbase.ttfonts import TTFont
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 🔤 PDF 한글 폰트 자동 등록 함수 (검은 네모 방지)
+# 🔤 PDF 한글 폰트 자동 등록 함수
 # ----------------------------------------------------
 def register_korean_font():
     font_path = "NanumGothic.ttf"
-    # 폰트 파일이 없으면 깃허브 오픈소스 저장소 등에서 무료 나눔고딕 폰트 다운로드
     if not os.path.exists(font_path):
         try:
             font_url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Regular.ttf"
@@ -37,7 +36,7 @@ def register_korean_font():
     if os.path.exists(font_path):
         pdfmetrics.registerFont(TTFont('NanumGothic', font_path))
         return 'NanumGothic'
-    return 'Helvetica' # 기본 fallback
+    return 'Helvetica'
 
 # ----------------------------------------------------
 # 📱 PC & 모바일 상단 여백 및 스타일 설정
@@ -290,59 +289,85 @@ def generate_ai_scouting_summary(player):
     return summary
 
 # ----------------------------------------------------
-# 📄 PDF 보고서 생성 함수 (한글 폰트 적용)
+# 📄 프리미엄 디자인 PDF 보고서 생성 함수
 # ----------------------------------------------------
 def generate_pdf_report(player_data):
     korean_font = register_korean_font()
     
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    doc = SimpleDocTemplate(
+        buffer, 
+        pagesize=A4, 
+        rightMargin=36, 
+        leftMargin=36, 
+        topMargin=36, 
+        bottomMargin=36
+    )
     story = []
     
-    # 한글 폰트가 지정된 ParagraphStyle 생성
-    title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=18, leading=22, alignment=1, textColor=colors.HexColor('#007bff'))
+    # 고급 스타일 정의
+    title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=20, leading=24, alignment=1, textColor=colors.HexColor('#003366'), fontName_bold=True)
     subtitle_style = ParagraphStyle('SubtitleStyle', fontName=korean_font, fontSize=10, leading=14, alignment=1, textColor=colors.HexColor('#6c757d'))
-    h2_style = ParagraphStyle('H2Style', fontName=korean_font, fontSize=12, leading=16, textColor=colors.HexColor('#111111'), spaceBefore=10, spaceAfter=5)
-    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9, leading=13, textColor=colors.HexColor('#333333'))
+    
+    section_heading = ParagraphStyle('SectionHeading', fontName=korean_font, fontSize=12, leading=16, textColor=colors.HexColor('#003366'), spaceBefore=12, spaceAfter=6, fontName_bold=True)
+    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, textColor=colors.HexColor('#222222'))
+    table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=9, leading=12, textColor=colors.HexColor('#555555'))
+    table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9.5, leading=13, textColor=colors.HexColor('#111111'))
 
-    story.append(Paragraph("SMC - SUNGMUN COMPANY", title_style))
-    story.append(Paragraph("Player Scouting Log & Performance Report", subtitle_style))
-    story.append(Spacer(1, 15))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#007bff'), spaceAfter=15))
+    # 헤더 타이틀
+    story.append(Paragraph("SMC — SUNGMUN COMPANY", title_style))
+    story.append(Paragraph("PROFESSIONAL PLAYER SCOUTING REPORT", subtitle_style))
+    story.append(Spacer(1, 10))
+    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#003366'), spaceAfter=15))
 
+    # 선수 프로필 정보 정리
     curr_team, past_team = parse_team_info(player_data.get('소속팀', ''))
     full_team = f"{curr_team} {past_team}".strip()
+    weight_val = f"{player_data.get('체중(kg)')}kg" if player_data.get('체중(kg)') else "미입력"
     
-    info_table_data = [
-        [Paragraph(f"<b>선수명</b>: {player_data.get('선수명', '-')}", body_style), Paragraph(f"<b>포지션/등번호</b>: {player_data.get('포지션', '-')} / {player_data.get('등번호', '-')}번", body_style)],
-        [Paragraph(f"<b>소속팀</b>: {full_team}", body_style), Paragraph(f"<b>진행상태</b>: {player_data.get('진행 상태', '-')}", body_style)],
-        [Paragraph(f"<b>생년월일(나이)</b>: {player_data.get('생년월일', '-')} ({player_data.get('만 나이', '-')})", body_style), Paragraph(f"<b>주발</b>: {player_data.get('주발', '-')}", body_style)],
-        [Paragraph(f"<b>피지컬</b>: {player_data.get('신장(cm)', '-')}cm / {player_data.get('체중(kg)', '-')}kg", body_style), Paragraph(f"<b>최근 업데이트</b>: {player_data.get('작성일자', '-')}", body_style)]
+    profile_data = [
+        [Paragraph("선수명", table_label), Paragraph(f"<b>{player_data.get('선수명', '-')}</b>", table_value), Paragraph("포지션 / 등번호", table_label), Paragraph(f"<b>{player_data.get('포지션', '-')} / {player_data.get('등번호', '-')}번</b>", table_value)],
+        [Paragraph("현재 소속팀", table_label), Paragraph(f"{curr_team}", table_value), Paragraph("진행 상태", table_label), Paragraph(f"<font color='#007bff'><b>{player_data.get('진행 상태', '-')}</b></font>", table_value)],
+        [Paragraph("소속팀 이력", table_label), Paragraph(f"{full_team}", table_value), Paragraph("주발", table_label), Paragraph(f"{player_data.get('주발', '-')}", table_value)],
+        [Paragraph("생년월일 (나이)", table_label), Paragraph(f"{player_data.get('생년월일', '-')} ({player_data.get('만 나이', '-')})", table_value), Paragraph("피지컬 (신장/체중)", table_label), Paragraph(f"{player_data.get('신장(cm)', '-')}cm / {weight_val}", table_value)],
+        [Paragraph("최근 작성일자", table_label), Paragraph(f"{player_data.get('작성일자', '-')}", table_value), Paragraph("보고서 발급일", table_label), Paragraph(datetime.today().strftime('%Y-%m-%d'), table_value)]
     ]
     
-    t = Table(info_table_data, colWidths=[260, 260])
-    t.setStyle(TableStyle([
+    profile_table = Table(profile_data, colWidths=[90, 180, 90, 180])
+    profile_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f8f9fa')),
-        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#dee2e6')),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e9ecef')),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#cbd3da')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e6ea')),
         ('PADDING', (0,0), (-1,-1), 6),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
-    story.append(t)
+    story.append(profile_table)
     story.append(Spacer(1, 15))
 
-    story.append(Paragraph("📌 장점 및 주요 특기 메모", h2_style))
-    pros_text = str(player_data.get('장점/특기', '작성 내용 없음')).replace('\n', '<br/>')
-    story.append(Paragraph(pros_text, body_style))
-    story.append(Spacer(1, 10))
+    # 공통 섹션 박스 생성 헬퍼 함수
+    def add_section_box(title, content, bg_color, border_color):
+        story.append(Paragraph(title, section_heading))
+        cleaned_content = str(content).replace('\n', '<br/>') if content and str(content).strip() else "작성된 관찰 내용이 없습니다."
+        content_table = Table([[Paragraph(cleaned_content, body_style)]], colWidths=[540])
+        content_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor(bg_color)),
+            ('BOX', (0,0), (-1,-1), 1, colors.HexColor(border_color)),
+            ('PADDING', (0,0), (-1,-1), 8),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ]))
+        story.append(content_table)
+        story.append(Spacer(1, 10))
 
-    story.append(Paragraph("⚠️ 보완점 및 약점 메모", h2_style))
-    cons_text = str(player_data.get('보완점/단점', '작성 내용 없음')).replace('\n', '<br/>')
-    story.append(Paragraph(cons_text, body_style))
-    story.append(Spacer(1, 10))
+    # 각 관찰 영역 추가 (고급스러운 배경 컬러 적용)
+    add_section_box("📌 장점 및 주요 특기 (PROS)", player_data.get('장점/특기', ''), '#f1f8ff', '#bbe1fa')
+    add_section_box("⚠️ 보완점 및 약점 (CONS)", player_data.get('보완점/단점', ''), '#fffdf4', '#ffeeba')
+    add_section_box("📋 스카우터 종합 평가 및 코멘트 (OVERALL EVALUATION)", player_data.get('종합 평가', ''), '#f4f6f8', '#ced4da')
 
-    story.append(Paragraph("📋 스카우터 종합 평가 코멘트", h2_style))
-    overall_text = str(player_data.get('종합 평가', '작성 내용 없음')).replace('\n', '<br/>')
-    story.append(Paragraph(overall_text, body_style))
+    # 하단 푸터 텍스트 추가
+    story.append(Spacer(1, 10))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#ced4da'), spaceAfter=8))
+    footer_style = ParagraphStyle('FooterStyle', fontName=korean_font, fontSize=8, leading=10, alignment=1, textColor=colors.HexColor('#888888'))
+    story.append(Paragraph("CONFIDENTIAL — This scouting report is exclusively prepared for SUNGMUN COMPANY internal use.", footer_style))
 
     doc.build(story)
     buffer.seek(0)
