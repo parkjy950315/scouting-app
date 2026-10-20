@@ -181,11 +181,10 @@ df = load_data()
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 사이드바 설정 (새로고침 버튼)
+# 사이드바 설정
 # ----------------------------------------------------
 st.sidebar.title("📌 메뉴")
 
-# 사이드바 최상단에 새로고침 버튼 배치
 if st.sidebar.button("🔄 새로고침", use_container_width=True):
     st.rerun()
 
@@ -244,7 +243,7 @@ if menu == "선수 등록":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 리포트 조회 (표 클릭 선택형)
+# 2. 선수 검색 및 상세 리포트 조회
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 리포트 조회":
     st.header("🔍 관찰 선수 검색 및 상세 리포트 조회")
@@ -416,21 +415,65 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                             st.success("🎉 선수 정보와 추가 관찰 일지가 성공적으로 수정·저장되었습니다!")
 
 # ----------------------------------------------------
-# 4. 데이터 삭제
+# 4. 데이터 삭제 (다중 선택 및 삭제 전 확인 기능)
 # ----------------------------------------------------
 elif menu == "🗑️ 데이터 삭제":
     st.header("🗑️ 선수 데이터 삭제")
     if df.empty:
         st.info("삭제할 데이터가 없습니다.")
     else:
-        player_options = [f"{idx}번 | {row.get('선수명', '')}" for idx, row in df.iterrows()]
-        selected_option = st.selectbox("삭제할 선수 선택", player_options)
-        if selected_option and st.button("영구 삭제", type="primary"):
-            target_idx = int(selected_option.split("번 |")[0])
-            updated_df = df.drop(target_idx).reset_index(drop=True)
-            if save_data_to_sheet(updated_df):
-                st.success("선수 데이터가 영구 삭제되었습니다.")
-                st.rerun()
+        st.subheader("📋 삭제할 선수를 표에서 **여러 명 다중 선택**하세요")
+        
+        # 다중 선택 모드 활성화 (multi-row)
+        del_selection = st.dataframe(
+            df,
+            use_container_width=True,
+            selection_mode="multi-row",
+            on_select="rerun"
+        )
+        
+        del_selected_rows = del_selection.selection.rows if hasattr(del_selection, "selection") else []
+        
+        if del_selected_rows:
+            selected_count = len(del_selected_rows)
+            st.write("---")
+            
+            # 선택된 선수 목록 요약 표시
+            selected_names = [df.loc[idx, '선수명'] for idx in del_selected_rows]
+            st.warning(f"⚠️ 선택된 선수 총 **{selected_count}명**: {', '.join(selected_names)}")
+            
+            # 세션 상태에 삭제 확인 단계 저장
+            confirm_key = "confirm_delete_mode"
+            if confirm_key not in st.session_state:
+                st.session_state[confirm_key] = False
+            
+            if not st.session_state[confirm_key]:
+                if st.button(f"🗑️ 선택한 {selected_count명의 데이터} 영구 삭제하기", type="primary", use_container_width=True):
+                    st.session_state[confirm_key] = True
+                    st.rerun()
+            else:
+                # 삭제 전 최종 되묻기 컨펌 창
+                st.error(f"🚨 **정말로 총 {selected_count}명의 데이터를 삭제하시겠습니까?** 이 작업은 되돌릴 수 없습니다!")
+                
+                c_yes, c_no = st.columns(2)
+                with c_yes:
+                    if st.button("✅ 예, 삭제합니다", type="primary", use_container_width=True):
+                        with st.spinner("구글 시트에서 선택된 데이터를 영구 삭제하는 중..."):
+                            updated_df = df.drop(del_selected_rows).reset_index(drop=True)
+                            if save_data_to_sheet(updated_df):
+                                st.session_state[confirm_key] = False
+                                st.success(f"총 {selected_count}명의 선수 데이터가 성공적으로 영구 삭제되었습니다!")
+                                st.rerun()
+                with c_no:
+                    if st.button("❌ 아니오 (취소)", use_container_width=True):
+                        st.session_state[confirm_key] = False
+                        st.rerun()
+        else:
+            # 선택이 바뀌면 컨펌 상태 초기화
+            if "confirm_delete_mode" in st.session_state:
+                st.session_state["confirm_delete_mode"] = False
+                
+            st.info("💡 위 목록 표에서 삭제하고 싶은 **선수 행들을 체크(다중 선택)** 하시면 삭제 버튼이 나타납니다.")
 
 # ----------------------------------------------------
 # 5. 엑셀 다운로드
