@@ -402,7 +402,8 @@ st.title("⚽ 선수 스카우팅 관리 시스템")
 # ----------------------------------------------------
 st.sidebar.title("📌 메뉴")
 
-if st.sidebar.button("🔄 새로고침", use_container_width=True):
+# 모바일에서 화면이 락 걸릴 때 언제든 탈출할 수 있는 안전망 새로고침 버튼
+if st.sidebar.button("🔄 앱 새로고침 (홈으로)", use_container_width=True, type="secondary"):
     st.rerun()
 
 st.sidebar.markdown("---")
@@ -562,15 +563,16 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
             with head_col2:
                 try:
                     pdf_bytes = generate_pdf_report(p)
+                    # 모바일에서 사파리/인앱브라우저가 곧바로 창을 띄워 잠기는 현상을 방지하는 MIME 타입 적용
                     st.download_button(
                         label="📄 관찰일지 PDF 다운로드",
                         data=pdf_bytes,
                         file_name=f"{p.get('선수명', '선수')}_스카우팅관찰일지.pdf",
-                        mime="application/octet-stream",  # 브라우저 강제 열기 방지 및 안전한 파일 다운로드 처리
+                        mime="application/octet-stream",
                         type="primary",
                         use_container_width=True
                     )
-                    st.caption("💡 모바일에서는 버튼을 누른 후 **'다운로드'** 또는 **'파일에 저장'**을 선택해 주세요.")
+                    st.caption("💡 아이폰/모바일 환경에서는 버튼을 누른 후 뜨는 메뉴에서 **'다운로드'** 또는 **'파일에 저장'**을 선택해 주세요.")
                 except Exception as e:
                     st.error(f"PDF 생성 중 오류 발생: {e}")
 
