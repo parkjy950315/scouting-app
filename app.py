@@ -253,17 +253,32 @@ if menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 리포트 조회 (필터 기능 추가)
+# 2. 선수 검색 및 상세 리포트 조회 (대시보드 & 키워드 검색 추가)
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 리포트 조회":
     st.header("🔍 관찰 선수 검색 및 상세 리포트 조회")
+    
     if df.empty:
         st.info("등록된 선수 데이터가 없습니다.")
     else:
-        # 검색 및 필터 입력 구역
+        # 1. 상단 실시간 대시보드 (Metrics 요약)
+        total_count = len(df)
+        watchlist_count = len(df[df["진행 상태"] == "관심 선수 (Watchlist)"])
+        observing_count = len(df[df["진행 상태"] == "집중 관찰 중"])
+        review_count = len(df[df["진행 상태"] == "계약 검토"])
+        
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("전체 등록 선수", f"{total_count}명")
+        m2.metric("관심 선수 (Watchlist)", f"{watchlist_count}명")
+        m3.metric("집중 관찰 중", f"{observing_count}명")
+        m4.metric("계약 검토", f"{review_count}명")
+        
+        st.write("---")
+        
+        # 2. 검색 및 필터 입력 구역
         f_col1, f_col2, f_col3 = st.columns([2, 1, 1])
         with f_col1:
-            search_term = st.text_input("🔍 선수명, 소속팀 또는 등번호 검색", "")
+            search_term = st.text_input("🔍 검색 (선수명, 소속팀, 등번호 또는 장점/키워드)", "")
         with f_col2:
             foot_filter = st.selectbox("⚽ 주발 필터", ["전체", "왼발", "오른발", "양발"])
         with f_col3:
@@ -271,23 +286,25 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         filtered_df = df.copy()
         
-        # 1. 텍스트 검색 적용
+        # 3. 통합 검색 적용 (선수명, 소속팀, 등번호 + 장점/특기, 종합평가 키워드 포함)
         if search_term:
             filtered_df = filtered_df[
-                filtered_df["선수명"].str.contains(search_term, na=False) | 
-                filtered_df["소속팀"].str.contains(search_term, na=False) |
-                filtered_df["등번호"].str.contains(search_term, na=False)
+                filtered_df["선수명"].str.contains(search_term, case=False, na=False) | 
+                filtered_df["소속팀"].str.contains(search_term, case=False, na=False) |
+                filtered_df["등번호"].str.contains(search_term, case=False, na=False) |
+                filtered_df["장점/특기"].str.contains(search_term, case=False, na=False) |
+                filtered_df["종합 평가"].str.contains(search_term, case=False, na=False)
             ]
             
-        # 2. 주발 필터 적용
+        # 4. 주발 필터 적용
         if foot_filter != "전체":
             filtered_df = filtered_df[filtered_df["주발"] == foot_filter]
             
-        # 3. 진행 상태 필터 적용
+        # 5. 진행 상태 필터 적용
         if status_filter != "전체":
             filtered_df = filtered_df[filtered_df["진행 상태"] == status_filter]
         
-        st.subheader("📋 선수 목록 (아래 표에서 선수를 클릭하여 선택하세요)")
+        st.subheader(f"📋 선수 목록 (검색 결과: 총 {len(filtered_df)}명)")
         
         selection = st.dataframe(
             filtered_df,
