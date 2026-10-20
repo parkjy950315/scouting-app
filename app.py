@@ -253,7 +253,7 @@ if menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 리포트 조회 (대시보드 & 키워드 검색 추가)
+# 2. 선수 검색 및 상세 리포트 조회 (실시간 검색 적용)
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 리포트 조회":
     st.header("🔍 관찰 선수 검색 및 상세 리포트 조회")
@@ -275,18 +275,18 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         st.write("---")
         
-        # 2. 검색 및 필터 입력 구역
+        # 2. 검색 및 필터 입력 구역 (key 지정으로 실시간 연동)
         f_col1, f_col2, f_col3 = st.columns([2, 1, 1])
         with f_col1:
-            search_term = st.text_input("🔍 검색 (선수명, 소속팀, 등번호 또는 장점/키워드)", "")
+            search_term = st.text_input("🔍 실시간 검색 (선수명, 소속팀, 등번호, 키워드)", key="live_search_input")
         with f_col2:
-            foot_filter = st.selectbox("⚽ 주발 필터", ["전체", "왼발", "오른발", "양발"])
+            foot_filter = st.selectbox("⚽ 주발 필터", ["전체", "왼발", "오른발", "양발"], key="live_foot_filter")
         with f_col3:
-            status_filter = st.selectbox("📌 진행 상태 필터", ["전체"] + STATUS_OPTIONS)
+            status_filter = st.selectbox("📌 진행 상태 필터", ["전체"] + STATUS_OPTIONS, key="live_status_filter")
         
         filtered_df = df.copy()
         
-        # 3. 통합 검색 적용 (선수명, 소속팀, 등번호 + 장점/특기, 종합평가 키워드 포함)
+        # 3. 실시간 통합 검색 적용
         if search_term:
             filtered_df = filtered_df[
                 filtered_df["선수명"].str.contains(search_term, case=False, na=False) | 
@@ -460,7 +460,7 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                             st.success("🎉 선수 정보와 추가 관찰 일지가 성공적으로 수정·저장되었습니다!")
 
 # ----------------------------------------------------
-# 4. 데이터 삭제
+# 4. 데이터 삭제 (다중 선택 및 삭제 확인 기능)
 # ----------------------------------------------------
 elif menu == "🗑️ 데이터 삭제":
     st.header("🗑️ 선수 데이터 삭제")
