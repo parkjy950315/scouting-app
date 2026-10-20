@@ -182,7 +182,7 @@ def load_data():
         df = pd.DataFrame(columns=expected_cols)
         
     for col in expected_cols:
-        df[col] = df[col].astype(str).str.replace('.0', '', regex=False).replace(['nan', 'None', 'nat', 'NaT', 'بت기', ''], '')
+        df[col] = df[col].astype(str).str.replace('.0', '', regex=False).replace(['nan', 'None', 'nat', 'NaT', ''], '')
             
     return df.astype(str)
 
@@ -649,7 +649,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                 else:
                     st.write("등록된 내용이 없습니다.")
                     
-                st.markdown("#### 📋 [스카우터 종합 평가 코멘트]")
+                st.markdown("#### 📋 [스카우터 종합 평가 및 코멘트]")
                 overall_text = p.get('종합 평가', '')
                 if pd.notna(overall_text) and str(overall_text).strip():
                     st.success(overall_text)
@@ -752,6 +752,7 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                         old_overall = str(target_row.get("종합 평가", ""))
                         
                         today_str = str(edit_date)
+                        # 🔥 장점, 단점과 마찬가지로 종합 평가도 기존 내용에 날짜별로 누적되도록 수정 완료
                         updated_pros = f"{old_pros}\n\n[{today_str} 관찰]\n{new_pros.strip()}".strip() if new_pros.strip() else old_pros
                         updated_cons = f"{old_cons}\n\n[{today_str} 관찰]\n{new_cons.strip()}".strip() if new_cons.strip() else old_cons
                         updated_overall = f"{old_overall}\n\n[{today_str} 관찰]\n{new_overall.strip()}".strip() if new_overall.strip() else old_overall
