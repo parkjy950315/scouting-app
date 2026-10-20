@@ -8,6 +8,23 @@ from datetime import datetime
 # 페이지 기본 설정
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
+# 표 전체 셀을 강제로 가운데 정렬하기 위한 CSS 스타일 주입
+st.markdown("""
+    <style>
+    /* Streamlit dataframe 내부 모든 셀과 헤더 가운데 정렬 강제 적용 */
+    [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th {
+        text-align: center !important;
+        justify-content: center !important;
+    }
+    div[data-testid="stDataFrame"] div[role="cell"] {
+        text-align: center !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # 🔗 1. 구글 시트 공유 링크
 GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1WSbVkwCr5Dv5hN3zU0Bw5tzzbNjMmlFyZiOCpG5DRjI/edit?usp=sharing"
 
@@ -269,7 +286,7 @@ if menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 리포트 조회 (연 나이 제외 및 가운데 정렬)
+# 2. 선수 검색 및 상세 리포트 조회
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 리포트 조회":
     st.header("🔍 관찰 선수 검색 및 상세 리포트 조회")
@@ -333,19 +350,13 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         display_df = filtered_df[display_cols].copy()
         display_df["소속팀"] = display_df["소속팀"].apply(lambda x: parse_team_info(x)[0])
         
-        # 검색어 형광펜 스타일링 함수
         def highlight_search(val):
             if search_term and search_term.strip() and str(search_term).lower() in str(val).lower():
                 return 'background-color: #fff9c4; color: #000000; font-weight: bold;'
             return ''
 
         if not display_df.empty:
-            # 강제 가운데 정렬(set_properties) 및 형광펜 스타일 적용
-            styled_df = (
-                display_df.style
-                .set_properties(**{'text-align': 'center'})
-                .map(highlight_search)
-            )
+            styled_df = display_df.style.map(highlight_search)
             selection = st.dataframe(
                 styled_df,
                 use_container_width=True,
@@ -366,7 +377,6 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
             target_idx = filtered_df.index[selected_rows[0]]
             p = df.loc[target_idx]
             
-            # 현재 소속팀과 과거 이력 분리
             current_team_name, past_team_history = parse_team_info(p.get('소속팀', ''))
             
             st.write("---")
@@ -375,12 +385,11 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("현재 소속팀 / 등번호", f"{current_team_name} / {p.get('등번호', '-')}번")
             c2.metric("포지션 / 주발", f"{p.get('포지션', '-')} / {p.get('주발', '-')}")
-            c3.metric("나이", f"{p.get('만 나이', '-')}") # 연 나이 제거 후 만 나이만 깔끔하게 출력
+            c3.metric("나이", f"{p.get('만 나이', '-')}")
             
             weight_display = f"{p.get('체중(kg)')}kg" if p.get('체중(kg)') else "미입력"
             c4.metric("피지컬", f"{p.get('신장(cm)', '-')}cm / {weight_display}")
             
-            # 과거 소속 이력이 있을 경우만 상세 표기
             if past_team_history:
                 st.info(f"📜 **소속팀 이력**: {current_team_name} {past_team_history}")
                 
@@ -447,8 +456,6 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
             col1, col2 = st.columns(2)
             with col1:
                 edit_name = st.text_input("선수명", value=str(target_row.get("선수명", "")), key=f"edit_name_{target_idx}")
-                
-                # 소속팀 수정 (입력 칸에는 현재 소속팀 이름만 표시)
                 edit_team_input = st.text_input("소속팀 (팀이 바뀐 경우 새 팀명 입력)", value=current_t, key=f"edit_team_{target_idx}")
                 
                 cur_pos = str(target_row.get("포지션", "MF"))
