@@ -183,8 +183,6 @@ st.title("⚽ 선수 스카우팅 관리 시스템")
 
 menu = st.sidebar.radio("메뉴 선택", ["선수 등록", "🔍 선수 검색 및 리포트 조회", "✏️ 선수 정보/일지 수정 및 추가", "🗑️ 데이터 삭제", "📊 엑셀 다운로드"])
 
-if "reg_num" not in st.session_state: st.session_state.reg_num = 0
-
 # ----------------------------------------------------
 # 1. 선수 등록
 # ----------------------------------------------------
@@ -198,14 +196,8 @@ if menu == "선수 등록":
         position = st.text_input("포지션 (예: FW, CAM, CB)", key="reg_pos_input")
         status = st.selectbox("진행 상태", STATUS_OPTIONS)
         
-        st.write("---")
-        st.write("**등번호 선택 (버튼 클릭)**")
-        b_col1, b_col2, b_col3 = st.columns([1, 2, 1])
-        if b_col1.button("➖ 감소", key="num_minus"):
-            if st.session_state.reg_num > 0: st.session_state.reg_num -= 1
-        b_col2.subheader(f"No. {st.session_state.reg_num}" if st.session_state.reg_num > 0 else "미입력 (0)")
-        if b_col3.button("➕ 증가", key="num_plus"):
-            if st.session_state.reg_num < 99: st.session_state.reg_num += 1
+        back_num_options = [""] + [str(i) for i in range(1, 100)]
+        back_num_val = st.selectbox("등번호", options=back_num_options, index=0, placeholder="등번호 선택")
 
     with col2:
         birth_date = st.date_input("생년월일 선택*", value=datetime(2005, 1, 1), min_value=datetime(1980, 1, 1), max_value=datetime.today())
@@ -215,9 +207,8 @@ if menu == "선수 등록":
         date = st.date_input("관찰/작성일자", value=datetime.today())
         
         st.write("---")
-        # 신장/체중 선택형 (숫자 직접 입력 또는 선택 가능)
-        height_val = st.selectbox("신장 (cm)", options=[str(h) for h in range(150, 205)] + [""], index=25, placeholder="선택 또는 입력")
-        weight_val = st.selectbox("체중 (kg)", options=[""] + [str(w) for w in range(50, 105)], index=0, placeholder="선택 또는 입력")
+        height_val = st.selectbox("신장 (cm)", options=[str(h) for h in range(150, 205)] + [""], index=25, placeholder="신장 선택")
+        weight_val = st.selectbox("체중 (kg)", options=[""] + [str(w) for w in range(50, 105)], index=0, placeholder="체중 선택")
 
     st.subheader("📝 관찰 리포트 / 첫 메모")
     pros = st.text_area("장점 및 주요 특기")
@@ -228,20 +219,19 @@ if menu == "선수 등록":
         if not name.strip():
             st.error("선수명은 필수 입력 항목입니다.")
         else:
-            num_str = str(st.session_state.reg_num) if st.session_state.reg_num > 0 else ""
-            
-            new_data = {
-                "선수명": name.strip(), "소속팀": team.strip(), "등번호": num_str,
-                "포지션": position.strip(), "생년월일": str(birth_date),
-                "만 나이": age_full_str, "연 나이": age_year_str, "주발": foot,
-                "신장(cm)": str(height_val), "체중(kg)": str(weight_val),
-                "진행 상태": status, "장점/특기": pros.strip(), "보완점/단점": cons.strip(),
-                "종합 평가": overall.strip(), "작성일자": str(date)
-            }
-            updated_df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
-            if save_data_to_sheet(updated_df):
-                st.success(f"'{name}' 선수의 데이터가 성공적으로 저장되었습니다!")
-                st.rerun()
+            with st.spinner("구글 시트에 데이터를 안전하게 저장하는 중..."):
+                new_data = {
+                    "선수명": name.strip(), "소속팀": team.strip(), "등번호": str(back_num_val),
+                    "포지션": position.strip(), "생년월일": str(birth_date),
+                    "만 나이": age_full_str, "연 나이": age_year_str, "주발": foot,
+                    "신장(cm)": str(height_val), "체중(kg)": str(weight_val),
+                    "진행 상태": status, "장점/특기": pros.strip(), "보완점/단점": cons.strip(),
+                    "종합 평가": overall.strip(), "작성일자": str(date)
+                }
+                updated_df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
+                if save_data_to_sheet(updated_df):
+                    st.success(f"🎉 '{name}' 선수의 데이터가 구글 시트에 성공적으로 저장되었습니다!")
+                    st.balloons() # 축하 효과 애니메이션 추가
 
 # ----------------------------------------------------
 # 2. 선수 검색 및 상세 리포트 조회
@@ -338,9 +328,6 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                 st.write("---")
                 st.markdown(f"**[종합 평가]**\n{target_row.get('종합 평가', '(없음)')}")
 
-            edit_num_key = f"edit_num_val_{target_idx}"
-            if edit_num_key not in st.session_state: st.session_state[edit_num_key] = safe_int(target_row.get("등번호", ""), 0)
-
             col1, col2 = st.columns(2)
             with col1:
                 edit_name = st.text_input("선수명", value=str(target_row.get("선수명", "")), key=f"edit_name_{target_idx}")
@@ -351,13 +338,10 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                 status_index = STATUS_OPTIONS.index(default_status) if default_status in STATUS_OPTIONS else 0
                 edit_status = st.selectbox("진행 상태", STATUS_OPTIONS, index=status_index, key=f"edit_status_{target_idx}")
                 
-                st.write("**등번호 선택**")
-                eb_1, eb_2, eb_3 = st.columns([1, 2, 1])
-                if eb_1.button("➖ 감소", key=f"eb_minus_{target_idx}"):
-                    if st.session_state[edit_num_key] > 0: st.session_state[edit_num_key] -= 1
-                eb_2.subheader(f"No. {st.session_state[edit_num_key]}" if st.session_state[edit_num_key] > 0 else "미입력 (0)")
-                if eb_3.button("➕ 증가", key=f"eb_plus_{target_idx}"):
-                    if st.session_state[edit_num_key] < 99: st.session_state[edit_num_key] += 1
+                cur_num = str(target_row.get("등번호", "")).strip()
+                back_num_options = [""] + [str(i) for i in range(1, 100)]
+                num_idx = back_num_options.index(cur_num) if cur_num in back_num_options else 0
+                edit_back_num = st.selectbox("등번호", options=back_num_options, index=num_idx, key=f"edit_num_{target_idx}")
 
             with col2:
                 default_birth = parse_date(target_row.get("생년월일"))
@@ -371,7 +355,6 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                 
                 edit_date = st.date_input("관찰 작성일자", value=datetime.today(), key=f"edit_date_{target_idx}")
                 
-                # 수정 화면 신장/체중 선택형
                 cur_h = safe_int(target_row.get("신장(cm)", ""), 175)
                 cur_w = safe_int(target_row.get("체중(kg)", ""), 70)
                 
@@ -392,32 +375,30 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                 if not edit_name.strip():
                     st.error("선수명은 필수입니다.")
                 else:
-                    old_pros = str(target_row.get("장점/특기", ""))
-                    old_cons = str(target_row.get("보완점/단점", ""))
-                    old_overall = str(target_row.get("종합 평가", ""))
-                    
-                    today_str = str(edit_date)
-                    updated_pros = f"{old_pros}\n\n[{today_str} 관찰]\n{new_pros.strip()}".strip() if new_pros.strip() else old_pros
-                    updated_cons = f"{old_cons}\n\n[{today_str} 관찰]\n{new_cons.strip()}".strip() if new_cons.strip() else old_cons
-                    updated_overall = f"{old_overall}\n\n[{today_str} 관찰]\n{new_overall.strip()}".strip() if new_overall.strip() else old_overall
+                    with st.spinner("변경사항을 구글 시트에 업데이트하는 중..."):
+                        old_pros = str(target_row.get("장점/특기", ""))
+                        old_cons = str(target_row.get("보완점/단점", ""))
+                        old_overall = str(target_row.get("종합 평가", ""))
+                        
+                        today_str = str(edit_date)
+                        updated_pros = f"{old_pros}\n\n[{today_str} 관찰]\n{new_pros.strip()}".strip() if new_pros.strip() else old_pros
+                        updated_cons = f"{old_cons}\n\n[{today_str} 관찰]\n{new_cons.strip()}".strip() if new_cons.strip() else old_cons
+                        updated_overall = f"{old_overall}\n\n[{today_str} 관찰]\n{new_overall.strip()}".strip() if new_overall.strip() else old_overall
 
-                    num_str = str(st.session_state[edit_num_key]) if st.session_state[edit_num_key] > 0 else ""
-
-                    records = df.to_dict('records')
-                    records[target_idx] = {
-                        "선수명": str(edit_name).strip(), "소속팀": str(edit_team).strip(),
-                        "등번호": str(num_str), "포지션": str(edit_position).strip(),
-                        "생년월일": str(edit_birth_date), "만 나이": str(age_full_str),
-                        "연 나이": str(age_year_str), "주발": str(edit_foot),
-                        "신장(cm)": str(edit_height), "체중(kg)": str(edit_weight),
-                        "진행 상태": str(edit_status), "장점/특기": str(updated_pros),
-                        "보완점/단점": str(updated_cons), "종합 평가": str(updated_overall),
-                        "작성일자": str(today_str)
-                    }
-                    updated_df = pd.DataFrame(records).astype(str)
-                    if save_data_to_sheet(updated_df):
-                        st.success("수정 완료되었습니다!")
-                        st.rerun()
+                        records = df.to_dict('records')
+                        records[target_idx] = {
+                            "선수명": str(edit_name).strip(), "소속팀": str(edit_team).strip(),
+                            "등번호": str(edit_back_num), "포지션": str(edit_position).strip(),
+                            "생년월일": str(edit_birth_date), "만 나이": str(age_full_str),
+                            "연 나이": str(age_year_str), "주발": str(edit_foot),
+                            "신장(cm)": str(edit_height), "체중(kg)": str(edit_weight),
+                            "진행 상태": str(edit_status), "장점/특기": str(updated_pros),
+                            "보완점/단점": str(updated_cons), "종합 평가": str(updated_overall),
+                            "작성일자": str(today_str)
+                        }
+                        updated_df = pd.DataFrame(records).astype(str)
+                        if save_data_to_sheet(updated_df):
+                            st.success("🎉 선수 정보와 추가 관찰 일지가 성공적으로 수정·저장되었습니다!")
 
 # ----------------------------------------------------
 # 4. 데이터 삭제
@@ -433,7 +414,7 @@ elif menu == "🗑️ 데이터 삭제":
             target_idx = int(selected_option.split("번 |")[0])
             updated_df = df.drop(target_idx).reset_index(drop=True)
             if save_data_to_sheet(updated_df):
-                st.success("삭제되었습니다!")
+                st.success("선수 데이터가 영구 삭제되었습니다.")
                 st.rerun()
 
 # ----------------------------------------------------
