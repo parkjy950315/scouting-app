@@ -328,17 +328,19 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         st.subheader(f"📋 선수 목록 (검색 결과: 총 {len(filtered_df)}명)")
         
-        # 표 출력 시 소속팀에는 '현재 소속팀'만 보이도록 가공한 디스플레이용 데이터프레임 생성
+        # 표 출력 시 소속팀에는 '현재 소속팀'만 보이도록 가공
         display_df = filtered_df.copy()
         display_df["소속팀"] = display_df["소속팀"].apply(lambda x: parse_team_info(x)[0])
         
-        def highlight_search(val):
+        # 표 전체 셀 글자 가운데 정렬 및 검색어 형광펜 스타일 적용 함수
+        def style_table(val):
+            style = 'text-align: center;'
             if search_term and search_term.strip() and str(search_term).lower() in str(val).lower():
-                return 'background-color: #fff9c4; color: #000000; font-weight: bold;'
-            return ''
+                style += ' background-color: #fff9c4; color: #000000; font-weight: bold;'
+            return style
 
-        if not display_df.empty and search_term:
-            styled_df = display_df.style.map(highlight_search)
+        if not display_df.empty:
+            styled_df = display_df.style.map(style_table)
             selection = st.dataframe(
                 styled_df,
                 use_container_width=True,
@@ -490,7 +492,6 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                     st.error("선수명은 필수입니다.")
                 else:
                     with st.spinner("변경사항을 구글 시트에 업데이트하는 중..."):
-                        # 소속팀 변경 시 이전 소속팀 히스토리 자동 누적
                         new_team_input = edit_team_input.strip()
                         raw_old_team = str(target_row.get("소속팀", "")).strip()
                         
