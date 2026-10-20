@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import io
 import re
+import os
 from datetime import datetime
 
 # 페이지 기본 설정
@@ -46,6 +47,22 @@ GOOGLE_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxTTvgJqNnmBxwuCGvT
 
 STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완료", "계약 검토", "보류 / 제외"]
 POSITION_OPTIONS = ["GK", "CB", "LB", "RB", "MF", "LW", "RW", "CF"]
+
+# ----------------------------------------------------
+# 🏢 회사 로고 불러오기 함수
+# ----------------------------------------------------
+def display_logo():
+    logo_filename = None
+    for name in ["logo.png", "logo.jpg", "logo.jpeg", "SMC.JPG", "SMC.jpg", "SMC.png"]:
+        if os.path.exists(name):
+            logo_filename = name
+            break
+            
+    if logo_filename:
+        # 사이드바 상단 로고
+        st.sidebar.image(logo_filename, use_container_width=True)
+        # 메인 상단 로고
+        st.image(logo_filename, width=220)
 
 def calculate_age(born_date):
     if not born_date:
@@ -223,6 +240,9 @@ def generate_ai_scouting_summary(player):
     return summary
 
 df = load_data()
+
+# 로고 출력
+display_logo()
 
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
