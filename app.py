@@ -6,26 +6,28 @@ import re
 import os
 from datetime import datetime
 
+# PDF 생성을 위한 reportlab 라이브러리
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.pdfgen import canvas
+
 # 페이지 기본 설정
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 상단 넉넉한 여백 확보 (Padding & Margin 최적화)
+# 📱 PC & 모바일 상단 여백 및 스타일 설정
 # ----------------------------------------------------
 st.markdown("""
     <style>
-    /* 1. 메인 컨테이너 상단 여백 대폭 확장 (스크롤 시 답답함 해소) */
     .block-container {
-        padding-top: 3.5rem !important;
+        padding-top: 3rem !important;
         padding-bottom: 3rem !important;
     }
-    
-    /* 2. 사이드바 최상단 여백 확보 */
     [data-testid="stSidebar"] > div:first-child {
-        padding-top: 3rem !important;
+        padding-top: 2.5rem !important;
     }
-
-    /* 3. 사이드바 메뉴 간격 및 라디오 버튼 폼 조절 */
     [data-testid="stSidebar"] .stRadio label {
         padding: 14px 18px !important;
         margin-bottom: 10px !important;
@@ -33,8 +35,6 @@ st.markdown("""
         background-color: rgba(255, 255, 255, 0.08);
         cursor: pointer;
     }
-    
-    /* 4. 모바일 화면 (화면 폭 768px 이하) 반응형 상세 여백 설정 */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 290px !important;
@@ -51,7 +51,7 @@ st.markdown("""
         .block-container {
             padding-left: 1.2rem !important;
             padding-right: 1.2rem !important;
-            padding-top: 2.5rem !important;
+            padding-top: 2rem !important;
         }
         h1 {
             font-size: 23px !important;
@@ -59,8 +59,6 @@ st.markdown("""
             margin-bottom: 20px !important;
         }
     }
-
-    /* 5. 데스크탑 화면 전용 여백 설정 */
     @media (min-width: 769px) {
         [data-testid="stSidebar"] {
             min-width: 260px;
@@ -83,11 +81,11 @@ STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완�
 POSITION_OPTIONS = ["GK", "CB", "LB", "RB", "MF", "LW", "RW", "CF"]
 
 # ----------------------------------------------------
-# 🏢 성문컴퍼니(SMC) 로고 HTML 여유있는 렌더링
+# 🏢 성문컴퍼니(SMC) 로고 HTML 렌더링
 # ----------------------------------------------------
 def display_logo():
     logo_html = """
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 10px 0 25px 0; margin-bottom: 10px;">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 10px 0 20px 0; margin-bottom: 10px;">
         <div style="color: #007bff; font-weight: 900; letter-spacing: 4px; font-size: 32px; font-family: sans-serif; line-height: 1.1;">SMC</div>
         <div style="color: #6c757d; font-weight: 700; letter-spacing: 4px; font-size: 11px; font-family: sans-serif; margin-top: 5px;">SUNGMUN COMPANY</div>
     </div>
@@ -126,12 +124,10 @@ def load_data():
     try:
         csv_url = get_csv_export_url(GOOGLE_SHEET_URL)
         df = pd.read_csv(csv_url, dtype=str)
-        
         for col in expected_cols:
             if col not in df.columns:
                 df[col] = ""
         df = df[expected_cols].fillna("")
-        
     except Exception:
         df = pd.DataFrame(columns=expected_cols)
         
@@ -193,82 +189,65 @@ def parse_team_info(team_str):
         return current_team, past_teams
     return team_str, ""
 
-# 메모 기반 플레이스타일 분석 및 요약 리포트 생성기
-def generate_ai_scouting_summary(player):
-    name = player.get('선수명', '미확인')
-    full_team_str = player.get('소속팀', '소속미상')
-    current_team, past_teams = parse_team_info(full_team_str)
-    team_display = f"{current_team} {past_teams}".strip()
+# ----------------------------------------------------
+# 📄 PDF 보고서 생성 함수 (reportlab 활용)
+# ----------------------------------------------------
+def generate_pdf_report(player_data):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    story = []
     
-    pos = player.get('포지션', '미정')
-    height = player.get('신장(cm)', '')
-    weight = player.get('체중(kg)', '')
-    foot = player.get('주발', '미확인')
-    age = player.get('만 나이', '미확인')
-    status = player.get('진행 상태', '관찰 중')
-    date_str = player.get('작성일자', '-')
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, leading=22, alignment=1, textColor=colors.HexColor('#007bff'))
+    subtitle_style = ParagraphStyle('SubtitleStyle', parent=styles['Normal'], fontSize=10, leading=14, alignment=1, textColor=colors.HexColor('#6c757d'))
+    h2_style = ParagraphStyle('H2Style', parent=styles['Heading2'], fontSize=12, leading=16, textColor=colors.HexColor('#111111'), spaceBefore=10, spaceAfter=5)
+    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontSize=9, leading=13, textColor=colors.HexColor('#333333'))
+
+    # 헤더 로고 텍스트
+    story.append(Paragraph("SMC - SUNGMUN COMPANY", title_style))
+    story.append(Paragraph("Player Scouting Log & Performance Report", subtitle_style))
+    story.append(Spacer(1, 15))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#007bff'), spaceAfter=15))
+
+    # 선수 프로필 표
+    curr_team, past_team = parse_team_info(player_data.get('소속팀', ''))
+    full_team = f"{curr_team} {past_team}".strip()
     
-    pros = str(player.get('장점/특기', '')).strip()
-    cons = str(player.get('보완점/단점', '')).strip()
-    overall = str(player.get('종합 평가', '')).strip()
+    info_table_data = [
+        [Paragraph(f"<b>선수명</b>: {player_data.get('선수명', '-')}", body_style), Paragraph(f"<b>포지션/등번호</b>: {player_data.get('포지션', '-')} / {player_data.get('등번호', '-')}번", body_style)],
+        [Paragraph(f"<b>소속팀</b>: {full_team}", body_style), Paragraph(f"<b>진행상태</b>: {player_data.get('진행 상태', '-')}", body_style)],
+        [Paragraph(f"<b>생년월일(나이)</b>: {player_data.get('생년월일', '-')} ({player_data.get('만 나이', '-')})", body_style), Paragraph(f"<b>주발</b>: {player_data.get('주발', '-')}", body_style)],
+        [Paragraph(f"<b>피지컬</b>: {player_data.get('신장(cm)', '-')}cm / {player_data.get('체중(kg)', '-')}kg", body_style), Paragraph(f"<b>최근 업데이트</b>: {player_data.get('작성일자', '-')}", body_style)]
+    ]
     
-    obs_count = len(re.findall(r'\[\d{4}-\d{2}-\d{2}\s*관찰\]', pros + cons + overall))
-    if obs_count == 0 and (pros or cons or overall):
-        obs_count = 1
-        
-    physical_info = f"{height}cm" if height else "신장 미입력"
-    if weight:
-        physical_info += f" / {weight}kg"
-        
-    combined_notes = (pros + " " + cons + " " + overall).lower()
-    
-    style_keywords = []
-    if any(k in combined_notes for k in ["빌드업", "패스", "시야", "전개", "킥"]):
-        style_keywords.append("• **패스 및 빌드업 성향**: 후방 또는 중원에서 정확한 킥과 시야를 바탕으로 공격 전개를 주도하는 플레이를 선호합니다.")
-    if any(k in combined_notes for k in ["스피드", "주력", "빠른", "돌파", "침투", "속도"]):
-        style_keywords.append("• **속도 및 기동력**: 뛰어난 주력과 순간 스피드를 활용해 측면 돌파나 뒷공간 침투에 강점을 보입니다.")
-    if any(k in combined_notes for k in ["피지컬", "경합", "몸싸움", "제공권", "대인", "수비"]):
-        style_keywords.append("• **피지컬 및 경합 능력**: 단단한 신체 조건을 바탕으로 한 대인 방어와 공중볼 경합에서 존재감을 드러냅니다.")
-    if any(k in combined_notes for k in ["활동량", "압박", "성실", "수비가담", "체력"]):
-        style_keywords.append("• **활동량 및 전술 이해도**: 경기 내내 성실한 움직임과 적극적인 압박 가담으로 팀에 기여하는 스타일입니다.")
-    if any(k in combined_notes for k in ["결정력", "슈팅", "골문", "마무리", "찬스"]):
-        style_keywords.append("• **결정력 및 파이널 서드 영향력**: 박스 안팎에서 위협적인 슈팅과 침착한 마무리를 보여줍니다.")
+    t = Table(info_table_data, colWidths=[260, 260])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f8f9fa')),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#dee2e6')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e9ecef')),
+        ('PADDING', (0,0), (-1,-1), 6),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 15))
 
-    if not style_keywords and (pros or overall):
-        style_keywords.append("• **종합 플레이 성향**: 작성된 관찰 메모를 바탕으로 볼 때, 해당 포지션에서 성실한 플레이와 기본기를 갖춘 자원입니다.")
-    
-    style_analysis_text = "\n".join(style_keywords) if style_keywords else "❌ *분석할 충분한 메모 데이터가 없습니다. 장점이나 평가를 더 기록해 주세요.*"
+    # 관찰일지 상세 영역
+    story.append(Paragraph("📌 장점 및 주요 특기 메모", h2_style))
+    pros_text = str(player_data.get('장점/특기', '작성 내용 없음')).replace('\n', '<br/>')
+    story.append(Paragraph(pros_text, body_style))
+    story.append(Spacer(1, 10))
 
-    summary = f"""
-### 📊 [{name} 선수 스카우팅 심층 분석 리포트]
+    story.append(Paragraph("⚠️ 보완점 및 약점 메모", h2_style))
+    cons_text = str(player_data.get('보완점/단점', '작성 내용 없음')).replace('\n', '<br/>')
+    story.append(Paragraph(cons_text, body_style))
+    story.append(Spacer(1, 10))
 
-#### 1. 기본 프로필 및 소속 이력
-- **소속팀**: {team_display}
-- **포지션 / 나이**: `{pos}` ({age} | 주발: `{foot}`)
-- **피지컬**: {physical_info}
-- **관리 상태**: 진행 상태 [`{status}`] | 총 관찰 기록 **{obs_count}회** (최근 작성: {date_str})
+    story.append(Paragraph("📋 스카우터 종합 평가 코멘트", h2_style))
+    overall_text = str(player_data.get('종합 평가', '작성 내용 없음')).replace('\n', '<br/>')
+    story.append(Paragraph(overall_text, body_style))
 
----
-
-#### 2. 🧠 메모 기반 AI 플레이스타일 분석
-{style_analysis_text}
-
----
-
-#### 3. 🌟 작성된 장점 및 특기 메모
-{f"```text\n{pros}\n```" if pros else "*(작성된 내용 없음)*"}
-
----
-
-#### 4. ⚠️ 작성된 보완점 및 약점 메모
-{f"```text\n{cons}\n```" if cons else "*(작성된 내용 없음)*"}
-
----
-
-#### 5. 📋 스카우터 종합 평가 및 코멘트
-{f"```text\n{overall}\n```" if overall else "*(작성된 내용 없음)*"}
-"""
-    return summary
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
 
 df = load_data()
 
@@ -278,7 +257,7 @@ display_logo()
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 사이드바 설정
+# 사이드바 설정 (엑셀 다운로드 메뉴 제거)
 # ----------------------------------------------------
 st.sidebar.title("📌 메뉴")
 
@@ -287,7 +266,8 @@ if st.sidebar.button("🔄 새로고침", use_container_width=True):
 
 st.sidebar.markdown("---")
 
-menu = st.sidebar.radio("이동할 메뉴", ["선수 등록", "🔍 선수 검색 및 리포트 조회", "✏️ 선수 정보/일지 수정 및 추가", "🗑️ 데이터 삭제", "📊 엑셀 다운로드"])
+# 엑셀 다운로드 메뉴 제거 후 4개 메뉴 구성
+menu = st.sidebar.radio("이동할 메뉴", ["선수 등록", "🔍 선수 검색 및 관찰일지 조회", "✏️ 선수 정보/일지 수정 및 추가", "🗑️ 데이터 삭제"])
 
 # ----------------------------------------------------
 # 1. 선수 등록
@@ -350,15 +330,15 @@ if menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 리포트 조회
+# 2. 선수 검색 및 상세 관찰일지 조회 & PDF 다운로드
 # ----------------------------------------------------
-elif menu == "🔍 선수 검색 및 리포트 조회":
-    st.header("🔍 관찰 선수 검색 및 상세 리포트 조회")
+elif menu == "🔍 선수 검색 및 관찰일지 조회":
+    st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
     
     if df.empty:
         st.info("등록된 선수 데이터가 없습니다.")
     else:
-        # 1. 상단 실시간 대시보드
+        # 상단 현황 대시보드
         total_count = len(df)
         watchlist_count = len(df[df["진행 상태"] == "관심 선수 (Watchlist)"])
         observing_count = len(df[df["진행 상태"] == "집중 관찰 중"])
@@ -372,7 +352,7 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         st.write("---")
         
-        # 2. 검색 및 필터 입력 구역
+        # 검색 및 필터 구역
         f_col1, f_col2, f_col3, f_col4 = st.columns([2, 1, 1, 1])
         with f_col1:
             search_term = st.text_input("🔍 검색 (선수명, 소속팀, 등번호, 키워드)", key="live_search_input")
@@ -385,7 +365,6 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         filtered_df = df.copy()
         
-        # 3. 통합 검색 적용
         if search_term:
             filtered_df = filtered_df[
                 filtered_df["선수명"].str.contains(search_term, case=False, na=False) | 
@@ -395,21 +374,15 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
                 filtered_df["종합 평가"].str.contains(search_term, case=False, na=False)
             ]
             
-        # 4. 포지션 필터 적용
         if position_filter != "전체":
             filtered_df = filtered_df[filtered_df["포지션"].str.strip() == position_filter]
-
-        # 5. 주발 필터 적용
         if foot_filter != "전체":
             filtered_df = filtered_df[filtered_df["주발"] == foot_filter]
-            
-        # 6. 진행 상태 필터 적용
         if status_filter != "전체":
             filtered_df = filtered_df[filtered_df["진행 상태"] == status_filter]
         
-        st.subheader(f"📋 선수 목록 (검색 결과: 총 {len(filtered_df)}명)")
+        st.subheader(f"📋 선수 목록 (클릭 시 하단에 관찰일지 표출)")
         
-        # 표 출력 시 '연 나이'를 제거하고 '소속팀'은 현재 소속팀만 보이게 가공
         display_cols = [c for c in filtered_df.columns if c != "연 나이"]
         display_df = filtered_df[display_cols].copy()
         display_df["소속팀"] = display_df["소속팀"].apply(lambda x: parse_team_info(x)[0])
@@ -444,8 +417,27 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
             current_team_name, past_team_history = parse_team_info(p.get('소속팀', ''))
             
             st.write("---")
-            st.markdown(f"### ⚽ [{p.get('진행 상태', '')}] {p.get('선수명', '')} 상세 프로필")
             
+            # 선수 상단 메인 프로필 및 PDF 다운로드 버튼 영역
+            head_col1, head_col2 = st.columns([3, 1])
+            with head_col1:
+                st.markdown(f"### ⚽ [{p.get('진행 상태', '')}] {p.get('선수명', '')} 상세 관찰일지")
+            with head_col2:
+                # PDF 파일 생성 및 다운로드 버튼
+                try:
+                    pdf_bytes = generate_pdf_report(p)
+                    st.download_button(
+                        label="📄 관찰일지 PDF 다운로드",
+                        data=pdf_bytes,
+                        file_name=f"{p.get('선수명', '선수')}_스카우팅관찰일지.pdf",
+                        mime="application/pdf",
+                        type="primary",
+                        use_container_width=True
+                    )
+                except Exception as e:
+                    st.error(f"PDF 생성 중 오류 발생: {e}")
+
+            # 카드형 기본 프로필
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("현재 소속팀 / 등번호", f"{current_team_name} / {p.get('등번호', '-')}번")
             c2.metric("포지션 / 주발", f"{p.get('포지션', '-')} / {p.get('주발', '-')}")
@@ -460,36 +452,33 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
             st.write(f"• **생년월일**: {p.get('생년월일', '-')} | **최근 업데이트**: {p.get('작성일자', '-')}")
             
             st.markdown("---")
-            
-            if st.button("🧠 메모 기반 플레이스타일 심층 분석 리포트 생성", type="primary", use_container_width=True):
-                with st.spinner("작성된 관찰 메모 분석 중..."):
-                    ai_report = generate_ai_scouting_summary(p)
-                    st.markdown(ai_report)
 
-            st.subheader("📚 관찰 리포트 및 평가 일지 (클릭해서 펼치기)")
+            # 일지 형태 기록 출력
+            st.subheader("📚 날짜별 관찰일지 및 누적 메모")
             
-            with st.expander("🌟 장점 및 주요 특기 보기", expanded=True):
+            with st.container():
+                st.markdown("#### 🌟 [장점 및 주요 특기 메모]")
                 pros_text = p.get('장점/특기', '')
                 if pd.notna(pros_text) and str(pros_text).strip():
                     st.info(pros_text)
                 else:
                     st.write("등록된 내용이 없습니다.")
                     
-            with st.expander("⚠️ 보완점 및 약점 보기", expanded=False):
+                st.markdown("#### ⚠️ [보완점 및 약점 메모]")
                 cons_text = p.get('보완점/단점', '')
                 if pd.notna(cons_text) and str(cons_text).strip():
                     st.warning(cons_text)
                 else:
                     st.write("등록된 내용이 없습니다.")
                     
-            with st.expander("📋 종합 평가 및 코멘트 보기", expanded=False):
+                st.markdown("#### 📋 [스카우터 종합 평가 코멘트]")
                 overall_text = p.get('종합 평가', '')
                 if pd.notna(overall_text) and str(overall_text).strip():
                     st.success(overall_text)
                 else:
                     st.write("등록된 내용이 없습니다.")
         else:
-            st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 상세 리포트가 아래에 바로 나타납니다.")
+            st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 관찰일지와 PDF 다운로드 버튼이 나타납니다.")
 
 # ----------------------------------------------------
 # 3. 선수 정보 수정 및 소속 이력 누적
@@ -659,14 +648,3 @@ elif menu == "🗑️ 데이터 삭제":
                 st.session_state["confirm_delete_mode"] = False
                 
             st.info("💡 위 목록 표에서 삭제하고 싶은 **선수 행들을 체크(다중 선택)** 하시면 삭제 버튼이 나타납니다.")
-
-# ----------------------------------------------------
-# 5. 엑셀 다운로드
-# ----------------------------------------------------
-elif menu == "📊 엑셀 다운로드":
-    st.header("📊 엑셀 다운로드")
-    if not df.empty:
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='스카우팅DB')
-        st.download_button("📥 다운로드", data=output.getvalue(), file_name='scouting_database.xlsx')
