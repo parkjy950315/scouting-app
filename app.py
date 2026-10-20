@@ -8,8 +8,11 @@ from datetime import datetime
 # 페이지 기본 설정
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
-# 🔗 1단계에서 복사한 구글 시트 공유 링크를 아래 큰따옴표 안에 넣어주세요!
+# 🔗 1. 기존 구글 시트 공유 링크
 GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1WSbVkwCr5Dv5hN3zU0Bw5tzzbNjMmlFyZiOCpG5DRjI/edit?usp=sharing"
+
+# 🔗 2. 1단계에서 얻은 구글 Apps Script 웹앱 URL을 아래 따옴표 안에 넣어주세요!
+GOOGLE_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyc5RUSDf7qGZtpV76zO3ojSuTQwlhWd8LIviGn-ay_iRc0OUffoMFVckDYDdrqFhx0/exec"
 
 STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완료", "계약 검토", "보류 / 제외"]
 
@@ -32,7 +35,6 @@ def parse_date(date_str):
         return datetime(2005, 1, 1)
 
 def get_csv_export_url(sheet_url):
-    # 구글 시트 웹 URL을 CSV 다운로드 전용 URL로 변환
     if "/edit" in sheet_url:
         return sheet_url.split("/edit")[0] + "/gviz/tq?tqx=out:csv"
     return sheet_url
@@ -61,9 +63,25 @@ def load_data():
     return df.astype(str)
 
 def save_data_to_sheet(df):
-    # 구글 시트 연동 웹앱 업데이터 (Streamlit Cloud 환경에서 구글 시트에 데이터 연동)
-    # 구글 웹앱 URL 연동 시 requests.post를 통해 구글 시트에 실시간 자동 쓰기가 수행됩니다.
-    st.session_state['data_cache'] = df.astype(str)
+    try:
+        # 데이터프레임을 리스트 구조(헤더 포함)로 변환
+        data_to_send = [df.columns.tolist()] + df.values.tolist()
+        
+        # 구글 웹앱으로 POST 요청 전송 (구글 시트에 수록)
+        if GOOGLE_WEBAPP_URL and "여기에" not in GOOGLE_WEBAPP_URL:
+            res = requests.post(GOOGLE_WEBAPP_URL, json=data_to_send)
+            if res.status_code == 200:
+                st.session_state['data_cache'] = df.astype(str)
+                return True
+            else:
+                st.error("구글 시트 저장 서버 응답 실패. 웹앱 URL을 확인해 주세요.")
+                return False
+        else:
+            st.warning("⚠️ 구글 웹앱 URL이 입력되지 않았습니다. app.py 상단 GOOGLE_WEBAPP_URL을 설정해 주세요.")
+            return False
+    except Exception as e:
+        st.error(f"저장 중 오류 발생: {e}")
+        return False
 
 def safe_int(val, default_val):
     try:
@@ -72,7 +90,6 @@ def safe_int(val, default_val):
     except:
         return default_val
 
-# 🤖 심화 데이터 분석 기반 스카우팅 총평 생성 함수 (기존 로직 동일 유지)
 def generate_ai_scouting_summary(player):
     name = player.get('선수명', '미확인')
     team = player.get('소속팀', '소속미상')
@@ -116,17 +133,17 @@ def generate_ai_scouting_summary(player):
 ### 📊 [스카우팅 심화 분석 리포트: {name}]
 
 #### 1. 선수 프로필 & 데이터 신뢰도
-* **인적 사항**: {name} ({team} / {pos}) | {age} | {foot}
-* **피지컬 조건**: {physical_info}
-* **역할 규정**: {tactical_role}
-* **데이터 누적 정도**: 총 **{obs_count}회**의 관찰일지 기록 보유 (진행 상태: `{status}`)
+- **인적 사항**: {name} ({team} / {pos}) | {age} | {foot}
+- **피지컬 조건**: {physical_info}
+- **역할 규정**: {tactical_role}
+- **데이터 누적 정도**: 총 **{obs_count}회**의 관찰일지 기록 보유 (진행 상태: `{status}`)
 
 ---
 
 #### 2. 기술적/전술적 강점 (Technical & Tactical Strengths)
 {pros_formatted}
 
-* **피지컬 & 전술 메커니즘**:
+- **피지컬 & 전술 메커니즘**:
   {foot}을 주로 활용하며, {pos} 포지션에서 요구되는 빌드업 및 대면 경합 상황에 강점을 보입니다.
 
 ---
@@ -134,15 +151,15 @@ def generate_ai_scouting_summary(player):
 #### 3. 개선 과제 및 위험 요인 (Areas for Development)
 {cons_formatted}
 
-* **체크 포인트**:
+- **체크 포인트**:
   고강도 압박 상황이나 경기 템포 유지 측면에서 상위 리그 적응을 위한 모니터링이 추가로 요구됩니다.
 
 ---
 
 #### 4. 스카우터 최종 평가 및 액션 플랜
-* **종합 코멘트 요약**: 
+- **종합 코멘트 요약**: 
   "{overall if overall else '현재 지속적인 폼 체크가 필요한 상태입니다.'}"
-* **추천 방향**:
+- **추천 방향**:
   **[{status}]** 단계를 유지하면서, 차기 관찰 경기에서는 특히 약점 영역으로 지적된 부분의 개선 여부와 전술적 이행 능력을 중점 검증할 것을 권장합니다.
 """
     return summary
@@ -226,10 +243,10 @@ if menu == "선수 등록":
                 "진행 상태": status, "장점/특기": pros.strip(), "보완점/단점": cons.strip(),
                 "종합 평가": overall.strip(), "작성일자": str(date)
             }
-            df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
-            save_data_to_sheet(df)
-            st.success(f"'{name}' 선수의 데이터가 저장되었습니다!")
-            st.rerun()
+            updated_df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
+            if save_data_to_sheet(updated_df):
+                st.success(f"'{name}' 선수의 데이터가 구글 시트에 성공적으로 저장되었습니다!")
+                st.rerun()
 
 # ----------------------------------------------------
 # 2. 선수 검색 및 상세 리포트 조회
@@ -415,10 +432,10 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                         "보완점/단점": str(updated_cons), "종합 평가": str(updated_overall),
                         "작성일자": str(today_str)
                     }
-                    df = pd.DataFrame(records).astype(str)
-                    save_data_to_sheet(df)
-                    st.success("수정 완료되었습니다!")
-                    st.rerun()
+                    updated_df = pd.DataFrame(records).astype(str)
+                    if save_data_to_sheet(updated_df):
+                        st.success("수정 완료되었습니다!")
+                        st.rerun()
 
 # ----------------------------------------------------
 # 4. 데이터 삭제
@@ -432,10 +449,10 @@ elif menu == "🗑️ 데이터 삭제":
         selected_option = st.selectbox("삭제할 선수 선택", player_options)
         if selected_option and st.button("영구 삭제", type="primary"):
             target_idx = int(selected_option.split("번 |")[0])
-            df = df.drop(target_idx).reset_index(drop=True)
-            save_data_to_sheet(df)
-            st.success("삭제되었습니다!")
-            st.rerun()
+            updated_df = df.drop(target_idx).reset_index(drop=True)
+            if save_data_to_sheet(updated_df):
+                st.success("삭제되었습니다!")
+                st.rerun()
 
 # ----------------------------------------------------
 # 5. 엑셀 다운로드
