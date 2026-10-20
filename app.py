@@ -289,7 +289,7 @@ def generate_ai_scouting_summary(player):
     return summary
 
 # ----------------------------------------------------
-# 📄 완벽한 칼각 정렬이 적용된 프리미엄 PDF 보고서 생성 함수
+# 📄 제목 시작 위치 완벽 일치 프리미엄 PDF 보고서 생성 함수
 # ----------------------------------------------------
 def generate_pdf_report(player_data):
     korean_font = register_korean_font()
@@ -305,16 +305,15 @@ def generate_pdf_report(player_data):
     )
     story = []
     
-    # 고급 스타일 정의 (왼쪽 들여쓰기 0, 여백 완전 고정)
+    # 고급 스타일 정의 (alignment=0: 강제 왼쪽 정렬, 들여쓰기 0으로 고정)
     title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=20, leading=24, alignment=1, textColor=colors.HexColor('#003366'))
     subtitle_style = ParagraphStyle('SubtitleStyle', fontName=korean_font, fontSize=10, leading=14, alignment=1, textColor=colors.HexColor('#6c757d'))
     
-    # 핵심 수정: leftIndent=0, firstLineIndent=0으로 제목이 완벽하게 맨 왼쪽 일직선상에서 시작되도록 고정
-    section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=10.5, leading=14, textColor=colors.HexColor('#ffffff'), leftIndent=0, firstLineIndent=0)
+    section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=10.5, leading=14, alignment=0, textColor=colors.HexColor('#ffffff'), leftIndent=0, firstLineIndent=0)
     
-    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, textColor=colors.HexColor('#222222'), leftIndent=0, firstLineIndent=0)
-    table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=9, leading=12, textColor=colors.HexColor('#555555'), leftIndent=0, firstLineIndent=0)
-    table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9.5, leading=13, textColor=colors.HexColor('#111111'), leftIndent=0, firstLineIndent=0)
+    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, alignment=0, textColor=colors.HexColor('#222222'), leftIndent=0, firstLineIndent=0)
+    table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=colors.HexColor('#555555'), leftIndent=0, firstLineIndent=0)
+    table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9.5, leading=13, alignment=0, textColor=colors.HexColor('#111111'), leftIndent=0, firstLineIndent=0)
 
     # 헤더 타이틀
     story.append(Paragraph("SMC — SUNGMUN COMPANY", title_style))
@@ -342,11 +341,12 @@ def generate_pdf_report(player_data):
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e6ea')),
         ('PADDING', (0,0), (-1,-1), 5),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
     ]))
     story.append(profile_table)
     story.append(Spacer(1, 15))
 
-    # 제목과 본문의 시작 위치와 패딩을 완벽하게 고정한 통합 섹션 박스 함수
+    # 모든 제목과 본문의 왼쪽 여백과 시작 위치를 완벽히 일치시키는 통합 섹션 박스 함수
     def add_unified_section_box(title, content, header_bg, body_bg, border_color):
         story.append(Spacer(1, 5))
         cleaned_content = str(content).replace('\n', '<br/>') if content and str(content).strip() else "작성된 관찰 내용이 없습니다."
@@ -363,9 +363,10 @@ def generate_pdf_report(player_data):
             ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(border_color)),
             ('TOPPADDING', (0,0), (-1,-1), 6),
             ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-            ('LEFTPADDING', (0,0), (-1,-1), 8),
-            ('RIGHTPADDING', (0,0), (-1,-1), 8),
+            ('LEFTPADDING', (0,0), (-1,-1), 10),  # 왼쪽 여백을 10으로 엄격 고정하여 칼각 정렬
+            ('RIGHTPADDING', (0,0), (-1,-1), 10),
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
         ]))
         story.append(section_table)
         story.append(Spacer(1, 10))
