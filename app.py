@@ -253,7 +253,7 @@ if menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 리포트 조회 (검색어 형광펜 스타일링 적용)
+# 2. 선수 검색 및 상세 리포트 조회 (형광펜 스타일링 수정 반영)
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 리포트 조회":
     st.header("🔍 관찰 선수 검색 및 상세 리포트 조회")
@@ -306,14 +306,14 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         st.subheader(f"📋 선수 목록 (검색 결과: 총 {len(filtered_df)}명)")
         
-        # 검색어가 있을 때 표 안에서 해당 검색어가 포함된 셀에 형광펜(노란색 배경) 효과 적용
+        # 검색어가 있을 때 표 안에서 해당 검색어가 포함된 셀에 형광펜(노란색 배경) 효과 적용 (Styler.map 사용)
         def highlight_search(val):
             if search_term and search_term.strip() and str(search_term).lower() in str(val).lower():
                 return 'background-color: #fff9c4; color: #000000; font-weight: bold;'
             return ''
 
         if not filtered_df.empty and search_term:
-            styled_df = filtered_df.style.applymap(highlight_search)
+            styled_df = filtered_df.style.map(highlight_search)
             selection = st.dataframe(
                 styled_df,
                 use_container_width=True,
