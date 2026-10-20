@@ -103,6 +103,7 @@ def safe_int(val, default_val):
     except:
         return default_val
 
+# 팩트 기반 AI 스카우팅 리포트 생성기 (없는 내용 지어내지 않도록 수정)
 def generate_ai_scouting_summary(player):
     name = player.get('선수명', '미확인')
     team = player.get('소속팀', '소속미상')
@@ -112,11 +113,13 @@ def generate_ai_scouting_summary(player):
     foot = player.get('주발', '미확인')
     age = player.get('만 나이', '미확인')
     status = player.get('진행 상태', '관찰 중')
+    date_str = player.get('작성일자', '-')
     
     pros = str(player.get('장점/특기', '')).strip()
     cons = str(player.get('보완점/단점', '')).strip()
     overall = str(player.get('종합 평가', '')).strip()
     
+    # 누적 관찰 일지 횟수 계산
     obs_count = len(re.findall(r'\[\d{4}-\d{2}-\d{2}\s*관찰\]', pros + cons + overall))
     if obs_count == 0 and (pros or cons or overall):
         obs_count = 1
@@ -125,55 +128,34 @@ def generate_ai_scouting_summary(player):
     if weight:
         physical_info += f" / {weight}kg"
         
-    pos_upper = pos.upper()
-    tactical_role = "필드 플레이어"
-    if any(p in pos_upper for p in ["GK", "골키퍼"]):
-        tactical_role = "최후방 빌드업 및 Shot Stopping 담당 골키퍼"
-    elif any(p in pos_upper for p in ["CB", "DF", "수비"]):
-        tactical_role = "후방 지역 대율 및 Defensive Duels 담당 센터백/수비수"
-    elif any(p in pos_upper for p in ["MF", "CM", "CDM", "CAM", "미드필더"]):
-        tactical_role = "중원 연결고리 및 Progressive Passes/Distribution 담당 미드필더"
-    elif any(p in pos_upper for p in ["FW", "ST", "RW", "LW", "공격"]):
-        tactical_role = "전방 침투 및 파이널 서드 마무리 담당 공격수"
-
-    pros_list = [p.strip() for p in pros.split('\n') if p.strip() and not p.strip().startswith('[')]
-    pros_formatted = "\n".join([f"  • {p}" for p in pros_list]) if pros_list else "  • 기록된 장점 항목이 없습니다."
-
-    cons_list = [c.strip() for c in cons.split('\n') if c.strip() and not c.strip().startswith('[')]
-    cons_formatted = "\n".join([f"  • {c}" for c in cons_list]) if cons_list else "  • 특별한 약점 항목이 보고되지 않았습니다."
+    # 작성된 내용만 팩트 기반으로 정리
+    pros_display = f"```text\n{pros}\n```" if pros else "❌ *작성된 장점 메모가 없습니다.*"
+    cons_display = f"```text\n{cons}\n```" if cons else "❌ *작성된 보완점 메모가 없습니다.*"
+    overall_display = f"```text\n{overall}\n```" if overall else "❌ *작성된 종합 코멘트가 없습니다.*"
 
     summary = f"""
-### 📊 [스카우팅 심화 분석 리포트: {name}]
+### 📊 [스카우팅 관찰 요약 리포트: {name}]
 
-#### 1. 선수 프로필 & 데이터 신뢰도
-- **인적 사항**: {name} ({team} / {pos}) | {age} | {foot}
+#### 1. 인적 사항 & 프로필
+- **기본 정보**: {name} ({team} / 포지션: `{pos}`)
+- **나이 / 주발**: {age} | `{foot}`
 - **피지컬 조건**: {physical_info}
-- **역할 규정**: {tactical_role}
-- **데이터 누적 정도**: 총 **{obs_count}회**의 관찰일지 기록 보유 (진행 상태: `{status}`)
+- **데이터 관리 상태**: 진행 상태 [`{status}`] | 관찰일지 **{obs_count}회** 기록됨 (최근 작성: {date_str})
 
 ---
 
-#### 2. 기술적/전술적 강점 (Technical & Tactical Strengths)
-{pros_formatted}
-
-- **피지컬 & 전술 메커니즘**:
-  {foot}을 주로 활용하며, {pos} 포지션에서 요구되는 빌드업 및 대면 경합 상황에 강점을 보입니다.
+#### 2. 관찰 기록: 장점 및 특기 (Technical & Tactical Strengths)
+{pros_display}
 
 ---
 
-#### 3. 개선 과제 및 위험 요인 (Areas for Development)
-{cons_formatted}
-
-- **체크 포인트**:
-  고강도 압박 상황이나 경기 템포 유지 측면에서 상위 리그 적응을 위한 모니터링이 추가로 요구됩니다.
+#### 3. 관찰 기록: 보완점 및 약점 (Areas for Development)
+{cons_display}
 
 ---
 
-#### 4. 스카우터 최종 평가 및 액션 플랜
-- **종합 코멘트 요약**: 
-  "{overall if overall else '현재 지속적인 폼 체크가 필요한 상태입니다.'}"
-- **추천 방향**:
-  **[{status}]** 단계를 유지하면서, 차기 관찰 경기에서는 특히 약점 영역으로 지적된 부분의 개선 여부와 전술적 이행 능력을 중점 검증할 것을 권장합니다.
+#### 4. 관찰 기록: 스카우터 종합 평가 및 코멘트
+{overall_display}
 """
     return summary
 
@@ -194,7 +176,7 @@ st.sidebar.markdown("---")
 menu = st.sidebar.radio("이동할 메뉴", ["선수 등록", "🔍 선수 검색 및 리포트 조회", "✏️ 선수 정보/일지 수정 및 추가", "🗑️ 데이터 삭제", "📊 엑셀 다운로드"])
 
 # ----------------------------------------------------
-# 1. 선수 등록 (포지션 셀렉트박스 적용)
+# 1. 선수 등록
 # ----------------------------------------------------
 if menu == "선수 등록":
     st.header("📋 신규 관찰 선수 등록")
@@ -254,7 +236,7 @@ if menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 리포트 조회 (포지션 필터 적용)
+# 2. 선수 검색 및 상세 리포트 조회
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 리포트 조회":
     st.header("🔍 관찰 선수 검색 및 상세 리포트 조회")
@@ -356,10 +338,9 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
             
             st.markdown("---")
             
-            if st.button("🤖 AI 팩트 기반 스카우팅 심화 리포트 생성", type="primary", use_container_width=True):
-                with st.spinner("누적 관찰 일지 및 피지컬 데이터 분석 중..."):
+            if st.button("📄 스카우팅 관찰 요약 리포트 생성", type="primary", use_container_width=True):
+                with st.spinner("누적 관찰 일지 불러오는 중..."):
                     ai_report = generate_ai_scouting_summary(p)
-                    st.success("심화 스카우팅 분석 완료!")
                     st.markdown(ai_report)
 
             st.subheader("📚 관찰 리포트 및 평가 일지 (클릭해서 펼치기)")
