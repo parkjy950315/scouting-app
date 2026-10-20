@@ -139,7 +139,7 @@ def get_csv_export_url(sheet_url):
         return sheet_url.split("/edit")[0] + "/gviz/tq?tqx=out:csv"
     return sheet_url
 
-# 캐시 방지 파라미터를 추가하여 항상 구글 시트의 최신 데이터를 실시간 로드
+# 🛡️ 구글 시트 데이터 로드 및 컬럼 완벽 매핑 함수 (캐시 우회 포함)
 def load_data():
     expected_cols = [
         "선수명", "소속팀", "등번호", "포지션", "생년월일", "만 나이", "연 나이", "주발", "신장(cm)", "체중(kg)",
@@ -152,16 +152,25 @@ def load_data():
         
         df = pd.read_csv(csv_url, dtype=str)
         
-        # 구글 시트의 다양한 컬럼명 변형을 표준 컬럼명으로 완벽히 매핑
+        # 구글 시트의 다양한 컬럼명 변형을 표준 컬럼명으로 강력하게 변환
         rename_map = {}
         for col in df.columns:
-            clean_col = str(col).strip().replace(" ", "")
-            if clean_col in ["종합평가", "종합평가코멘트", "코멘트", "종합평가(코멘트)", "오버롤"]:
+            clean_col = str(col).strip().replace(" ", "").lower()
+            if any(k in clean_col for k in ["종합평가", "코멘트", "오버롤", "평가"]):
                 rename_map[col] = "종합 평가"
-            elif clean_col in ["장점", "특기", "장점및특기", "장점특기"]:
+            elif any(k in clean_col for k in ["장점", "특기"]):
                 rename_map[col] = "장점/특기"
-            elif clean_col in ["보완점", "단점", "약점", "보완점및약점", "보완점단점"]:
+            elif any(k in clean_col for k in ["보완점", "단점", "약점"]):
                 rename_map[col] = "보완점/단점"
+            elif "선수" in clean_col:
+                rename_map[col] = "선수명"
+            elif "소속" in clean_col:
+                rename_map[col] = "소속팀"
+            elif "포지션" in clean_col:
+                rename_map[col] = "포지션"
+            elif "상태" in clean_col:
+                rename_map[col] = "진행 상태"
+                
         if rename_map:
             df = df.rename(columns=rename_map)
 
@@ -173,7 +182,7 @@ def load_data():
         df = pd.DataFrame(columns=expected_cols)
         
     for col in expected_cols:
-        df[col] = df[col].astype(str).str.replace('.0', '', regex=False).replace(['nan', 'None', 'nat', 'NaT', ''], '')
+        df[col] = df[col].astype(str).str.replace('.0', '', regex=False).replace(['nan', 'None', 'nat', 'NaT', 'بت기', ''], '')
             
     return df.astype(str)
 
@@ -640,10 +649,10 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                 else:
                     st.write("등록된 내용이 없습니다.")
                     
-                st.markdown("#### 📋 [스카우터 종합 평가 및 코멘트]")
+                st.markdown("#### 📋 [스카우터 종합 평가 코멘트]")
                 overall_text = p.get('종합 평가', '')
                 if pd.notna(overall_text) and str(overall_text).strip():
-                    st.success(overall_text) # 이제 종합 평가 내용이 화면에 정상 출력됩니다!
+                    st.success(overall_text)
                 else:
                     st.write("등록된 내용이 없습니다.")
         else:
