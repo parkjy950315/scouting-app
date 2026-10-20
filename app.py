@@ -424,7 +424,6 @@ elif menu == "🗑️ 데이터 삭제":
     else:
         st.subheader("📋 삭제할 선수를 표에서 **여러 명 다중 선택**하세요")
         
-        # 다중 선택 모드 활성화 (multi-row)
         del_selection = st.dataframe(
             df,
             use_container_width=True,
@@ -438,21 +437,18 @@ elif menu == "🗑️ 데이터 삭제":
             selected_count = len(del_selected_rows)
             st.write("---")
             
-            # 선택된 선수 목록 요약 표시
             selected_names = [df.loc[idx, '선수명'] for idx in del_selected_rows]
             st.warning(f"⚠️ 선택된 선수 총 **{selected_count}명**: {', '.join(selected_names)}")
             
-            # 세션 상태에 삭제 확인 단계 저장
             confirm_key = "confirm_delete_mode"
             if confirm_key not in st.session_state:
                 st.session_state[confirm_key] = False
             
             if not st.session_state[confirm_key]:
-                if st.button(f"🗑️ 선택한 {selected_count명의 데이터} 영구 삭제하기", type="primary", use_container_width=True):
+                if st.button(f"🗑️ 선택한 {selected_count}명 데이터 영구 삭제하기", type="primary", use_container_width=True):
                     st.session_state[confirm_key] = True
                     st.rerun()
             else:
-                # 삭제 전 최종 되묻기 컨펌 창
                 st.error(f"🚨 **정말로 총 {selected_count}명의 데이터를 삭제하시겠습니까?** 이 작업은 되돌릴 수 없습니다!")
                 
                 c_yes, c_no = st.columns(2)
@@ -469,7 +465,6 @@ elif menu == "🗑️ 데이터 삭제":
                         st.session_state[confirm_key] = False
                         st.rerun()
         else:
-            # 선택이 바뀌면 컨펌 상태 초기화
             if "confirm_delete_mode" in st.session_state:
                 st.session_state["confirm_delete_mode"] = False
                 
