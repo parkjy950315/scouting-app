@@ -47,18 +47,18 @@ def load_data():
     try:
         csv_url = get_csv_export_url(GOOGLE_SHEET_URL)
         df = pd.read_csv(csv_url, dtype=str)
-        df = df.fillna("")
+        
+        # 1. 불필요한 Unnamed 열들을 원천 차단하고 정확히 15개 열만 추출
+        for col in expected_cols:
+            if col not in df.columns:
+                df[col] = ""
+        df = df[expected_cols].fillna("")
+        
     except Exception:
         df = pd.DataFrame(columns=expected_cols)
         
     for col in expected_cols:
-        if col not in df.columns:
-            if col == "진행 상태":
-                df[col] = "관심 선수 (Watchlist)"
-            else:
-                df[col] = ""
-        else:
-            df[col] = df[col].astype(str).str.replace('.0', '', regex=False).replace(['nan', 'None', 'nat', 'NaT', ''], '')
+        df[col] = df[col].astype(str).str.replace('.0', '', regex=False).replace(['nan', 'None', 'nat', 'NaT', ''], '')
             
     return df.astype(str)
 
@@ -231,7 +231,7 @@ if menu == "선수 등록":
                 updated_df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
                 if save_data_to_sheet(updated_df):
                     st.success(f"🎉 '{name}' 선수의 데이터가 구글 시트에 성공적으로 저장되었습니다!")
-                    st.balloons() # 축하 효과 애니메이션 추가
+                    st.balloons()
 
 # ----------------------------------------------------
 # 2. 선수 검색 및 상세 리포트 조회
