@@ -8,10 +8,10 @@ from datetime import datetime
 # 페이지 기본 설정
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
-# 🔗 1. 기존 구글 시트 공유 링크
+# 🔗 1. 구글 시트 공유 링크
 GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1WSbVkwCr5Dv5hN3zU0Bw5tzzbNjMmlFyZiOCpG5DRjI/edit?usp=sharing"
 
-# 🔗 2. 1단계에서 얻은 구글 Apps Script 웹앱 URL을 아래 따옴표 안에 넣어주세요!
+# 🔗 2. 구글 Apps Script 웹앱 URL
 GOOGLE_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxTTvgJqNnmBxwuCGvT3agMEo0_0Fon0JGWdREyR7usEIu4Mfw9M1lq66njtr8S_cbP/exec"
 
 STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완료", "계약 검토", "보류 / 제외"]
@@ -64,20 +64,26 @@ def load_data():
 
 def save_data_to_sheet(df):
     try:
-        # 데이터프레임을 리스트 구조(헤더 포함)로 변환
-        data_to_send = [df.columns.tolist()] + df.values.tolist()
+        # 1. 모든 NaN/빈/숫자 형식을 문자열로 안전 치환 (JSON 에러 방지)
+        clean_df = df.fillna("").astype(str)
         
-        # 구글 웹앱으로 POST 요청 전송 (구글 시트에 수록)
+        # 2. 파이썬 리스트 구조로 변환
+        headers = [str(col) for col in clean_df.columns.tolist()]
+        rows = [[str(val) if pd.notna(val) and str(val).lower() != 'nan' else "" for val in row] for row in clean_df.values.tolist()]
+        
+        data_to_send = [headers] + rows
+        
+        # 3. 구글 웹앱으로 POST 전송
         if GOOGLE_WEBAPP_URL and "여기에" not in GOOGLE_WEBAPP_URL:
             res = requests.post(GOOGLE_WEBAPP_URL, json=data_to_send)
             if res.status_code == 200:
-                st.session_state['data_cache'] = df.astype(str)
+                st.session_state['data_cache'] = clean_df
                 return True
             else:
-                st.error("구글 시트 저장 서버 응답 실패. 웹앱 URL을 확인해 주세요.")
+                st.error("구글 시트 저장 서버 응답 실패. 웹앱 URL 및 권한 설정을 확인해 주세요.")
                 return False
         else:
-            st.warning("⚠️ 구글 웹앱 URL이 입력되지 않았습니다. app.py 상단 GOOGLE_WEBAPP_URL을 설정해 주세요.")
+            st.warning("⚠️ 구글 웹앱 URL이 설정되지 않았습니다.")
             return False
     except Exception as e:
         st.error(f"저장 중 오류 발생: {e}")
@@ -245,7 +251,7 @@ if menu == "선수 등록":
             }
             updated_df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
             if save_data_to_sheet(updated_df):
-                st.success(f"'{name}' 선수의 데이터가 구글 시트에 성공적으로 저장되었습니다!")
+                st.success(f"'{name}' 선수의 데이터가 성공적으로 저장되었습니다!")
                 st.rerun()
 
 # ----------------------------------------------------
