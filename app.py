@@ -103,10 +103,25 @@ def safe_int(val, default_val):
     except:
         return default_val
 
-# 메모 기반 플레이스타일 분석 및 소속 이력 추출 리포트 생성기
+# 소속팀 텍스트 분리 함수 (현재 소속팀 / 과거 소속팀 이력 분리)
+def parse_team_info(team_str):
+    if not team_str or pd.isna(team_str):
+        return "-", ""
+    team_str = str(team_str).strip()
+    if "(전:" in team_str:
+        parts = team_str.split("(전:")
+        current_team = parts[0].strip()
+        past_teams = "(전:" + parts[1]
+        return current_team, past_teams
+    return team_str, ""
+
+# 메모 기반 플레이스타일 분석 및 요약 리포트 생성기
 def generate_ai_scouting_summary(player):
     name = player.get('선수명', '미확인')
-    team = player.get('소속팀', '소속미상')
+    full_team_str = player.get('소속팀', '소속미상')
+    current_team, past_teams = parse_team_info(full_team_str)
+    team_display = f"{current_team} {past_teams}".strip()
+    
     pos = player.get('포지션', '미정')
     height = player.get('신장(cm)', '')
     weight = player.get('체중(kg)', '')
@@ -127,7 +142,6 @@ def generate_ai_scouting_summary(player):
     if weight:
         physical_info += f" / {weight}kg"
         
-    # 메모 내용을 바탕으로 한 플레이스타일 분석 문장 도출 (키워드 매칭 분석)
     combined_notes = (pros + " " + cons + " " + overall).lower()
     
     style_keywords = []
@@ -151,7 +165,8 @@ def generate_ai_scouting_summary(player):
 ### 📊 [{name} 선수 스카우팅 심층 분석 리포트]
 
 #### 1. 기본 프로필 및 소속 이력
-- **현재 소속 / 포지션**: {team} / `{pos}` ({age} | 주발: `{foot}`)
+- **소속팀**: {team_display}
+- **포지션 / 나이**: `{pos}` ({age} | 주발: `{foot}`)
 - **피지컬**: {physical_info}
 - **관리 상태**: 진행 상태 [`{status}`] | 총 관찰 기록 **{obs_count}회** (최근 작성: {date_str})
 
@@ -262,7 +277,7 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
     if df.empty:
         st.info("등록된 선수 데이터가 없습니다.")
     else:
-        # 1. 상단 실시간 대시보드 (Metrics 요약)
+        # 1. 상단 실시간 대시보드
         total_count = len(df)
         watchlist_count = len(df[df["진행 상태"] == "관심 선수 (Watchlist)"])
         observing_count = len(df[df["진행 상태"] == "집중 관찰 중"])
@@ -313,14 +328,17 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         st.subheader(f"📋 선수 목록 (검색 결과: 총 {len(filtered_df)}명)")
         
-        # 검색어가 있을 때 표 안에서 해당 검색어가 포함된 셀에 형광펜(노란색 배경) 효과 적용
+        # 표 출력 시 소속팀에는 '현재 소속팀'만 보이도록 가공한 디스플레이용 데이터프레임 생성
+        display_df = filtered_df.copy()
+        display_df["소속팀"] = display_df["소속팀"].apply(lambda x: parse_team_info(x)[0])
+        
         def highlight_search(val):
             if search_term and search_term.strip() and str(search_term).lower() in str(val).lower():
                 return 'background-color: #fff9c4; color: #000000; font-weight: bold;'
             return ''
 
-        if not filtered_df.empty and search_term:
-            styled_df = filtered_df.style.map(highlight_search)
+        if not display_df.empty and search_term:
+            styled_df = display_df.style.map(highlight_search)
             selection = st.dataframe(
                 styled_df,
                 use_container_width=True,
@@ -329,7 +347,7 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
             )
         else:
             selection = st.dataframe(
-                filtered_df,
+                display_df,
                 use_container_width=True,
                 selection_mode="single-row",
                 on_select="rerun"
@@ -341,17 +359,24 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
             target_idx = filtered_df.index[selected_rows[0]]
             p = df.loc[target_idx]
             
+            # 현재 소속팀과 과거 이력 분리
+            current_team_name, past_team_history = parse_team_info(p.get('소속팀', ''))
+            
             st.write("---")
             st.markdown(f"### ⚽ [{p.get('진행 상태', '')}] {p.get('선수명', '')} 상세 프로필")
             
             c1, c2, c3, c4 = st.columns(4)
-            c1.metric("소속팀 / 등번호", f"{p.get('소속팀', '-')} / {p.get('등번호', '-')}번")
+            c1.metric("현재 소속팀 / 등번호", f"{current_team_name} / {p.get('등번호', '-')}번")
             c2.metric("포지션 / 주발", f"{p.get('포지션', '-')} / {p.get('주발', '-')}")
             c3.metric("나이 (만/연)", f"{p.get('만 나이', '-')} ({p.get('연 나이', '-')})")
             
             weight_display = f"{p.get('체중(kg)')}kg" if p.get('체중(kg)') else "미입력"
             c4.metric("피지컬", f"{p.get('신장(cm)', '-')}cm / {weight_display}")
             
+            # 과거 소속 이력이 있을 경우만 상세 표기
+            if past_team_history:
+                st.info(f"📜 **소속팀 이력**: {current_team_name} {past_team_history}")
+                
             st.write(f"• **생년월일**: {p.get('생년월일', '-')} | **최근 업데이트**: {p.get('작성일자', '-')}")
             
             st.markdown("---")
@@ -394,15 +419,17 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
     if df.empty:
         st.info("수정할 선수 데이터가 없습니다.")
     else:
-        player_options = [f"{idx}번 | [{row.get('진행 상태', '')}] {row.get('선수명', '')} ({row.get('소속팀', '')})" for idx, row in df.iterrows()]
+        player_options = [f"{idx}번 | [{row.get('진행 상태', '')}] {parse_team_info(row.get('소속팀', ''))[0]} - {row.get('선수명', '')}" for idx, row in df.iterrows()]
         selected_option = st.selectbox("수정할 선수를 선택하세요", player_options)
         
         if selected_option:
             target_idx = int(selected_option.split("번 |")[0])
             target_row = df.loc[target_idx]
             
-            with st.expander("📖 현재까지 누적된 전체 관찰 기록 펼쳐보기", expanded=False):
-                st.markdown(f"**[현재 소속팀 및 이력]**\n{target_row.get('소속팀', '(없음)')}")
+            current_t, past_t = parse_team_info(target_row.get("소속팀", ""))
+            
+            with st.expander("📖 현재 소속팀 및 전체 누적 관찰 기록 펼쳐보기", expanded=False):
+                st.markdown(f"**[소속팀]** {current_t} {past_t}")
                 st.write("---")
                 st.markdown(f"**[장점/특기]**\n{target_row.get('장점/특기', '(없음)')}")
                 st.write("---")
@@ -414,9 +441,8 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
             with col1:
                 edit_name = st.text_input("선수명", value=str(target_row.get("선수명", "")), key=f"edit_name_{target_idx}")
                 
-                # 소속팀 수정 (이전 소속 이력 자동 누적 처리)
-                old_team = str(target_row.get("소속팀", "")).strip()
-                edit_team = st.text_input("새 소속팀 (변경 시 이전 소속 이력 자동 누적)", value=old_team, key=f"edit_team_{target_idx}")
+                # 소속팀 수정 (입력 칸에는 현재 소속팀 이름만 표시)
+                edit_team_input = st.text_input("소속팀 (팀이 바뀐 경우 새 팀명 입력)", value=current_t, key=f"edit_team_{target_idx}")
                 
                 cur_pos = str(target_row.get("포지션", "MF"))
                 pos_idx = POSITION_OPTIONS.index(cur_pos) if cur_pos in POSITION_OPTIONS else 4
@@ -464,16 +490,18 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                     st.error("선수명은 필수입니다.")
                 else:
                     with st.spinner("변경사항을 구글 시트에 업데이트하는 중..."):
-                        # 소속팀이 변경되었을 경우 기존 소속팀을 히스토리 형태로 누적
-                        final_team = edit_team.strip()
-                        if old_team and final_team and old_team != final_team:
-                            if "(전:" not in old_team:
-                                final_team = f"{final_team} (전: {old_team})"
+                        # 소속팀 변경 시 이전 소속팀 히스토리 자동 누적
+                        new_team_input = edit_team_input.strip()
+                        raw_old_team = str(target_row.get("소속팀", "")).strip()
+                        
+                        if current_t and new_team_input and current_t != new_team_input:
+                            if "(전:" not in raw_old_team:
+                                final_team_str = f"{new_team_input} (전: {current_t})"
                             else:
-                                # 이미 전 소속 이력이 있는 경우 최신 팀명과 병합
-                                base_old_team = old_team.split(" (전:")[0]
-                                history_part = old_team.split(" (전:")[1]
-                                final_team = f"{final_team} (전: {base_old_team}, {history_part}"
+                                history_part = raw_old_team.split("(전:")[1]
+                                final_team_str = f"{new_team_input} (전: {current_t}, {history_part}"
+                        else:
+                            final_team_str = raw_old_team if raw_old_team else new_team_input
 
                         old_pros = str(target_row.get("장점/특기", ""))
                         old_cons = str(target_row.get("보완점/단점", ""))
@@ -486,7 +514,7 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
 
                         records = df.to_dict('records')
                         records[target_idx] = {
-                            "선수명": str(edit_name).strip(), "소속팀": str(final_team),
+                            "선수명": str(edit_name).strip(), "소속팀": str(final_team_str),
                             "등번호": str(edit_back_num), "포지션": str(edit_position),
                             "생년월일": str(edit_birth_date), "만 나이": str(age_full_str),
                             "연 나이": str(age_year_str), "주발": str(edit_foot),
