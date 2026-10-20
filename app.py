@@ -139,19 +139,24 @@ def get_csv_export_url(sheet_url):
         return sheet_url.split("/edit")[0] + "/gviz/tq?tqx=out:csv"
     return sheet_url
 
+# 캐시 방지 파라미터를 추가하여 항상 구글 시트의 최신 데이터를 실시간 로드
 def load_data():
     expected_cols = [
         "선수명", "소속팀", "등번호", "포지션", "생년월일", "만 나이", "연 나이", "주발", "신장(cm)", "체중(kg)",
         "진행 상태", "장점/특기", "보완점/단점", "종합 평가", "작성일자"
     ]
     try:
-        csv_url = get_csv_export_url(GOOGLE_SHEET_URL)
+        base_csv_url = get_csv_export_url(GOOGLE_SHEET_URL)
+        # 타임스탬프를 붙여 브라우저 및 스트림릿 캐시 강제 우회 (실시간 반영 보장)
+        import time
+        csv_url = f"{base_csv_url}&t={int(time.time())}" if "?" in base_csv_url else f"{base_csv_url}?t={int(time.time())}"
+        
         df = pd.read_csv(csv_url, dtype=str)
         
         # 구글 시트의 다양한 컬럼명 변형을 표준 컬럼명으로 완벽히 매핑
         rename_map = {}
         for col in df.columns:
-            clean_col = col.strip().replace(" ", "")
+            clean_col = str(col).strip().replace(" ", "")
             if clean_col in ["종합평가", "종합평가코멘트", "코멘트", "종합평가(코멘트)", "오버롤"]:
                 rename_map[col] = "종합 평가"
             elif clean_col in ["장점", "특기", "장점및특기", "장점특기"]:
@@ -417,7 +422,7 @@ st.title("⚽ 선수 스카우팅 관리 시스템")
 # ----------------------------------------------------
 st.sidebar.title("📌 메뉴")
 
-if st.sidebar.button("🔄 앱 새로고침 (홈으로)", use_container_width=True, type="secondary"):
+if st.sidebar.button("🔄 앱 새로고침 (실시간 동기화)", use_container_width=True, type="secondary"):
     st.rerun()
 
 st.sidebar.markdown("---")
