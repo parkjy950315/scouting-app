@@ -8,19 +8,32 @@ from datetime import datetime
 # 페이지 기본 설정
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
-# 표 전체 셀을 강제로 가운데 정렬하기 위한 CSS 스타일 주입
+# 모바일 환경에서 사이드바 메뉴 터치 및 가독성 대폭 개선을 위한 CSS 스타일 주입
 st.markdown("""
     <style>
-    /* Streamlit dataframe 내부 모든 셀과 헤더 가운데 정렬 강제 적용 */
-    [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th {
-        text-align: center !important;
-        justify-content: center !important;
+    /* 사이드바 폭을 모바일에 맞게 넉넉히 확보 */
+    [data-testid="stSidebar"] {
+        min-width: 300px;
+        max-width: 360px;
     }
-    div[data-testid="stDataFrame"] div[role="cell"] {
-        text-align: center !important;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+    /* 사이드바 메뉴(라디오 버튼) 글자 크기를 크게 키우고 터치 영역(패딩)을 넓힘 */
+    [data-testid="stSidebar"] .stRadio label {
+        padding: 14px 18px !important;
+        margin-bottom: 10px !important;
+        border-radius: 10px;
+        background-color: rgba(255, 255, 255, 0.08);
+        cursor: pointer;
+    }
+    [data-testid="stSidebar"] .stRadio label p {
+        font-size: 17px !important;
+        font-weight: 600 !important;
+    }
+    /* 새로고침 등 사이드바 버튼 크기 및 터치 영역 확대 */
+    [data-testid="stSidebar"] button {
+        padding: 12px 18px !important;
+        font-size: 17px !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
     }
     </style>
 """, unsafe_allow_html=True)
