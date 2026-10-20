@@ -574,135 +574,159 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
             st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 관찰일지와 PDF 다운로드 버튼이 나타납니다.")
 
 # ----------------------------------------------------
-# 3. 선수 정보 수정 및 소속 이력 누적 (✨ UI 대폭 개선됨)
+# 3. 선수 정보 수정 및 소속 이력 누적 (✨ 표 클릭 선택 방식으로 개편)
 # ----------------------------------------------------
 elif menu == "✏️ 선수 정보/일지 수정 및 추가":
     st.header("✏️ 기존 선수 정보 수정 및 추가 관찰 일지 작성")
     if df.empty:
         st.info("수정할 선수 데이터가 없습니다.")
     else:
-        # 🔍 선수 검색 필터 박스 추가로 어지러움 해결
-        search_edit = st.text_input("🔍 수정할 선수 검색 (이름 또는 소속팀 입력)", key="edit_search_box")
+        st.subheader("📋 수정할 선수를 표에서 **클릭**하세요")
         
-        target_candidates = df.copy()
-        if search_edit.strip():
-            target_candidates = target_candidates[
-                target_candidates["선수명"].str.contains(search_edit, case=False, na=False) |
-                target_candidates["소속팀"].str.contains(search_edit, case=False, na=False)
+        # 검색 및 필터 박스 제공
+        s_col1, s_col2 = st.columns([2, 1])
+        with s_col1:
+            edit_search = st.text_input("🔍 선수 검색 (선수명, 소속팀, 등번호)", key="edit_grid_search")
+        with s_col2:
+            edit_pos_filter = st.selectbox("🛡️ 포지션 필터", ["전체"] + POSITION_OPTIONS, key="edit_grid_pos")
+            
+        edit_filtered_df = df.copy()
+        if edit_search.strip():
+            edit_filtered_df = edit_filtered_df[
+                edit_filtered_df["선수명"].str.contains(edit_search, case=False, na=False) |
+                edit_filtered_df["소속팀"].str.contains(edit_search, case=False, na=False) |
+                edit_filtered_df["등번호"].str.contains(edit_search, case=False, na=False)
             ]
+        if edit_pos_filter != "전체":
+            edit_filtered_df = edit_filtered_df[edit_filtered_df["포지션"].str.strip() == edit_pos_filter]
             
-        if target_candidates.empty:
-            st.warning("검색된 선수가 없습니다. 다른 검색어를 입력해 주세요.")
+        edit_display_cols = [c for c in edit_filtered_df.columns if c != "연 나이"]
+        edit_display_df = edit_filtered_df[edit_display_cols].copy()
+        edit_display_df["소속팀"] = edit_display_df["소속팀"].apply(lambda x: parse_team_info(x)[0])
+        
+        if not edit_display_df.empty:
+            edit_selection = st.dataframe(
+                edit_display_df,
+                use_container_width=True,
+                selection_mode="single-row",
+                on_select="rerun"
+            )
         else:
-            player_options = {}
-            for idx, row in target_candidates.iterrows():
-                curr_t, _ = parse_team_info(row.get('소속팀', ''))
-                label = f"[{row.get('진행 상태', '상태미정')}] {curr_t} - {row.get('선수명', '')} (등번호: {row.get('등번호', '-')})"
-                player_options[label] = idx
-                
-            selected_label = st.selectbox("🎯 수정할 선수를 선택하세요", options=list(player_options.keys()))
+            edit_selection = st.dataframe(
+                edit_display_df,
+                use_container_width=True,
+                selection_mode="single-row",
+                on_select="rerun"
+            )
             
-            if selected_label:
-                target_idx = player_options[selected_label]
-                target_row = df.loc[target_idx]
-                
-                current_t, past_t = parse_team_info(target_row.get("소속팀", ""))
-                
-                with st.expander(f"📖 [{target_row.get('선수명', '')}] 현재 기록 및 누적 일지 미리보기", expanded=False):
-                    st.markdown(f"**[소속팀]** {current_t} {past_t}")
-                    st.write("---")
-                    st.markdown(f"**[장점/특기]**\n{target_row.get('장점/특기', '(없음)')}")
-                    st.write("---")
-                    st.markdown(f"**[보완점/단점]**\n{target_row.get('보완점/단점', '(없음)')}")
-                    st.write("---")
-                    st.markdown(f"**[종합 평가]**\n{target_row.get('종합 평가', '(없음)')}")
+        edit_selected_rows = edit_selection.selection.rows if hasattr(edit_selection, "selection") else []
+        
+        if edit_selected_rows:
+            target_idx = edit_filtered_df.index[edit_selected_rows[0]]
+            target_row = df.loc[target_idx]
+            
+            current_t, past_t = parse_team_info(target_row.get("소속팀", ""))
+            
+            st.write("---")
+            st.markdown(f"### ✏️ [{target_row.get('선수명', '')}] 정보 및 관찰일지 수정")
+            
+            with st.expander(f"📖 [{target_row.get('선수명', '')}] 현재 기록 및 누적 일지 미리보기", expanded=False):
+                st.markdown(f"**[소속팀]** {current_t} {past_t}")
+                st.write("---")
+                st.markdown(f"**[장점/특기]**\n{target_row.get('장점/특기', '(없음)')}")
+                st.write("---")
+                st.markdown(f"**[보완점/단점]**\n{target_row.get('보완점/단점', '(없음)')}")
+                st.write("---")
+                st.markdown(f"**[종합 평가]**\n{target_row.get('종합 평가', '(없음)')}")
 
-                col1, col2 = st.columns(2)
-                with col1:
-                    edit_name = st.text_input("선수명", value=str(target_row.get("선수명", "")), key=f"edit_name_{target_idx}")
-                    edit_team_input = st.text_input("소속팀 (팀이 바뀐 경우 새 팀명 입력)", value=current_t, key=f"edit_team_{target_idx}")
-                    
-                    cur_pos = str(target_row.get("포지션", "MF"))
-                    pos_idx = POSITION_OPTIONS.index(cur_pos) if cur_pos in POSITION_OPTIONS else 4
-                    edit_position = st.selectbox("포지션", POSITION_OPTIONS, index=pos_idx, key=f"edit_pos_{target_idx}")
-                    
-                    default_status = str(target_row.get("진행 상태", STATUS_OPTIONS[0]))
-                    status_index = STATUS_OPTIONS.index(default_status) if default_status in STATUS_OPTIONS else 0
-                    edit_status = st.selectbox("진행 상태", STATUS_OPTIONS, index=status_index, key=f"edit_status_{target_idx}")
-                    
-                    cur_num = str(target_row.get("등번호", "")).strip()
-                    back_num_options = [""] + [str(i) for i in range(1, 100)]
-                    num_idx = back_num_options.index(cur_num) if cur_num in back_num_options else 0
-                    edit_back_num = st.selectbox("등번호", options=back_num_options, index=num_idx, key=f"edit_num_{target_idx}")
-
-                with col2:
-                    default_birth = parse_date(target_row.get("생년월일"))
-                    edit_birth_date = st.date_input("생년월일", value=default_birth, key=f"edit_birth_{target_idx}")
-                    age_full_str, age_year_str = calculate_age(edit_birth_date)
-                    
-                    default_foot = str(target_row.get("주발", "오른발"))
-                    foot_options = ["오른발", "왼발", "양발"]
-                    foot_index = foot_options.index(default_foot) if default_foot in foot_options else 0
-                    edit_foot = st.selectbox("주발", foot_options, index=foot_index, key=f"edit_foot_{target_idx}")
-                    
-                    edit_date = st.date_input("관찰 작성일자", value=datetime.today(), key=f"edit_date_{target_idx}")
-                    
-                    cur_h = safe_int(target_row.get("신장(cm)", ""), 175)
-                    cur_w = safe_int(target_row.get("체중(kg)", ""), 70)
-                    
-                    h_options = [str(h) for h in range(150, 205)]
-                    h_idx = h_options.index(str(cur_h)) if str(cur_h) in h_options else 25
-                    edit_height = st.selectbox("신장 (cm)", options=h_options + [""], index=h_idx, key=f"edit_h_{target_idx}")
-                    
-                    w_options = [str(w) for w in range(50, 105)]
-                    w_idx = w_options.index(str(cur_w)) if str(cur_w) in w_options else 20
-                    edit_weight = st.selectbox("체중 (kg)", options=[""] + w_options, index=w_idx + 1 if str(cur_w) in w_options else 0, key=f"edit_w_{target_idx}")
-
-                st.subheader("➕ 오늘 관찰한 내용 추가 입력 (누적 기록)")
-                new_pros = st.text_area("새 관찰 장점", key=f"new_pros_{target_idx}")
-                new_cons = st.text_area("새로 관찰한 보완점", key=f"new_cons_{target_idx}")
-                new_overall = st.text_area("새로 관찰한 종합 평가", key=f"new_overall_{target_idx}")
+            col1, col2 = st.columns(2)
+            with col1:
+                edit_name = st.text_input("선수명", value=str(target_row.get("선수명", "")), key=f"edit_name_{target_idx}")
+                edit_team_input = st.text_input("소속팀 (팀이 바뀐 경우 새 팀명 입력)", value=current_t, key=f"edit_team_{target_idx}")
                 
-                if st.button("🔄 변경사항 및 추가 일지 저장하기", type="primary", use_container_width=True, key=f"btn_save_{target_idx}"):
-                    if not edit_name.strip():
-                        st.error("선수명은 필수입니다.")
-                    else:
-                        with st.spinner("변경사항을 구글 시트에 업데이트하는 중..."):
-                            new_team_input = edit_team_input.strip()
-                            raw_old_team = str(target_row.get("소속팀", "")).strip()
-                            
-                            if current_t and new_team_input and current_t != new_team_input:
-                                if "(전:" not in raw_old_team:
-                                    final_team_str = f"{new_team_input} (전: {current_t})"
-                                else:
-                                    history_part = raw_old_team.split("(전:")[1]
-                                    final_team_str = f"{new_team_input} (전: {current_t}, {history_part}"
+                cur_pos = str(target_row.get("포지션", "MF"))
+                pos_idx = POSITION_OPTIONS.index(cur_pos) if cur_pos in POSITION_OPTIONS else 4
+                edit_position = st.selectbox("포지션", POSITION_OPTIONS, index=pos_idx, key=f"edit_pos_{target_idx}")
+                
+                default_status = str(target_row.get("진행 상태", STATUS_OPTIONS[0]))
+                status_index = STATUS_OPTIONS.index(default_status) if default_status in STATUS_OPTIONS else 0
+                edit_status = st.selectbox("진행 상태", STATUS_OPTIONS, index=status_index, key=f"edit_status_{target_idx}")
+                
+                cur_num = str(target_row.get("등번호", "")).strip()
+                back_num_options = [""] + [str(i) for i in range(1, 100)]
+                num_idx = back_num_options.index(cur_num) if cur_num in back_num_options else 0
+                edit_back_num = st.selectbox("등번호", options=back_num_options, index=num_idx, key=f"edit_num_{target_idx}")
+
+            with col2:
+                default_birth = parse_date(target_row.get("생년월일"))
+                edit_birth_date = st.date_input("생년월일", value=default_birth, key=f"edit_birth_{target_idx}")
+                age_full_str, age_year_str = calculate_age(edit_birth_date)
+                
+                default_foot = str(target_row.get("주발", "오른발"))
+                foot_options = ["오른발", "왼발", "양발"]
+                foot_index = foot_options.index(default_foot) if default_foot in foot_options else 0
+                edit_foot = st.selectbox("주발", foot_options, index=foot_index, key=f"edit_foot_{target_idx}")
+                
+                edit_date = st.date_input("관찰 작성일자", value=datetime.today(), key=f"edit_date_{target_idx}")
+                
+                cur_h = safe_int(target_row.get("신장(cm)", ""), 175)
+                cur_w = safe_int(target_row.get("체중(kg)", ""), 70)
+                
+                h_options = [str(h) for h in range(150, 205)]
+                h_idx = h_options.index(str(cur_h)) if str(cur_h) in h_options else 25
+                edit_height = st.selectbox("신장 (cm)", options=h_options + [""], index=h_idx, key=f"edit_h_{target_idx}")
+                
+                w_options = [str(w) for w in range(50, 105)]
+                w_idx = w_options.index(str(cur_w)) if str(cur_w) in w_options else 20
+                edit_weight = st.selectbox("체중 (kg)", options=[""] + w_options, index=w_idx + 1 if str(cur_w) in w_options else 0, key=f"edit_w_{target_idx}")
+
+            st.subheader("➕ 오늘 관찰한 내용 추가 입력 (누적 기록)")
+            new_pros = st.text_area("새 관찰 장점", key=f"new_pros_{target_idx}")
+            new_cons = st.text_area("새로 관찰한 보완점", key=f"new_cons_{target_idx}")
+            new_overall = st.text_area("새로 관찰한 종합 평가", key=f"new_overall_{target_idx}")
+            
+            if st.button("🔄 변경사항 및 추가 일지 저장하기", type="primary", use_container_width=True, key=f"btn_save_{target_idx}"):
+                if not edit_name.strip():
+                    st.error("선수명은 필수입니다.")
+                else:
+                    with st.spinner("변경사항을 구글 시트에 업데이트하는 중..."):
+                        new_team_input = edit_team_input.strip()
+                        raw_old_team = str(target_row.get("소속팀", "")).strip()
+                        
+                        if current_t and new_team_input and current_t != new_team_input:
+                            if "(전:" not in raw_old_team:
+                                final_team_str = f"{new_team_input} (전: {current_t})"
                             else:
-                                final_team_str = raw_old_team if raw_old_team else new_team_input
+                                history_part = raw_old_team.split("(전:")[1]
+                                final_team_str = f"{new_team_input} (전: {current_t}, {history_part}"
+                        else:
+                            final_team_str = raw_old_team if raw_old_team else new_team_input
 
-                            old_pros = str(target_row.get("장점/특기", ""))
-                            old_cons = str(target_row.get("보완점/단점", ""))
-                            old_overall = str(target_row.get("종합 평가", ""))
-                            
-                            today_str = str(edit_date)
-                            updated_pros = f"{old_pros}\n\n[{today_str} 관찰]\n{new_pros.strip()}".strip() if new_pros.strip() else old_pros
-                            updated_cons = f"{old_cons}\n\n[{today_str} 관찰]\n{new_cons.strip()}".strip() if new_cons.strip() else old_cons
-                            updated_overall = f"{old_overall}\n\n[{today_str} 관찰]\n{new_overall.strip()}".strip() if new_overall.strip() else old_overall
+                        old_pros = str(target_row.get("장점/특기", ""))
+                        old_cons = str(target_row.get("보완점/단점", ""))
+                        old_overall = str(target_row.get("종합 평가", ""))
+                        
+                        today_str = str(edit_date)
+                        updated_pros = f"{old_pros}\n\n[{today_str} 관찰]\n{new_pros.strip()}".strip() if new_pros.strip() else old_pros
+                        updated_cons = f"{old_cons}\n\n[{today_str} 관찰]\n{new_cons.strip()}".strip() if new_cons.strip() else old_cons
+                        updated_overall = f"{old_overall}\n\n[{today_str} 관찰]\n{new_overall.strip()}".strip() if new_overall.strip() else old_overall
 
-                            records = df.to_dict('records')
-                            records[target_idx] = {
-                                "선수명": str(edit_name).strip(), "소속팀": str(final_team_str),
-                                "등번호": str(edit_back_num), "포지션": str(edit_position),
-                                "생년월일": str(edit_birth_date), "만 나이": str(age_full_str),
-                                "연 나이": str(age_year_str), "주발": str(edit_foot),
-                                "신장(cm)": str(edit_height), "체중(kg)": str(edit_weight),
-                                "진행 상태": str(edit_status), "장점/특기": str(updated_pros),
-                                "보완점/단점": str(updated_cons), "종합 평가": str(updated_overall),
-                                "작성일자": str(today_str)
-                            }
-                            updated_df = pd.DataFrame(records).astype(str)
-                            if save_data_to_sheet(updated_df):
-                                st.success("🎉 선수 정보와 소속 이력, 추가 관찰 일지가 성공적으로 수정·저장되었습니다!")
+                        records = df.to_dict('records')
+                        records[target_idx] = {
+                            "선수명": str(edit_name).strip(), "소속팀": str(final_team_str),
+                            "등번호": str(edit_back_num), "포지션": str(edit_position),
+                            "생년월일": str(edit_birth_date), "만 나이": str(age_full_str),
+                            "연 나이": str(age_year_str), "주발": str(edit_foot),
+                            "신장(cm)": str(edit_height), "체중(kg)": str(edit_weight),
+                            "진행 상태": str(edit_status), "장점/특기": str(updated_pros),
+                            "보완점/단점": str(updated_cons), "종합 평가": str(updated_overall),
+                            "작성일자": str(today_str)
+                        }
+                        updated_df = pd.DataFrame(records).astype(str)
+                        if save_data_to_sheet(updated_df):
+                            st.success("🎉 선수 정보와 소속 이력, 추가 관찰 일지가 성공적으로 수정·저장되었습니다!")
+        else:
+            st.info("💡 위 선수 목록 표에서 수정하고 싶은 **선수 행을 클릭**하시면 하단에 수정 폼이 나타납니다.")
 
 # ----------------------------------------------------
 # 4. 데이터 삭제
