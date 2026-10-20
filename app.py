@@ -289,7 +289,7 @@ def generate_ai_scouting_summary(player):
     return summary
 
 # ----------------------------------------------------
-# 📄 제목 시작 위치 완벽 일치 프리미엄 PDF 보고서 생성 함수
+# 📄 모던 카드 스타일 프리미엄 PDF 보고서 생성 함수
 # ----------------------------------------------------
 def generate_pdf_report(player_data):
     korean_font = register_korean_font()
@@ -305,82 +305,95 @@ def generate_pdf_report(player_data):
     )
     story = []
     
-    # 고급 스타일 정의 (alignment=0: 강제 왼쪽 정렬, 들여쓰기 0으로 고정)
-    title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=20, leading=24, alignment=1, textColor=colors.HexColor('#003366'))
-    subtitle_style = ParagraphStyle('SubtitleStyle', fontName=korean_font, fontSize=10, leading=14, alignment=1, textColor=colors.HexColor('#6c757d'))
-    
-    section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=10.5, leading=14, alignment=0, textColor=colors.HexColor('#ffffff'), leftIndent=0, firstLineIndent=0)
-    
-    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, alignment=0, textColor=colors.HexColor('#222222'), leftIndent=0, firstLineIndent=0)
-    table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=colors.HexColor('#555555'), leftIndent=0, firstLineIndent=0)
-    table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9.5, leading=13, alignment=0, textColor=colors.HexColor('#111111'), leftIndent=0, firstLineIndent=0)
+    # 모던 컬러 팔레트 정의
+    PRIMARY_COLOR = colors.HexColor('#0F172A')  # 딥 슬레이트 (네이비 계열)
+    ACCENT_BLUE = colors.HexColor('#2563EB')    # 로열 블루
+    TEXT_COLOR = colors.HexColor('#334155')     # 본문 차콜
+    BG_LIGHT = colors.HexColor('#F8FAFC')       # 연한 배경 그레이
+    BORDER_COLOR = colors.HexColor('#CBD5E1')   # 테두리 그레이
 
-    # 헤더 타이틀
-    story.append(Paragraph("SMC — SUNGMUN COMPANY", title_style))
-    story.append(Paragraph("PROFESSIONAL PLAYER SCOUTING REPORT", subtitle_style))
-    story.append(Spacer(1, 10))
-    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#003366'), spaceAfter=15))
+    # 폰트 스타일 (좌측 정렬 0, 들여쓰기 0으로 완벽 고정)
+    title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=16, leading=20, alignment=0, textColor=PRIMARY_COLOR)
+    header_date = ParagraphStyle('HeaderDate', fontName=korean_font, fontSize=8.5, leading=11, alignment=2, textColor=colors.HexColor('#64748B'))
+    
+    section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=10, leading=14, alignment=0, textColor=PRIMARY_COLOR, leftIndent=0, firstLineIndent=0)
+    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, alignment=0, textColor=TEXT_COLOR, leftIndent=0, firstLineIndent=0)
+    
+    table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=8.5, leading=11, alignment=0, textColor=colors.HexColor('#64748B'), leftIndent=0, firstLineIndent=0)
+    table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=PRIMARY_COLOR, leftIndent=0, firstLineIndent=0)
 
-    # 선수 프로필 정보 정리 (폭 합계 정확히 520포인트로 일치)
+    # 1. 상단 헤더 (회사명 및 발급일자)
+    header_data = [
+        [Paragraph("<b>SMC SCOUTING REPORT</b>", title_style), Paragraph(f"<b>발급일:</b> {datetime.today().strftime('%Y-%m-%d')}", header_date)]
+    ]
+    header_table = Table(header_data, colWidths=[350, 170])
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+    ]))
+    story.append(header_table)
+    story.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY_COLOR, spaceAfter=12))
+
+    # 2. 선수 프로필 정보 그리드
     curr_team, past_team = parse_team_info(player_data.get('소속팀', ''))
     full_team = f"{curr_team} {past_team}".strip()
     weight_val = f"{player_data.get('체중(kg)')}kg" if player_data.get('체중(kg)') else "미입력"
     
     profile_data = [
         [Paragraph("선수명", table_label), Paragraph(f"<b>{player_data.get('선수명', '-')}</b>", table_value), Paragraph("포지션 / 등번호", table_label), Paragraph(f"<b>{player_data.get('포지션', '-')} / {player_data.get('등번호', '-')}번</b>", table_value)],
-        [Paragraph("현재 소속팀", table_label), Paragraph(f"{curr_team}", table_value), Paragraph("진행 상태", table_label), Paragraph(f"<font color='#007bff'><b>{player_data.get('진행 상태', '-')}</b></font>", table_value)],
+        [Paragraph("현재 소속팀", table_label), Paragraph(f"{curr_team}", table_value), Paragraph("진행 상태", table_label), Paragraph(f"<font color='#2563EB'><b>{player_data.get('진행 상태', '-')}</b></font>", table_value)],
         [Paragraph("소속팀 이력", table_label), Paragraph(f"{full_team}", table_value), Paragraph("주발", table_label), Paragraph(f"{player_data.get('주발', '-')}", table_value)],
         [Paragraph("생년월일 (나이)", table_label), Paragraph(f"{player_data.get('생년월일', '-')} ({player_data.get('만 나이', '-')})", table_value), Paragraph("피지컬 (신장/체중)", table_label), Paragraph(f"{player_data.get('신장(cm)', '-')}cm / {weight_val}", table_value)],
-        [Paragraph("최근 작성일자", table_label), Paragraph(f"{player_data.get('작성일자', '-')}", table_value), Paragraph("보고서 발급일", table_label), Paragraph(datetime.today().strftime('%Y-%m-%d'), table_value)]
+        [Paragraph("최근 관찰일자", table_label), Paragraph(f"{player_data.get('작성일자', '-')}", table_value), Paragraph("문서 보안", table_label), Paragraph("CONFIDENTIAL", table_value)]
     ]
     
     profile_table = Table(profile_data, colWidths=[90, 170, 90, 170]) # 총합 520
     profile_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f8f9fa')),
-        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#cbd3da')),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e6ea')),
-        ('PADDING', (0,0), (-1,-1), 5),
+        ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT),
+        ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('PADDING', (0,0), (-1,-1), 6),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('ALIGN', (0,0), (-1,-1), 'LEFT'),
     ]))
     story.append(profile_table)
-    story.append(Spacer(1, 15))
+    story.append(Spacer(1, 14))
 
-    # 모든 제목과 본문의 왼쪽 여백과 시작 위치를 완벽히 일치시키는 통합 섹션 박스 함수
-    def add_unified_section_box(title, content, header_bg, body_bg, border_color):
-        story.append(Spacer(1, 5))
+    # 3. 모던 카드 섹션 빌더 (제목 칼각 및 포인트 하단 바 적용)
+    def add_modern_card(title, content, accent_hex):
+        story.append(Spacer(1, 4))
         cleaned_content = str(content).replace('\n', '<br/>') if content and str(content).strip() else "작성된 관찰 내용이 없습니다."
         
-        section_data = [
+        card_data = [
             [Paragraph(f"<b>{title}</b>", section_title_style)],
             [Paragraph(cleaned_content, body_style)]
         ]
-        section_table = Table(section_data, colWidths=[520])
-        section_table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor(header_bg)),
-            ('BACKGROUND', (0,1), (-1,1), colors.HexColor(body_bg)),
-            ('BOX', (0,0), (-1,-1), 1, colors.HexColor(border_color)),
-            ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(border_color)),
-            ('TOPPADDING', (0,0), (-1,-1), 6),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-            ('LEFTPADDING', (0,0), (-1,-1), 10),  # 왼쪽 여백을 10으로 엄격 고정하여 칼각 정렬
-            ('RIGHTPADDING', (0,0), (-1,-1), 10),
+        card_table = Table(card_data, colWidths=[520])
+        card_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F1F5F9')), # 통일된 연한 그레이 헤더 배경
+            ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#FFFFFF')),
+            ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR),
+            ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(accent_hex)), # 항목별 포인트 하단 라인
+            ('TOPPADDING', (0,0), (-1,-1), 7),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 7),
+            ('LEFTPADDING', (0,0), (-1,-1), 12),  # 좌측 패딩 12포인트로 완벽 고정
+            ('RIGHTPADDING', (0,0), (-1,-1), 12),
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
             ('ALIGN', (0,0), (-1,-1), 'LEFT'),
         ]))
-        story.append(section_table)
-        story.append(Spacer(1, 10))
+        story.append(card_table)
+        story.append(Spacer(1, 8))
 
-    # 각 관찰 영역 추가
-    add_unified_section_box("📌 장점 및 주요 특기 (PROS)", player_data.get('장점/특기', ''), '#003366', '#f1f8ff', '#003366')
-    add_unified_section_box("⚠️ 보완점 및 약점 (CONS)", player_data.get('보완점/단점', ''), '#b8860b', '#fffdf4', '#b8860b')
-    add_unified_section_box("📋 스카우터 종합 평가 및 코멘트 (OVERALL EVALUATION)", player_data.get('종합 평가', ''), '#495057', '#f4f6f8', '#495057')
+    # 각 관찰 영역 추가 (포인트 컬러: 블루, 앰버, 슬레이트)
+    add_modern_card("장점 및 주요 특기 (PROS)", player_data.get('장점/특기', ''), '#2563EB')
+    add_modern_card("보완점 및 약점 (CONS)", player_data.get('보완점/단점', ''), '#D97706')
+    add_modern_card("스카우터 종합 평가 및 코멘트 (OVERALL EVALUATION)", player_data.get('종합 평가', ''), '#475569')
 
-    # 하단 푸터 텍스트 추가
-    story.append(Spacer(1, 10))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#ced4da'), spaceAfter=8))
-    footer_style = ParagraphStyle('FooterStyle', fontName=korean_font, fontSize=8, leading=10, alignment=1, textColor=colors.HexColor('#888888'), leftIndent=0, firstLineIndent=0)
-    story.append(Paragraph("CONFIDENTIAL — This scouting report is exclusively prepared for SUNGMUN COMPANY internal use.", footer_style))
+    # 4. 하단 푸터
+    story.append(Spacer(1, 8))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER_COLOR, spaceAfter=6))
+    footer_style = ParagraphStyle('FooterStyle', fontName=korean_font, fontSize=8, leading=10, alignment=1, textColor=colors.HexColor('#94A3B8'), leftIndent=0, firstLineIndent=0)
+    story.append(Paragraph("SUNGMUN COMPANY — Professional Player Scouting Database System", footer_style))
 
     doc.build(story)
     buffer.seek(0)
