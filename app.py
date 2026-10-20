@@ -247,13 +247,13 @@ if menu == "선수 등록":
                         "진행 상태": status, "장점/특기": pros.strip(), "보완점/단점": cons.strip(),
                         "종합 평가": overall.strip(), "작성일자": str(date)
                     }
-                    updated_df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
+                    updated_df = pd.DataFrame([new_data]) if df.empty else pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
                     if save_data_to_sheet(updated_df):
                         st.session_state["reg_success_msg"] = f"🎉 '{name.strip()}' 선수의 데이터가 구글 시트에 성공적으로 저장되었습니다!"
                         st.rerun()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 리포트 조회 (형광펜 스타일링 수정 반영)
+# 2. 선수 검색 및 상세 리포트 조회 (포지션 필터 포함)
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 리포트 조회":
     st.header("🔍 관찰 선수 검색 및 상세 리포트 조회")
@@ -275,13 +275,18 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
         
         st.write("---")
         
-        # 2. 검색 및 필터 입력 구역
-        f_col1, f_col2, f_col3 = st.columns([2, 1, 1])
+        # 2. 검색 및 필터 입력 구역 (포지션 필터 추가)
+        f_col1, f_col2, f_col3, f_col4 = st.columns([2, 1, 1, 1])
         with f_col1:
             search_term = st.text_input("🔍 검색 (선수명, 소속팀, 등번호, 키워드)", key="live_search_input")
         with f_col2:
-            foot_filter = st.selectbox("⚽ 주발 필터", ["전체", "왼발", "오른발", "양발"], key="live_foot_filter")
+            # 등록된 포지션 목록을 추출하여 중복 제거 후 선택 옵션 구성
+            existing_positions = sorted(list(set(df["포지션"].dropna().str.strip().tolist()))) if "포지션" in df.columns else []
+            pos_options = ["전체"] + [p for p in existing_positions if p]
+            position_filter = st.selectbox("🛡️ 포지션 필터", pos_options, key="live_position_filter")
         with f_col3:
+            foot_filter = st.selectbox("⚽ 주발 필터", ["전체", "왼발", "오른발", "양발"], key="live_foot_filter")
+        with f_col4:
             status_filter = st.selectbox("📌 진행 상태 필터", ["전체"] + STATUS_OPTIONS, key="live_status_filter")
         
         filtered_df = df.copy()
@@ -296,17 +301,21 @@ elif menu == "🔍 선수 검색 및 리포트 조회":
                 filtered_df["종합 평가"].str.contains(search_term, case=False, na=False)
             ]
             
-        # 4. 주발 필터 적용
+        # 4. 포지션 필터 적용
+        if position_filter != "전체":
+            filtered_df = filtered_df[filtered_df["포지션"].str.strip() == position_filter]
+
+        # 5. 주발 필터 적용
         if foot_filter != "전체":
             filtered_df = filtered_df[filtered_df["주발"] == foot_filter]
             
-        # 5. 진행 상태 필터 적용
+        # 6. 진행 상태 필터 적용
         if status_filter != "전체":
             filtered_df = filtered_df[filtered_df["진행 상태"] == status_filter]
         
         st.subheader(f"📋 선수 목록 (검색 결과: 총 {len(filtered_df)}명)")
         
-        # 검색어가 있을 때 표 안에서 해당 검색어가 포함된 셀에 형광펜(노란색 배경) 효과 적용 (Styler.map 사용)
+        # 검색어가 있을 때 표 안에서 해당 검색어가 포함된 셀에 형광펜(노란색 배경) 효과 적용
         def highlight_search(val):
             if search_term and search_term.strip() and str(search_term).lower() in str(val).lower():
                 return 'background-color: #fff9c4; color: #000000; font-weight: bold;'
