@@ -64,18 +64,15 @@ def load_data():
 
 def save_data_to_sheet(df):
     try:
-        # 1. 오직 정확히 15개 열(A~O)만 강제로 추려내어 오른쪽(AS~BF 등)으로 밀리는 현상 원천 차단
         expected_cols = [
             "선수명", "소속팀", "등번호", "포지션", "생년월일", "만 나이", "연 나이", "주발", "신장(cm)", "체중(kg)",
             "진행 상태", "장점/특기", "보완점/단점", "종합 평가", "작성일자"
         ]
-        
         for col in expected_cols:
             if col not in df.columns:
                 df[col] = ""
         df_clean = df[expected_cols].fillna("").astype(str)
         
-        # 2. 헤더와 데이터 행을 정확히 15개 배열로 변환
         headers = expected_cols
         rows = []
         for _, row in df_clean.iterrows():
@@ -84,7 +81,6 @@ def save_data_to_sheet(df):
             
         data_to_send = [headers] + rows
         
-        # 3. 구글 웹앱으로 전송
         if GOOGLE_WEBAPP_URL and "여기에" not in GOOGLE_WEBAPP_URL:
             res = requests.post(GOOGLE_WEBAPP_URL, json=data_to_send)
             if res.status_code == 200:
@@ -188,8 +184,6 @@ st.title("⚽ 선수 스카우팅 관리 시스템")
 menu = st.sidebar.radio("메뉴 선택", ["선수 등록", "🔍 선수 검색 및 리포트 조회", "✏️ 선수 정보/일지 수정 및 추가", "🗑️ 데이터 삭제", "📊 엑셀 다운로드"])
 
 if "reg_num" not in st.session_state: st.session_state.reg_num = 0
-if "reg_height" not in st.session_state: st.session_state.reg_height = 175
-if "reg_weight" not in st.session_state: st.session_state.reg_weight = 0
 
 # ----------------------------------------------------
 # 1. 선수 등록
@@ -221,24 +215,9 @@ if menu == "선수 등록":
         date = st.date_input("관찰/작성일자", value=datetime.today())
         
         st.write("---")
-        st.write("**신장 (cm) 선택**")
-        h_col1, h_col2, h_col3 = st.columns([1, 2, 1])
-        if h_col1.button("➖ 1cm", key="h_minus"):
-            if st.session_state.reg_height > 130: st.session_state.reg_height -= 1
-        h_col2.subheader(f"{st.session_state.reg_height} cm")
-        if h_col3.button("➕ 1cm", key="h_plus"):
-            if st.session_state.reg_height < 220: st.session_state.reg_height += 1
-
-        st.write("**체중 (kg) 선택**")
-        w_col1, w_col2, w_col3 = st.columns([1, 2, 1])
-        if w_col1.button("➖ 1kg", key="w_minus"):
-            if st.session_state.reg_weight > 0: st.session_state.reg_weight -= 1
-        w_col2.subheader(f"{st.session_state.reg_weight} kg" if st.session_state.reg_weight > 0 else "미입력 (0)")
-        if w_col3.button("➕ 1kg", key="w_plus"):
-            if st.session_state.reg_weight == 0:
-                st.session_state.reg_weight = 40
-            elif st.session_state.reg_weight < 120:
-                st.session_state.reg_weight += 1
+        # 신장/체중 선택형 (숫자 직접 입력 또는 선택 가능)
+        height_val = st.selectbox("신장 (cm)", options=[str(h) for h in range(150, 205)] + [""], index=25, placeholder="선택 또는 입력")
+        weight_val = st.selectbox("체중 (kg)", options=[""] + [str(w) for w in range(50, 105)], index=0, placeholder="선택 또는 입력")
 
     st.subheader("📝 관찰 리포트 / 첫 메모")
     pros = st.text_area("장점 및 주요 특기")
@@ -249,14 +228,13 @@ if menu == "선수 등록":
         if not name.strip():
             st.error("선수명은 필수 입력 항목입니다.")
         else:
-            num_val = str(st.session_state.reg_num) if st.session_state.reg_num > 0 else ""
-            weight_val = str(st.session_state.reg_weight) if st.session_state.reg_weight > 0 else ""
+            num_str = str(st.session_state.reg_num) if st.session_state.reg_num > 0 else ""
             
             new_data = {
-                "선수명": name.strip(), "소속팀": team.strip(), "등번호": num_val,
+                "선수명": name.strip(), "소속팀": team.strip(), "등번호": num_str,
                 "포지션": position.strip(), "생년월일": str(birth_date),
                 "만 나이": age_full_str, "연 나이": age_year_str, "주발": foot,
-                "신장(cm)": str(st.session_state.reg_height), "체중(kg)": weight_val,
+                "신장(cm)": str(height_val), "체중(kg)": str(weight_val),
                 "진행 상태": status, "장점/특기": pros.strip(), "보완점/단점": cons.strip(),
                 "종합 평가": overall.strip(), "작성일자": str(date)
             }
@@ -361,12 +339,7 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                 st.markdown(f"**[종합 평가]**\n{target_row.get('종합 평가', '(없음)')}")
 
             edit_num_key = f"edit_num_val_{target_idx}"
-            edit_h_key = f"edit_h_val_{target_idx}"
-            edit_w_key = f"edit_w_val_{target_idx}"
-            
             if edit_num_key not in st.session_state: st.session_state[edit_num_key] = safe_int(target_row.get("등번호", ""), 0)
-            if edit_h_key not in st.session_state: st.session_state[edit_h_key] = safe_int(target_row.get("신장(cm)", ""), 175)
-            if edit_w_key not in st.session_state: st.session_state[edit_w_key] = safe_int(target_row.get("체중(kg)", ""), 0)
 
             col1, col2 = st.columns(2)
             with col1:
@@ -398,24 +371,17 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                 
                 edit_date = st.date_input("관찰 작성일자", value=datetime.today(), key=f"edit_date_{target_idx}")
                 
-                st.write("**신장 (cm)**")
-                eh_1, eh_2, eh_3 = st.columns([1, 2, 1])
-                if eh_1.button("➖", key=f"eh_minus_{target_idx}"):
-                    if st.session_state[edit_h_key] > 130: st.session_state[edit_h_key] -= 1
-                eh_2.subheader(f"{st.session_state[edit_h_key]} cm")
-                if eh_3.button("➕", key=f"eh_plus_{target_idx}"):
-                    if st.session_state[edit_h_key] < 220: st.session_state[edit_h_key] += 1
-
-                st.write("**체중 (kg)**")
-                ew_1, ew_2, ew_3 = st.columns([1, 2, 1])
-                if ew_1.button("➖", key=f"ew_minus_{target_idx}"):
-                    if st.session_state[edit_w_key] > 0: st.session_state[edit_w_key] -= 1
-                ew_2.subheader(f"{st.session_state[edit_w_key]} kg" if st.session_state[edit_w_key] > 0 else "미입력 (0)")
-                if ew_3.button("➕", key=f"ew_plus_{target_idx}"):
-                    if st.session_state[edit_w_key] == 0:
-                        st.session_state[edit_w_key] = 40
-                    elif st.session_state[edit_w_key] < 120:
-                        st.session_state[edit_w_key] += 1
+                # 수정 화면 신장/체중 선택형
+                cur_h = safe_int(target_row.get("신장(cm)", ""), 175)
+                cur_w = safe_int(target_row.get("체중(kg)", ""), 70)
+                
+                h_options = [str(h) for h in range(150, 205)]
+                h_idx = h_options.index(str(cur_h)) if str(cur_h) in h_options else 25
+                edit_height = st.selectbox("신장 (cm)", options=h_options + [""], index=h_idx, key=f"edit_h_{target_idx}")
+                
+                w_options = [str(w) for w in range(50, 105)]
+                w_idx = w_options.index(str(cur_w)) if str(cur_w) in w_options else 20
+                edit_weight = st.selectbox("체중 (kg)", options=[""] + w_options, index=w_idx + 1 if str(cur_w) in w_options else 0, key=f"edit_w_{target_idx}")
 
             st.subheader("➕ 오늘 관찰한 내용 추가 입력 (누적 기록)")
             new_pros = st.text_area("새 관찰 장점", key=f"new_pros_{target_idx}")
@@ -435,16 +401,15 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                     updated_cons = f"{old_cons}\n\n[{today_str} 관찰]\n{new_cons.strip()}".strip() if new_cons.strip() else old_cons
                     updated_overall = f"{old_overall}\n\n[{today_str} 관찰]\n{new_overall.strip()}".strip() if new_overall.strip() else old_overall
 
-                    num_val = str(st.session_state[edit_num_key]) if st.session_state[edit_num_key] > 0 else ""
-                    weight_val = str(st.session_state[edit_w_key]) if st.session_state[edit_w_key] > 0 else ""
+                    num_str = str(st.session_state[edit_num_key]) if st.session_state[edit_num_key] > 0 else ""
 
                     records = df.to_dict('records')
                     records[target_idx] = {
                         "선수명": str(edit_name).strip(), "소속팀": str(edit_team).strip(),
-                        "등번호": str(num_val), "포지션": str(edit_position).strip(),
+                        "등번호": str(num_str), "포지션": str(edit_position).strip(),
                         "생년월일": str(edit_birth_date), "만 나이": str(age_full_str),
                         "연 나이": str(age_year_str), "주발": str(edit_foot),
-                        "신장(cm)": str(st.session_state[edit_h_key]), "체중(kg)": weight_val,
+                        "신장(cm)": str(edit_height), "체중(kg)": str(edit_weight),
                         "진행 상태": str(edit_status), "장점/특기": str(updated_pros),
                         "보완점/단점": str(updated_cons), "종합 평가": str(updated_overall),
                         "작성일자": str(today_str)
