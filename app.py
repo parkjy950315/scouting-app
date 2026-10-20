@@ -289,12 +289,13 @@ def generate_ai_scouting_summary(player):
     return summary
 
 # ----------------------------------------------------
-# 📄 프리미엄 디자인 PDF 보고서 생성 함수
+# 📄 완벽한 열 정렬이 적용된 프리미엄 PDF 보고서 생성 함수
 # ----------------------------------------------------
 def generate_pdf_report(player_data):
     korean_font = register_korean_font()
     
     buffer = io.BytesIO()
+    # A4 여백 고려 정확한 인쇄 가능 폭: 595.27 - 72(좌우 여백 각 36) = 523 -> 정확히 520포인트로 통일
     doc = SimpleDocTemplate(
         buffer, 
         pagesize=A4, 
@@ -306,10 +307,10 @@ def generate_pdf_report(player_data):
     story = []
     
     # 고급 스타일 정의
-    title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=20, leading=24, alignment=1, textColor=colors.HexColor('#003366'), fontName_bold=True)
+    title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=20, leading=24, alignment=1, textColor=colors.HexColor('#003366'))
     subtitle_style = ParagraphStyle('SubtitleStyle', fontName=korean_font, fontSize=10, leading=14, alignment=1, textColor=colors.HexColor('#6c757d'))
     
-    section_heading = ParagraphStyle('SectionHeading', fontName=korean_font, fontSize=12, leading=16, textColor=colors.HexColor('#003366'), spaceBefore=12, spaceAfter=6, fontName_bold=True)
+    section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=11, leading=14, textColor=colors.HexColor('#ffffff'))
     body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, textColor=colors.HexColor('#222222'))
     table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=9, leading=12, textColor=colors.HexColor('#555555'))
     table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9.5, leading=13, textColor=colors.HexColor('#111111'))
@@ -320,7 +321,7 @@ def generate_pdf_report(player_data):
     story.append(Spacer(1, 10))
     story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#003366'), spaceAfter=15))
 
-    # 선수 프로필 정보 정리
+    # 선수 프로필 정보 정리 (폭 합계 정확히 520포인트로 일치)
     curr_team, past_team = parse_team_info(player_data.get('소속팀', ''))
     full_team = f"{curr_team} {past_team}".strip()
     weight_val = f"{player_data.get('체중(kg)')}kg" if player_data.get('체중(kg)') else "미입력"
@@ -333,7 +334,7 @@ def generate_pdf_report(player_data):
         [Paragraph("최근 작성일자", table_label), Paragraph(f"{player_data.get('작성일자', '-')}", table_value), Paragraph("보고서 발급일", table_label), Paragraph(datetime.today().strftime('%Y-%m-%d'), table_value)]
     ]
     
-    profile_table = Table(profile_data, colWidths=[90, 180, 90, 180])
+    profile_table = Table(profile_data, colWidths=[90, 170, 90, 170]) # 총합 520
     profile_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f8f9fa')),
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#cbd3da')),
@@ -344,24 +345,32 @@ def generate_pdf_report(player_data):
     story.append(profile_table)
     story.append(Spacer(1, 15))
 
-    # 공통 섹션 박스 생성 헬퍼 함수
-    def add_section_box(title, content, bg_color, border_color):
-        story.append(Paragraph(title, section_heading))
+    # 굵은 제목과 본문 박스를 하나의 표 구조로 통합하여 열 어긋남 완벽 방지
+    def add_unified_section_box(title, content, header_bg, body_bg, border_color):
+        story.append(Spacer(1, 5))
         cleaned_content = str(content).replace('\n', '<br/>') if content and str(content).strip() else "작성된 관찰 내용이 없습니다."
-        content_table = Table([[Paragraph(cleaned_content, body_style)]], colWidths=[540])
-        content_table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor(bg_color)),
+        
+        # 1행: 제목, 2행: 내용 (폭 520포인트로 정확히 일치)
+        section_data = [
+            [Paragraph(f"<b>{title}</b>", section_title_style)],
+            [Paragraph(cleaned_content, body_style)]
+        ]
+        section_table = Table(section_data, colWidths=[520])
+        section_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor(header_bg)),
+            ('BACKGROUND', (0,1), (-1,1), colors.HexColor(body_bg)),
             ('BOX', (0,0), (-1,-1), 1, colors.HexColor(border_color)),
+            ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(border_color)),
             ('PADDING', (0,0), (-1,-1), 8),
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ]))
-        story.append(content_table)
+        story.append(section_table)
         story.append(Spacer(1, 10))
 
-    # 각 관찰 영역 추가 (고급스러운 배경 컬러 적용)
-    add_section_box("📌 장점 및 주요 특기 (PROS)", player_data.get('장점/특기', ''), '#f1f8ff', '#bbe1fa')
-    add_section_box("⚠️ 보완점 및 약점 (CONS)", player_data.get('보완점/단점', ''), '#fffdf4', '#ffeeba')
-    add_section_box("📋 스카우터 종합 평가 및 코멘트 (OVERALL EVALUATION)", player_data.get('종합 평가', ''), '#f4f6f8', '#ced4da')
+    # 각 관찰 영역 추가 (통합된 박스 구조로 깔끔한 정렬)
+    add_unified_section_box("📌 장점 및 주요 특기 (PROS)", player_data.get('장점/특기', ''), '#003366', '#f1f8ff', '#003366')
+    add_unified_section_box("⚠️ 보완점 및 약점 (CONS)", player_data.get('보완점/단점', ''), '#b8860b', '#fffdf4', '#b8860b')
+    add_unified_section_box("📋 스카우터 종합 평가 및 코멘트 (OVERALL EVALUATION)", player_data.get('종합 평가', ''), '#495057', '#f4f6f8', '#495057')
 
     # 하단 푸터 텍스트 추가
     story.append(Spacer(1, 10))
