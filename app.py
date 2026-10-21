@@ -671,7 +671,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (선수별 기존 메모 완벽 보존 처리)
+# 2. 📂 경기 일지 조회 (기존 메모 완벽 유지형 수정 폼)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -877,7 +877,7 @@ elif menu == "📂 경기 일지 조회":
 
                         st.write("---")
                         with st.expander(f"✏️ [{match_title}] 포메이션/등번호 마저 채우기 및 선수별 메모 이어서 수정하기", expanded=True):
-                            st.caption("이전에 저장했던 포메이션, 대칭형 등번호 입력 칸들과 선수별 개개인 메모 상자들이 그대로 복원됩니다. 수정 후 아래 저장 버튼을 누르세요.")
+                            st.caption("이전에 저장했던 포메이션, 등번호, 그리고 선수별 개개인 메모가 상자에 그대로 살아있습니다. 내용을 이어서 적거나 수정하세요.")
 
                             formation_list = ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"]
                             h_form_idx = formation_list.index(h_form_saved) if h_form_saved in formation_list else 0
@@ -939,7 +939,7 @@ elif menu == "📂 경기 일지 조회":
                                 if num:
                                     active_edit_players.append(f"[어웨이] {edit_at_name} - {pos} (#{num})")
 
-                            # ✨ [핵심 해결 1] 기존 저장되어 있던 메모 내용을 session_state에 강제로 동기화하여 날아가지 않도록 보완
+                            # ✨ [핵심 해결] 폼을 처음 열거나 리렌더링될 때 세션에 기존 메모 내용 주입 (덮어쓰기 방지)
                             for p_k, p_v in saved_player_memos.items():
                                 matching_label = None
                                 for act_p in active_edit_players:
@@ -950,7 +950,7 @@ elif menu == "📂 경기 일지 조회":
                                     matching_label = p_k
 
                                 target_state_key = f"edit_memo_desc_{target_memo_idx}_{matching_label}"
-                                if target_state_key not in st.session_state:
+                                if target_state_key not in st.session_state or not st.session_state[target_state_key]:
                                     st.session_state[target_state_key] = p_v
 
                             updated_player_specific_memos = {}
@@ -979,7 +979,6 @@ elif menu == "📂 경기 일지 조회":
                                         
                                         p_memo_key = f"edit_memo_desc_{target_memo_idx}_{p_label}"
                                         
-                                        # ✨ [핵심 해결 2] session_state에 값이 없다면 파싱된 기존 메모 대입
                                         if p_memo_key not in st.session_state:
                                             existing_v = ""
                                             for k, v in saved_player_memos.items():
@@ -988,7 +987,7 @@ elif menu == "📂 경기 일지 조회":
                                                     break
                                             st.session_state[p_memo_key] = existing_v
 
-                                        # 기존 메모 내용이 살아있는 상태로 텍스트 영역에 렌더링
+                                        # ✨ value 인자를 배제하고 session_state를 직접 참조하도록 하여 기존 내용 보존
                                         updated_p_note = st.text_area(
                                             f"{p_label} 세부 메모 수정",
                                             key=p_memo_key,
