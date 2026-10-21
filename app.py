@@ -947,7 +947,6 @@ elif menu == "📂 경기 일지 조회":
                                     pure_pos = act_p_key.split("-")[-1].strip() if "-" in act_p_key else act_p_key
                                     side_pos_key = f"{act_side}_{pure_pos}"
                                     
-                                    # 홈은 홈끼리, 어웨이는 어웨이끼리만 정확히 매칭되도록 조건 강화
                                     if act_p in saved_player_memos or act_p in pos_to_saved_memo or side_pos_key in pos_to_saved_memo:
                                         default_selected_memos.append(act_p)
 
@@ -1096,7 +1095,7 @@ elif menu == "📂 경기 일지 조회":
                                         df.loc[target_memo_idx, "종합 평가"] = updated_overall_content
                                         
                                         if save_data_to_sheet(df):
-                                            st.success("🎉 홈/어웨이 팀별 선수가 섞이지 않고 선택한 선수만 정확히 매칭되어 저장되었습니다!")
+                                            st.success("🎉 수정된 내용과 메모가 유실 없이 안전하게 누적 저장되었습니다!")
                                             st.rerun()
 
                             with col_del_memo:
