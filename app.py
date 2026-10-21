@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 디자인 및 잔디 그라운드 CSS 스타일
+# 📱 PC & 모바일 반응형 디자인 및 잔디 피치 작전판 CSS
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -59,23 +59,23 @@ st.markdown("""
         cursor: pointer;
     }
     
-    /* ⚽ 진짜 축구장 그라운드 필드 스타일 */
-    .football-pitch {
-        background-color: #2e8b57;
+    /* ⚽ 실제 축구장 피치(그라운드) 디자인 */
+    .soccer-pitch {
+        background-color: #1e7e34;
         background-image: 
-            linear-gradient(rgba(255,255,255,0.15) 2px, transparent 2px),
-            linear-gradient(90deg, rgba(255,255,255,0.15) 2px, transparent 2px),
+            linear-gradient(rgba(255,255,255,0.12) 2px, transparent 2px),
+            linear-gradient(90deg, rgba(255,255,255,0.12) 2px, transparent 2px),
             linear-gradient(180deg, #1b4d3e 0%, #2e8b57 50%, #1b4d3e 100%);
-        background-size: 50px 50px, 50px 50px, 100% 100%;
+        background-size: 60px 60px, 60px 60px, 100% 100%;
         border: 4px solid #ffffff;
         border-radius: 16px;
-        padding: 25px;
+        padding: 20px;
         box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         margin-bottom: 20px;
     }
     
-    /* 🔴 그라운드 위에 배치되는 동그란 선수 핀 마커 */
-    .pitch-pin {
+    /* 🔴 피치 위에 뜬 선수 핀 마커 스타일 */
+    .pitch-marker {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -84,12 +84,12 @@ st.markdown("""
         color: white;
         border: 3px solid #ffffff;
         border-radius: 50%;
-        width: 65px;
-        height: 65px;
+        width: 60px;
+        height: 60px;
         font-weight: 800;
-        font-size: 13px;
+        font-size: 12px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-        margin: 0 auto 5px auto;
+        margin: 0 auto;
         text-align: center;
         line-height: 1.1;
     }
@@ -108,10 +108,10 @@ st.markdown("""
             padding-right: 1rem !important;
             padding-top: 2rem !important;
         }
-        .pitch-pin {
-            width: 50px;
-            height: 50px;
-            font-size: 11px;
+        .pitch-marker {
+            width: 48px;
+            height: 48px;
+            font-size: 10px;
         }
     }
     </style>
@@ -354,33 +354,33 @@ menu = st.sidebar.radio(
 )
 
 # ----------------------------------------------------
-# 1. 📋 실제 잔디밭 그라운드 작전판 & 터치 노트
+# 1. 📋 잔디 피치 작전판 그라운드 핀 터치 노트
 # ----------------------------------------------------
 if menu == "📋 실시간 전술판 & 터치 노트":
-    st.header("🏟️ SMC 실시간 작전판 & 터치 스카우트 노트")
-    st.caption("※ 초록색 축구장 그라운드 작전판 위에 배치된 핀을 확인하고 기록하세요.")
+    st.header("🏟️ SMC 실시간 잔디 작전판 & 터치 노트")
+    st.caption("※ 초록색 축구장 피치(그라운드) 전술판 위에서 포지션별 핀을 확인하고 기록하세요[cite: 2].")
 
-    st.markdown("### 🏟️ 1. 경기 정보 및 포메이션 설정")
+    st.markdown("### 🏟️ 1. 팀 및 포메이션 설정")
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.text_input("팀 이름", value="관찰 대상 팀")
-        form_home = st.selectbox("포메이션 선택", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2"], key="form_home")
+        home_team = st.text_input("관찰 팀 이름", value="홈팀")
+        form_home = st.selectbox("포메이션 구조", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2"], key="form_home")
     with col_t2:
         opponent_team = st.text_input("상대 팀 이름", value="상대팀")
 
     st.divider()
 
     # ====================================================
-    # ⚽ [실제 초록색 잔디 그라운드 배경 위에 선수 핀 배치 UI]
+    # ⚽ [실제 축구장 피치 배경 위에 포지션별 핀 배치 UI]
     # ====================================================
     st.markdown(f"""
-    <div class="football-pitch">
+    <div class="soccer-pitch">
         <div style="text-align: center; margin-bottom: 15px;">
             <h2 style="margin: 0; color: #ffeb3b; font-weight: 900; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">
                 ⚽ TACTICAL PITCH — {home_team} ({form_home})
             </h2>
             <p style="font-size: 13px; color: #e8f8f5; margin: 5px 0 0 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">
-                그라운드 라인별 포지션 핀에 선수의 등번호를 입력하세요.
+                피치 위에 배치된 포지션별 핀(마커)과 등번호를 확인하고 아래에서 선택해 기록하세요[cite: 2].
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -396,39 +396,39 @@ if menu == "📋 실시간 전술판 & 터치 노트":
     active_slots = formation_slots.get(form_home, formation_slots["4-3-3"])
     player_mapping = {}
 
-    # 그라운드 내부에서 라인별 핀 배치 시뮬레이션
+    # 피치 내부에서 라인별 핀 배치 시뮬레이션
     for line_name, positions in active_slots.items():
-        st.markdown(f"<div style='color: #a3e4d7; font-weight: bold; margin: 10px 0 5px 0; font-size: 13px;'>📍 {line_name} 라인</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='color: #a3e4d7; font-weight: bold; margin: 12px 0 6px 0; font-size: 13px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);'>📍 {line_name} 라인 포진</div>", unsafe_allow_html=True)
         cols = st.columns(len(positions))
         for i, pos_name in enumerate(positions):
             with cols[i]:
                 st.markdown(f"""
-                <div class="pitch-pin">
-                    <span style="font-size:10px; opacity:0.9;">{pos_name}</span>
+                <div class="pitch-marker">
+                    <span style="font-size:11px;">{pos_name}</span>
                 </div>
                 """, unsafe_allow_html=True)
                 num = st.number_input(f"{pos_name} 등번호", min_value=1, max_value=99, value=10+i, key=f"pitch_{line_name}_{i}", label_visibility="collapsed")
                 player_mapping[f"{line_name} - {pos_name}"] = num
 
-    st.markdown("</div>", unsafe_allow_html=True) # 그라운드 박스 닫기
+    st.markdown("</div>", unsafe_allow_html=True) # 피치 박스 닫기
 
     st.divider()
 
     # ====================================================
-    # 🎯 2. 작전판 핀(선수) 선택 및 역량 평가 연동
+    # 🎯 2. 피치 위 핀(포지션) 터치 및 노트 연동
     # ====================================================
-    st.markdown("### 🎯 2. 기록할 작전판 핀(선수) 선택")
+    st.markdown("### 🎯 2. 기록할 피치 핀(포지션) 터치 선택")
     
     selected_position_slot = st.selectbox(
-        "그라운드 작전판에서 메모할 포지션 선택",
+        "기록을 남길 포지션 핀 선택",
         options=list(player_mapping.keys()),
-        format_func=lambda x: f"⚽ 작전판 핀 [{x}] — 등번호 {player_mapping[x]}번"
+        format_func=lambda x: f"⚽ 피치 핀 [{x}] — 등번호 {player_mapping[x]}번"
     )
 
     selected_back_num = player_mapping[selected_position_slot]
     position_short = selected_position_slot.split(" - ")[-1]
 
-    st.info(f"📍 현재 잔디 작전판에서 선택된 집중 관찰 대상: **[{home_team}] {selected_position_slot} (등번호: {selected_back_num}번)**")
+    st.info(f"📍 현재 피치에서 선택된 집중 관찰 대상: **[{home_team}] {selected_position_slot} (등번호: {selected_back_num}번)**")
 
     # 역량 태그 선택 영역
     col_p1, col_p2 = st.columns(2)
@@ -458,7 +458,7 @@ if menu == "📋 실시간 전술판 & 터치 노트":
 
     st.divider()
 
-    if st.button("💾 구글 시트에 현장 작전판 메모 임시 저장", type="primary", use_container_width=True):
+    if st.button("💾 구글 시트에 피치 핀 메모 임시 저장", type="primary", use_container_width=True):
         temp_player_name = f"[{home_team}] {selected_back_num}번"
         pros_summary = f"[체형/특징] {', '.join(all_tags)}"
         overall_summary = f"상대팀: vs {opponent_team} | 포메이션: {form_home} ({selected_position_slot}) | 관찰등급: {verdict}"
@@ -483,10 +483,10 @@ if menu == "📋 실시간 전술판 & 터치 노트":
             "작성일자": datetime.today().strftime('%Y-%m-%d')
         }
 
-        with st.spinner("구글 시트에 작전판 메모를 기록하는 중..."):
+        with st.spinner("구글 시트에 피치 핀 메모를 기록하는 중..."):
             updated_df = pd.DataFrame([new_field_data]) if df.empty else pd.concat([df, pd.DataFrame([new_field_data])], ignore_index=True)
             if save_data_to_sheet(updated_df):
-                st.success(f"🎉 [{home_team} {selected_back_num}번] 작전판 메모가 구글 시트에 안전하게 임시 저장되었습니다!")
+                st.success(f"🎉 [{home_team} {selected_back_num}번] 피치 핀 메모가 구글 시트에 안전하게 임시 저장되었습니다!")
                 st.balloons()
 
 # ----------------------------------------------------
