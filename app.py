@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 축구장 그라운드 통짜 잔디 UI 스타일 (완벽 격리)
+# 📱 깔끔하고 안정적인 기본 CSS 스타일
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -51,59 +51,12 @@ st.markdown("""
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 2rem !important;
     }
-    
-    /* ⚽ 잔디 그라운드 컨테이너 스타일 */
-    .st-key-pitch_inner_box {
-        background: radial-gradient(circle, #2e8b57 0%, #154335 100%) !important;
-        background-image: 
-            linear-gradient(rgba(255,255,255,0.1) 2px, transparent 2px),
-            linear-gradient(90deg, rgba(255,255,255,0.1) 2px, transparent 2px) !important;
-        background-size: 45px 45px !important;
-        border: 4px solid #ffffff !important;
-        border-radius: 20px !important;
-        padding: 25px 15px !important;
-        box-shadow: inset 0 0 50px rgba(0,0,0,0.6), 0 10px 25px rgba(0,0,0,0.4) !important;
-        margin-bottom: 25px !important;
-    }
-    
-    /* 🔴 잔디 그라운드 안의 원형 축구 핀 버튼 커스텀 */
-    div.stButton > button {
-        background: radial-gradient(circle, #ff4d4d 0%, #b71c1c 100%) !important;
-        color: white !important;
-        border: 3px solid #ffffff !important;
-        border-radius: 50% !important;
-        width: 65px !important;
-        height: 65px !important;
-        padding: 0 !important;
-        font-weight: 800 !important;
-        font-size: 13px !important;
-        box-shadow: 0 5px 12px rgba(0,0,0,0.5) !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        margin: 0 auto !important;
-        transition: all 0.2s ease-in-out !important;
-        cursor: pointer !important;
-    }
-    
-    div.stButton > button:hover {
-        transform: scale(1.12) !important;
-        border-color: #ffeb3b !important;
-        box-shadow: 0 0 15px rgba(255,235,59,0.8) !important;
-    }
-
-    div.stButton > button:focus {
-        border-color: #ffeb3b !important;
-        box-shadow: 0 0 0 4px rgba(255,235,59,0.7) !important;
-    }
-
-    @media (max-width: 768px) {
-        div.stButton > button {
-            width: 52px !important;
-            height: 52px !important;
-            font-size: 11px !important;
-        }
+    [data-testid="stSidebar"] .stRadio label {
+        padding: 12px 16px !important;
+        margin-bottom: 8px !important;
+        border-radius: 10px;
+        background-color: rgba(255, 255, 255, 0.05);
+        cursor: pointer;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -117,15 +70,17 @@ GOOGLE_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxTTvgJqNnmBxwuCGvT
 STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완료", "계약 검토", "보류 / 제외", "현장 관찰 메모 (임시)"]
 POSITION_OPTIONS = ["GK", "CB", "LB", "RB", "MF", "LW", "RW", "CF"]
 
+# ----------------------------------------------------
+# 🏢 성문컴퍼니(SMC) 로고 렌더링 (깨짐 방지 수정)
+# ----------------------------------------------------
 def display_logo():
     logo_html = """
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 10px 0 20px 0; margin-bottom: 10px;">
-        <div style="color: #007bff; font-weight: 900; letter-spacing: 4px; font-size: 32px; font-family: sans-serif; line-height: 1.1;">SMC</div>
-        <div style="color: #6c757d; font-weight: 700; letter-spacing: 4px; font-size: 11px; font-family: sans-serif; margin-top: 5px;">SUNGMUN COMPANY</div>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 5px 0 15px 0; margin-bottom: 5px;">
+        <div style="color: #007bff; font-weight: 900; letter-spacing: 4px; font-size: 28px; font-family: sans-serif; line-height: 1.1;">SMC</div>
+        <div style="color: #6c757d; font-weight: 700; letter-spacing: 3px; font-size: 10px; font-family: sans-serif; margin-top: 4px;">SUNGMUN COMPANY</div>
     </div>
     """
     st.sidebar.markdown(logo_html, unsafe_allow_html=True)
-    st.markdown(logo_html, unsafe_allow_html=True)
 
 def calculate_age(born_date):
     if not born_date:
@@ -319,16 +274,11 @@ def generate_pdf_report(player_data):
 
 df = load_data()
 
+# 사이드바 로고 및 메뉴 구성
 display_logo()
 
-st.title("⚽ 선수 스카우팅 관리 시스템")
-
-# ----------------------------------------------------
-# 사이드바 설정
-# ----------------------------------------------------
 st.sidebar.title("📌 메뉴")
-
-if st.sidebar.button("🔄 앱 새로고침 (실시간 동기화)", use_container_width=True, type="secondary"):
+if st.sidebar.button("🔄 앱 새로고침", use_container_width=True, type="secondary"):
     st.rerun()
 
 st.sidebar.markdown("---")
@@ -338,14 +288,15 @@ menu = st.sidebar.radio(
     ["📋 실시간 전술판 & 터치 노트", "선수 등록", "🔍 선수 검색 및 관찰일지 조회", "✏️ 선수 정보/일지 수정 및 추가"]
 )
 
+st.title("⚽ 선수 스카우팅 관리 시스템")
+
 # ----------------------------------------------------
-# 1. 📋 잔디 그라운드 일체형 전술판 & 터치 노트
+# 1. 📋 실시간 전술판 & 터치 노트 (안정적인 직관적 입력 폼 형태)
 # ----------------------------------------------------
 if menu == "📋 실시간 전술판 & 터치 노트":
-    st.header("🏟️ SMC 실시간 터치 전술판 & 노트")
-    st.caption("🟢 초록색 축구장 그라운드 피치 판 안의 **원형 핀 버튼을 터치**하여 선수 선택 및 번호 변경을 진행하세요[cite: 2].")
+    st.header("🏟️ SMC 실시간 전술판 & 노트")
+    st.caption("그라운드 포지션별 선수를 선택하고 등번호와 관찰 메모를 신속하게 기록하세요.")
 
-    st.markdown("### 🏟️ 1. 팀 및 포메이션 설정")
     col_t1, col_t2 = st.columns(2)
     with col_t1:
         home_team = st.text_input("관찰 팀 이름", value="홈팀")
@@ -355,134 +306,19 @@ if menu == "📋 실시간 전술판 & 터치 노트":
 
     st.divider()
 
-    formation_configs = {
-        "4-3-3": [
-            {"line": "FW", "pos": "LW", "default": 11},
-            {"line": "FW", "pos": "CF", "default": 9},
-            {"line": "FW", "pos": "RW", "default": 7},
-            {"line": "MF", "pos": "LCM", "default": 8},
-            {"line": "MF", "pos": "CDM", "default": 6},
-            {"line": "MF", "pos": "RCM", "default": 10},
-            {"line": "DF", "pos": "LB", "default": 3},
-            {"line": "DF", "pos": "CB1", "default": 4},
-            {"line": "DF", "pos": "CB2", "default": 5},
-            {"line": "DF", "pos": "RB", "default": 2},
-            {"line": "GK", "pos": "GK", "default": 1}
-        ],
-        "4-4-2": [
-            {"line": "FW", "pos": "ST1", "default": 9},
-            {"line": "FW", "pos": "ST2", "default": 11},
-            {"line": "MF", "pos": "LM", "default": 7},
-            {"line": "MF", "pos": "LCM", "default": 6},
-            {"line": "MF", "pos": "RCM", "default": 8},
-            {"line": "MF", "pos": "RM", "default": 10},
-            {"line": "DF", "pos": "LB", "default": 3},
-            {"line": "DF", "pos": "CB1", "default": 4},
-            {"line": "DF", "pos": "CB2", "default": 5},
-            {"line": "DF", "pos": "RB", "default": 2},
-            {"line": "GK", "pos": "GK", "default": 1}
-        ],
-        "4-2-3-1": [
-            {"line": "FW", "pos": "ST", "default": 9},
-            {"line": "AM", "pos": "LAM", "default": 11},
-            {"line": "AM", "pos": "CAM", "default": 10},
-            {"line": "AM", "pos": "RAM", "default": 7},
-            {"line": "DM", "pos": "LDM", "default": 6},
-            {"line": "DM", "pos": "RDM", "default": 8},
-            {"line": "DF", "pos": "LB", "default": 3},
-            {"line": "DF", "pos": "CB1", "default": 4},
-            {"line": "DF", "pos": "CB2", "default": 5},
-            {"line": "DF", "pos": "RB", "default": 2},
-            {"line": "GK", "pos": "GK", "default": 1}
-        ],
-        "3-5-2": [
-            {"line": "FW", "pos": "ST1", "default": 9},
-            {"line": "FW", "pos": "ST2", "default": 11},
-            {"line": "MF", "pos": "LWB", "default": 3},
-            {"line": "MF", "pos": "LCM", "default": 8},
-            {"line": "MF", "pos": "CDM", "default": 6},
-            {"line": "MF", "pos": "RCM", "default": 10},
-            {"line": "MF", "pos": "RWB", "default": 2},
-            {"line": "DF", "pos": "CB1", "default": 4},
-            {"line": "DF", "pos": "CB2", "default": 5},
-            {"line": "DF", "pos": "CB3", "default": 14},
-            {"line": "GK", "pos": "GK", "default": 1}
-        ]
+    st.subheader("🎯 포지션별 선수 선택 및 등번호 입력")
+    
+    formation_slots = {
+        "4-3-3": ["LW", "CF", "RW", "LCM", "CDM", "RCM", "LB", "CB1", "CB2", "RB", "GK"],
+        "4-4-2": ["ST1", "ST2", "LM", "LCM", "RCM", "RM", "LB", "CB1", "CB2", "RB", "GK"],
+        "4-2-3-1": ["ST", "LAM", "CAM", "RAM", "LDM", "RDM", "LB", "CB1", "CB2", "RB", "GK"],
+        "3-5-2": ["ST1", "ST2", "LWB", "LCM", "CDM", "RCM", "RWB", "CB1", "CB2", "CB3", "GK"]
     }
 
-    pins = formation_configs.get(form_home, formation_configs["4-3-3"])
-
-    if "pitch_numbers" not in st.session_state:
-        st.session_state.pitch_numbers = {}
-    if "selected_pin_key" not in st.session_state:
-        st.session_state.selected_pin_key = f"{pins[0]['line']}_{pins[0]['pos']}"
-
-    for p in pins:
-        k = f"{p['line']}_{p['pos']}"
-        if k not in st.session_state.pitch_numbers:
-            st.session_state.pitch_numbers[k] = p['default']
-
-    # ====================================================
-    # ⚽ [잔디 그라운드 박스 안에 완전히 포함된 통짜 전술판]
-    # ====================================================
-    st.markdown(f"### ⚽ [{home_team}] {form_home} 잔디 전술판")
-
-    with st.container(key="pitch_inner_box"):
-        st.markdown(f"""
-        <div style="text-align: center; color: #ffeb3b; font-weight: 900; font-size: 20px; letter-spacing: 2px; text-shadow: 2px 2px 4px #000; margin-bottom: 5px;">
-            🏟️ {home_team} FIELD PITCH ({form_home})
-        </div>
-        <div style="text-align: center; color: #ffffff; font-size: 13px; margin-bottom: 15px; opacity: 0.9;">
-            👇 그라운드 잔디 위 포지션 핀 버튼을 터치하여 선택하세요[cite: 2].
-        </div>
-        <div style="border-bottom: 2px solid rgba(255,255,255,0.3); margin-bottom: 15px;"></div>
-        """, unsafe_allow_html=True)
-
-        lines_order = list(dict.fromkeys([p['line'] for p in pins]))
-
-        for line in lines_order:
-            line_pins = [p for p in pins if p['line'] == line]
-            st.markdown(f"<div style='color:#a3e4d7; font-weight:bold; font-size:12px; margin: 4px 0 8px 0; text-shadow: 1px 1px 2px #000;'>📍 {line} LINE</div>", unsafe_allow_html=True)
-            cols = st.columns(len(line_pins))
-            for idx, p in enumerate(line_pins):
-                pin_key = f"{p['line']}_{p['pos']}"
-                current_num = st.session_state.pitch_numbers.get(pin_key, p['default'])
-                
-                button_label = f"{p['pos']}\n#{current_num}"
-                
-                with cols[idx]:
-                    if st.button(button_label, key=f"btn_pin_{pin_key}"):
-                        st.session_state.selected_pin_key = pin_key
-
-    st.divider()
-
-    # ====================================================
-    # 🎯 2. 선택된 핀의 등번호 실시간 수정 및 스카우트 노트 작성
-    # ====================================================
-    st.markdown("### 🎯 2. 선택된 포지션 핀 프로필 설정 & 메모")
-
-    cur_key = st.session_state.selected_pin_key
-    cur_line, cur_pos = cur_key.split("_")
-    cur_num = st.session_state.pitch_numbers.get(cur_key, 10)
-
-    st.success(f"📌 현재 잔디 피치에서 선택된 핀: **[{home_team}] {cur_line} - {cur_pos} (현재 등번호: {cur_num}번)**")
-
-    c_edit1, c_edit2 = st.columns([1, 2])
-    with c_edit1:
-        updated_num = st.number_input(
-            f"✏️ {cur_pos} 실제 등번호 변경",
-            min_value=1, max_value=99,
-            value=int(cur_num),
-            key=f"num_input_{cur_key}"
-        )
-        st.session_state.pitch_numbers[cur_key] = updated_num
-
-    with c_edit2:
-        st.write("")
-        st.write("")
-        st.info("💡 등번호를 수정하면 위 초록색 잔디 그라운드 안의 핀 번호가 실시간으로 자동 변경됩니다.")
-
-    st.write("---")
+    slots = formation_slots.get(form_home, formation_slots["4-3-3"])
+    
+    selected_slot = st.selectbox("기록할 포지션 선택", options=slots)
+    back_num = st.number_input("선수 등번호", min_value=1, max_value=99, value=10)
 
     col_p1, col_p2 = st.columns(2)
     with col_p1:
@@ -504,17 +340,17 @@ if menu == "📋 실시간 전술판 & 터치 노트":
     st.divider()
 
     if st.button("💾 구글 시트에 현장 작전판 메모 저장", type="primary", use_container_width=True):
-        temp_player_name = f"[{home_team}] {updated_num}번"
+        temp_player_name = f"[{home_team}] {back_num}번"
         pros_summary = f"[특징] {', '.join(all_tags)}"
-        overall_summary = f"상대: vs {opponent_team} | 포메이션: {form_home} ({cur_line}-{cur_pos}) | 관찰등급: {verdict}"
+        overall_summary = f"상대: vs {opponent_team} | 포메이션: {form_home} ({selected_slot}) | 관찰등급: {verdict}"
         if detail_memo:
             overall_summary += f" | 메모: {detail_memo}"
 
         new_field_data = {
             "선수명": temp_player_name,
             "소속팀": home_team,
-            "등번호": str(updated_num),
-            "포지션": cur_pos,
+            "등번호": str(back_num),
+            "포지션": selected_slot,
             "생년월일": "", "만 나이": "", "연 나이": "", "주발": "", "신장(cm)": "", "체중(kg)": "",
             "진행 상태": "현장 관찰 메모 (임시)",
             "장점/특기": pros_summary,
@@ -526,7 +362,7 @@ if menu == "📋 실시간 전술판 & 터치 노트":
         with st.spinner("구글 시트에 메모를 기록하는 중..."):
             updated_df = pd.DataFrame([new_field_data]) if df.empty else pd.concat([df, pd.DataFrame([new_field_data])], ignore_index=True)
             if save_data_to_sheet(updated_df):
-                st.success(f"🎉 [{home_team} {updated_num}번] 피치 메모가 구글 시트에 저장되었습니다!")
+                st.success(f"🎉 [{home_team} {back_num}번] 피치 메모가 구글 시트에 저장되었습니다!")
                 st.balloons()
 
 # ----------------------------------------------------
