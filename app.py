@@ -345,13 +345,19 @@ st.sidebar.markdown("---")
 
 menu = st.sidebar.radio(
     "이동할 메뉴",
-    ["🏟️ 현장 경기 관찰 메모", "선수 등록", "🔍 선수 검색 및 관찰일지 조회", "✏️ 선수 정보/일지 수정 및 삭제"]
+    [
+        "🏟️ 현장 경기 관찰 메모", 
+        "📂 경기 일지 조회", 
+        "선수 등록", 
+        "🔍 선수 검색 및 관찰일지 조회", 
+        "✏️ 선수 정보/일지 수정 및 삭제"
+    ]
 )
 
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (선택한 선수별 집중 메모 기능 추가)
+# 1. 🏟️ 현장 경기 관찰 메모
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -425,11 +431,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    # 🎯 등록된 등번호 기반 [선택한 선수별 집중 메모] 생성 영역
     st.subheader("⭐ 눈에 띈 선수별 집중 메모")
     st.caption("위에서 등번호가 기입된 선수들 중 메모를 남기고 싶은 선수를 선택하세요.")
 
-    # 홈팀, 어웨이팀에서 등번호가 입력된 선수 목록 합치기
     active_players = []
     for pos, num in home_numbers.items():
         active_players.append(f"[홈] {home_team} - {pos} (#{num})")
@@ -478,7 +482,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 home_num_str = ", ".join([f"{pos}: {num}번" for pos, num in home_numbers.items()]) if home_numbers else "입력 없음"
                 away_num_str = ", ".join([f"{pos}: {num}번" for pos, num in away_numbers.items()]) if away_numbers else "입력 없음"
 
-                # 선수별 메모 포맷팅 정리
                 player_notes_formatted = ""
                 if player_specific_memos:
                     player_notes_formatted = "\n\n⭐ [선수별 집중 관찰 메모]\n"
@@ -516,7 +519,39 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 선수 정식 등록
+# 2. 📂 경기 일지 조회 (앱 내부에 일자별로 쌓인 기록 확인)
+# ----------------------------------------------------
+elif menu == "📂 경기 일지 조회":
+    st.header("📂 현장 경기 관찰 일지 모음")
+    st.caption("지금까지 앱을 통해 작성하고 저장한 모든 경기 관찰 일지 기록을 일자별·대회별로 확인할 수 있습니다.")
+
+    memo_df = df[df["진행 상태"] == "현장 관찰 메모 (임시)"].copy()
+
+    if memo_df.empty:
+        st.info("아직 저장된 경기 관찰 일지가 없습니다. [🏟️ 현장 경기 관찰 메모] 메뉴에서 첫 일지를 작성해 보세요!")
+    else:
+        # 최신 작성일자 순으로 정렬
+        if "작성일자" in memo_df.columns:
+            memo_df = memo_df.sort_values(by="작성일자", ascending=False).reset_index(drop=True)
+
+        st.metric("총 누적 경기 일지", f"{len(memo_df)}건")
+        st.write("---")
+
+        for idx, row in memo_df.iterrows():
+            match_title = row.get("선수명", "경기 기록")
+            match_date_str = row.get("작성일자", "-")
+            match_teams = row.get("소속팀", "-")
+            content_body = row.get("종합 평가", "내용이 없습니다.")
+
+            with st.expander(f"📅 [{match_date_str}]  {match_title}"):
+                st.markdown(f"**⚽ 대진 정보:** {match_teams}")
+                st.markdown(f"**🗓️ 관찰 일자:** {match_date_str}")
+                st.markdown("---")
+                st.markdown("**📝 상세 관찰 기록 및 총평**")
+                st.info(content_body)
+
+# ----------------------------------------------------
+# 3. 선수 정식 등록
 # ----------------------------------------------------
 elif menu == "선수 등록":
     st.header("📋 신규 관찰 선수 정식 등록")
@@ -576,7 +611,7 @@ elif menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 3. 선수 검색 및 상세 관찰일지 조회 & PDF 다운로드
+# 4. 선수 검색 및 상세 관찰일지 조회 & PDF 다운로드
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
     st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
@@ -708,7 +743,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
             st.info("💡 목록 표에서 조회하고 싶은 **행을 클릭**하시면 상세 내용이 하단에 나타납니다.")
 
 # ----------------------------------------------------
-# 4. 선수 정보 수정 및 삭제
+# 5. 선수 정보 수정 및 삭제
 # ----------------------------------------------------
 elif menu == "✏️ 선수 정보/일지 수정 및 삭제":
     st.header("✏️ 기존 정보 수정 및 데이터 삭제")
@@ -762,7 +797,6 @@ elif menu == "✏️ 선수 정보/일지 수정 및 삭제":
             
             st.write("---")
 
-            # 🗑️ 삭제 기능 영역
             st.markdown(f"### 🗑️ [{target_row.get('선수명', '')}] 데이터 삭제")
             if st.button("⚠️ 이 데이터를 영구 삭제하기", type="secondary", use_container_width=True, key=f"btn_delete_{target_idx}"):
                 with st.spinner("구글 시트에서 데이터를 삭제하는 중..."):
