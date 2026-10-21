@@ -671,7 +671,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (기존 메모 완벽 유지형 수정 폼)
+# 2. 📂 경기 일지 조회 (선수별 개개인 메모 완벽 보존 및 보완 버전)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -825,32 +825,6 @@ elif menu == "📂 경기 일지 조회":
                         if not a_form_saved:
                             a_form_saved = "4-3-3"
 
-                        if not h_nums_saved and "🏠 [홈팀" in raw_content:
-                            try:
-                                home_section = raw_content.split("🏠 [홈팀")[1].split("✈️ [어웨이팀")[0]
-                                if "포지션별 등번호:" in home_section:
-                                    num_line = home_section.split("포지션별 등번호:")[1].split("\n")[0].strip()
-                                    if num_line and num_line != "없음":
-                                        for item in num_line.split(","):
-                                            if ":" in item:
-                                                p_key, p_val = item.split(":")
-                                                h_nums_saved[p_key.strip()] = p_val.replace("#", "").strip()
-                            except Exception:
-                                pass
-
-                        if not a_nums_saved and "✈️ [어웨이팀" in raw_content:
-                            try:
-                                away_section = raw_content.split("✈️ [어웨이팀")[1].split("⭐ [선수별")[0] if "⭐ [선수별" in raw_content else raw_content.split("✈️ [어웨이팀")[1].split("📝 [경기")[0]
-                                if "포지션별 등번호:" in away_section:
-                                    num_line = away_section.split("포지션별 등번호:")[1].split("\n")[0].strip()
-                                    if num_line and num_line != "없음":
-                                        for item in num_line.split(","):
-                                            if ":" in item:
-                                                p_key, p_val = item.split(":")
-                                                a_nums_saved[p_key.strip()] = p_val.replace("#", "").strip()
-                            except Exception:
-                                pass
-
                         clean_content = raw_content
                         if "[SMC_JSON_DATA:" in clean_content:
                             lines = clean_content.split("\n")
@@ -877,7 +851,7 @@ elif menu == "📂 경기 일지 조회":
 
                         st.write("---")
                         with st.expander(f"✏️ [{match_title}] 포메이션/등번호 마저 채우기 및 선수별 메모 이어서 수정하기", expanded=True):
-                            st.caption("이전에 저장했던 포메이션, 등번호, 그리고 선수별 개개인 메모가 상자에 그대로 살아있습니다. 내용을 이어서 적거나 수정하세요.")
+                            st.caption("기존에 작성한 선수별 메모가 텍스트 상자에 고스란히 복원됩니다. 내용을 이어서 적거나 수정해보세요.")
 
                             formation_list = ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"]
                             h_form_idx = formation_list.index(h_form_saved) if h_form_saved in formation_list else 0
@@ -939,27 +913,22 @@ elif menu == "📂 경기 일지 조회":
                                 if num:
                                     active_edit_players.append(f"[어웨이] {edit_at_name} - {pos} (#{num})")
 
-                            # ✨ [핵심 해결] 폼을 처음 열거나 리렌더링될 때 세션에 기존 메모 내용 주입 (덮어쓰기 방지)
-                            for p_k, p_v in saved_player_memos.items():
-                                matching_label = None
-                                for act_p in active_edit_players:
-                                    if p_k == act_p or ((' - ' in act_p) and (act_p.split(' - ')[1] in p_k)):
-                                        matching_label = act_p
-                                        break
-                                if not matching_label:
-                                    matching_label = p_k
-
-                                target_state_key = f"edit_memo_desc_{target_memo_idx}_{matching_label}"
-                                if target_state_key not in st.session_state or not st.session_state[target_state_key]:
-                                    st.session_state[target_state_key] = p_v
+                            # ✨ [핵심 해결] 일지가 활성화되었을 때, 구글 시트에서 들고온 개개인 메모를 session_state에 미리 강제 로드
+                            init_load_flag_key = f"memo_loaded_flag_{target_memo_idx}"
+                            if init_load_flag_key not in st.session_state:
+                                st.session_state[init_load_flag_key] = True
+                                for orig_p_label, orig_p_note in saved_player_memos.items():
+                                    memo_session_key = f"edit_memo_val_{target_memo_idx}_{orig_p_label}"
+                                    st.session_state[memo_session_key] = orig_p_note
 
                             updated_player_specific_memos = {}
 
                             if active_edit_players:
+                                # 기존 메모 기록이 있었던 선수들 자동 선택
                                 default_selected_memos = []
                                 for act_p in active_edit_players:
-                                    pos_part = act_p.split(' - ')[1] if ' - ' in act_p else ""
-                                    if any(pos_part in k for k in saved_player_memos.keys()) or act_p in saved_player_memos:
+                                    pos_p = act_p.split(' - ')[1] if ' - ' in act_p else ""
+                                    if any(pos_p in k for k in saved_player_memos.keys()) or act_p in saved_player_memos:
                                         default_selected_memos.append(act_p)
 
                                 if not default_selected_memos and saved_player_memos:
@@ -977,22 +946,26 @@ elif menu == "📂 경기 일지 조회":
                                     for p_label in selected_edit_memo_players:
                                         st.markdown(f"**📌 {p_label} 개개인 관찰 기록**")
                                         
-                                        p_memo_key = f"edit_memo_desc_{target_memo_idx}_{p_label}"
+                                        p_memo_key = f"edit_memo_val_{target_memo_idx}_{p_label}"
                                         
-                                        if p_memo_key not in st.session_state:
-                                            existing_v = ""
+                                        # 기존 메모 파싱 복원 보완
+                                        if p_memo_key not in st.session_state or st.session_state[p_memo_key] is None:
+                                            found_val = ""
                                             for k, v in saved_player_memos.items():
                                                 if p_label in k or ((' - ' in p_label) and (p_label.split(' - ')[1] in k)):
-                                                    existing_v = v
+                                                    found_val = v
                                                     break
-                                            st.session_state[p_memo_key] = existing_v
+                                            st.session_state[p_memo_key] = found_val
 
-                                        # ✨ value 인자를 배제하고 session_state를 직접 참조하도록 하여 기존 내용 보존
+                                        # 기존 메모 내용이 대입된 텍스트 상자 출력
                                         updated_p_note = st.text_area(
                                             f"{p_label} 세부 메모 수정",
-                                            key=p_memo_key,
+                                            value=st.session_state.get(p_memo_key, ""),
+                                            key=f"ta_widget_{target_memo_idx}_{p_label}",
                                             height=100
                                         )
+                                        # 작성된 내용을 세션과 결과 딕셔너리에 동시 저장
+                                        st.session_state[p_memo_key] = updated_p_note
                                         if updated_p_note.strip():
                                             updated_player_specific_memos[p_label] = updated_p_note.strip()
                             else:
