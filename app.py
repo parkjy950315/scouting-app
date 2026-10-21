@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 상단 여백 및 스타일 설정
+# 📱 PC & 모바일 반응형 디자인 및 작전판 전용 CSS 스타일
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -58,6 +58,8 @@ st.markdown("""
         background-color: rgba(255, 255, 255, 0.08);
         cursor: pointer;
     }
+    
+    /* 📱 모바일 환경에서 작전판 컬럼이 일자로 무너지지 않고 그리드 형태 유지 */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 290px !important;
@@ -72,14 +74,24 @@ st.markdown("""
             font-size: 17px !important;
         }
         .block-container {
-            padding-left: 1.2rem !important;
-            padding-right: 1.2rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
             padding-top: 2rem !important;
         }
         h1 {
             font-size: 23px !important;
             margin-top: 10px !important;
             margin-bottom: 20px !important;
+        }
+        
+        /* 모바일에서 작전판 내부 컬럼들이 세로로 길게 쌓이지 않게 컴팩트하게 정렬 */
+        [data-testid="stHorizontalBlock"] {
+            flex-wrap: wrap !important;
+        }
+        [data-testid="column"] {
+            flex: 1 1 42% !important;
+            min-width: 130px !important;
+            margin-bottom: 8px !important;
         }
     }
     @media (min-width: 769px) {
@@ -331,11 +343,11 @@ menu = st.sidebar.radio(
 )
 
 # ----------------------------------------------------
-# 1. 📋 잔디밭 작전판 그라운드 핀 터치 노트
+# 1. 📋 진짜 잔디밭 작전판 그라운드 핀 터치 노트 (모바일/PC 반응형 격자 유지)
 # ----------------------------------------------------
 if menu == "📋 실시간 전술판 & 터치 노트":
     st.header("🏟️ SMC 실시간 작전판 & 터치 스카우트 노트")
-    st.caption("※ 잔디밭 작전판 위에 배치된 포지션별 핀을 선택해 신속히 기록하세요.")
+    st.caption("※ 초록색 잔디 운동장 작전판 위에 배치된 포지션별 핀을 선택해 신속히 기록하세요.")
 
     st.markdown("### 🏟️ 1. 경기 정보 및 포메이션 설정")
     col_t1, col_t2 = st.columns(2)
@@ -353,31 +365,36 @@ if menu == "📋 실시간 전술판 & 터치 노트":
     current_formation = form_home if selected_view_team == home_team else form_away
 
     # ====================================================
-    # ⚽ [실제 잔디밭 작전판 시각화 UI]
+    # ⚽ [진짜 축구장 잔디밭 및 작전판 그래픽 UI]
     # ====================================================
     st.markdown(f"""
     <div style="
-        background: linear-gradient(180deg, #1b4d3e 0%, #11382c 100%);
-        border: 4px solid #ffffff;
+        background-color: #2e8b57;
+        background-image: 
+            linear-gradient(rgba(255,255,255,0.1) 2px, transparent 2px),
+            linear-gradient(90deg, rgba(255,255,255,0.1) 2px, transparent 2px),
+            linear-gradient(180deg, #2e8b57 0%, #228b22 100%);
+        background-size: 100px 100px, 100px 100px, 100% 100%;
+        border: 5px solid #ffffff;
         border-radius: 16px;
-        padding: 20px;
+        padding: 25px;
         text-align: center;
         color: white;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
         margin-bottom: 20px;
-        position: relative;
     ">
         <div style="
-            border: 2px dashed rgba(255,255,255,0.5);
+            border: 3px solid rgba(255,255,255,0.7);
             border-radius: 12px;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.15);
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
         ">
-            <h2 style="margin: 0 0 5px 0; color: #ffeb3b; font-weight: 900; letter-spacing: 2px;">
-                TACTICAL BOARD — {selected_view_team} ({current_formation})
+            <h2 style="margin: 0 0 5px 0; color: #ffeb3b; font-weight: 900; letter-spacing: 3px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+                ⚽ TACTICAL PITCH — {selected_view_team} ({current_formation})
             </h2>
-            <p style="font-size: 13px; color: #a3e4d7; margin: 0 0 15px 0;">
-                🟢 잔디밭 작전판 라인별 포지션에 선수의 등번호를 입력하세요.
+            <p style="font-size: 14px; color: #e8f8f5; margin: 0 0 15px 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+                🟢 잔디 운동장 작전판 포지션 위치에 선수의 <b>등번호</b>를 입력하세요.
             </p>
         </div>
     </div>
@@ -395,34 +412,34 @@ if menu == "📋 실시간 전술판 & 터치 노트":
     player_mapping = {}
 
     with st.container():
-        st.markdown("##### ⚡ [FW] 공격진 (Attack)")
+        st.markdown("##### ⚡ [FW] 공격 라인 (Attack)")
         fw_cols = st.columns(len(active_slots["FW"]))
         for i, pos_name in enumerate(active_slots["FW"]):
             with fw_cols[i]:
-                st.markdown(f"<div style='text-align:center; background:#ff5722; color:white; border-radius:50px; padding:4px; font-weight:bold; font-size:12px; margin-bottom:4px;'>{pos_name}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align:center; background:#e65100; color:white; border-radius:30px; padding:6px; font-weight:bold; font-size:13px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom:5px;'>📍 {pos_name}</div>", unsafe_allow_html=True)
                 num = st.number_input(f"{pos_name} 등번호", min_value=1, max_value=99, value=9+i, key=f"{selected_view_team}_fw_{i}", label_visibility="collapsed")
                 player_mapping[f"FW - {pos_name}"] = num
 
-        st.markdown("##### ⚙️ [MF] 미드필더진 (Midfield)")
+        st.markdown("##### ⚙️ [MF] 미드필더 라인 (Midfield)")
         mf_cols = st.columns(len(active_slots["MF"]))
         for i, pos_name in enumerate(active_slots["MF"]):
             with mf_cols[i]:
-                st.markdown(f"<div style='text-align:center; background:#ff9800; color:white; border-radius:50px; padding:4px; font-weight:bold; font-size:12px; margin-bottom:4px;'>{pos_name}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align:center; background:#f57f17; color:white; border-radius:30px; padding:6px; font-weight:bold; font-size:13px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom:5px;'>📍 {pos_name}</div>", unsafe_allow_html=True)
                 num = st.number_input(f"{pos_name} 등번호", min_value=1, max_value=99, value=6+i, key=f"{selected_view_team}_mf_{i}", label_visibility="collapsed")
                 player_mapping[f"MF - {pos_name}"] = num
 
-        st.markdown("##### 🛡️ [DF] 수비진 (Defense)")
+        st.markdown("##### 🛡️ [DF] 수비 라인 (Defense)")
         df_cols = st.columns(len(active_slots["DF"]))
         for i, pos_name in enumerate(active_slots["DF"]):
             with df_cols[i]:
-                st.markdown(f"<div style='text-align:center; background:#2196f3; color:white; border-radius:50px; padding:4px; font-weight:bold; font-size:12px; margin-bottom:4px;'>{pos_name}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align:center; background:#0277bd; color:white; border-radius:30px; padding:6px; font-weight:bold; font-size:13px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom:5px;'>📍 {pos_name}</div>", unsafe_allow_html=True)
                 num = st.number_input(f"{pos_name} 등번호", min_value=1, max_value=99, value=2+i, key=f"{selected_view_team}_df_{i}", label_visibility="collapsed")
                 player_mapping[f"DF - {pos_name}"] = num
 
         st.markdown("##### 🧤 [GK] 골키퍼 (Goalkeeper)")
         gk_cols = st.columns(1)
         with gk_cols[0]:
-            st.markdown(f"<div style='text-align:center; background:#9c27b0; color:white; border-radius:50px; padding:4px; font-weight:bold; font-size:12px; margin-bottom:4px;'>GK</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align:center; background:#6a1b9a; color:white; border-radius:30px; padding:6px; font-weight:bold; font-size:13px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom:5px;'>📍 GK</div>", unsafe_allow_html=True)
             num = st.number_input("GK 등번호", min_value=1, max_value=99, value=1, key=f"{selected_view_team}_gk_0", label_visibility="collapsed")
             player_mapping[f"GK - {active_slots['GK'][0]}"] = num
 
@@ -442,7 +459,7 @@ if menu == "📋 실시간 전술판 & 터치 노트":
     selected_back_num = player_mapping[selected_position_slot]
     position_short = selected_position_slot.split(" - ")[0]
 
-    st.info(f"📍 현재 작전판에서 선택된 집중 관찰 대상: **[{selected_view_team}] {selected_position_slot} (등번호: {selected_back_num}번)**")
+    st.info(f"📍 현재 잔디 작전판에서 선택된 집중 관찰 대상: **[{selected_view_team}] {selected_position_slot} (등번호: {selected_back_num}번)**")
 
     # 역량 태그 선택 영역
     col_p1, col_p2 = st.columns(2)
@@ -862,7 +879,7 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                         df.loc[target_idx, "만 나이"] = age_full_str
                         df.loc[target_idx, "연 나이"] = age_year_str
                         df.loc[target_idx, "주발"] = edit_foot
-                        df.loc[target_idx, "신장(cm)"] = str(edit_height)
+                        df.loc[target_idx, "신장(cm)`"] = str(edit_height)
                         df.loc[target_idx, "체중(kg)"] = str(edit_weight)
                         df.loc[target_idx, "장점/특기"] = final_pros
                         df.loc[target_idx, "보완점/단점"] = final_cons
