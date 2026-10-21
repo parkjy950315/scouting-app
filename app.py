@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 상단 여백 및 스타일 설정 (현장 관찰 피치 핀 스타일 포함)
+# 📱 PC & 모바일 상단 여백 및 스타일 설정
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -166,7 +166,7 @@ def get_csv_export_url(sheet_url):
         return sheet_url.split("/edit")[0] + "/gviz/tq?tqx=out:csv"
     return sheet_url
 
-# 🛡️ 구글 시트 데이터 로드 및 컬럼 완벽 매핑 함수 (캐시 우회 포함)
+# 🛡️ 구글 시트 데이터 로드 및 컬럼 완벽 매핑 함수
 def load_data():
     expected_cols = [
         "선수명", "소속팀", "등번호", "포지션", "생년월일", "만 나이", "연 나이", "주발", "신장(cm)", "체중(kg)",
@@ -253,7 +253,6 @@ def safe_int(val, default_val):
     except:
         return default_val
 
-# 소속팀 텍스트 분리 함수 (현재 소속팀 / 과거 소속팀 이력 분리)
 def parse_team_info(team_str):
     if not team_str or pd.isna(team_str):
         return "-", ""
@@ -266,7 +265,7 @@ def parse_team_info(team_str):
     return team_str, ""
 
 # ----------------------------------------------------
-# 📄 모던 카드 스타일 프리미엄 PDF 보고서 생성 함수 (선수용)
+# 📄 PDF 보고서 생성 함수 (선수용)
 # ----------------------------------------------------
 def generate_pdf_report(player_data):
     korean_font = register_korean_font()
@@ -290,20 +289,17 @@ def generate_pdf_report(player_data):
     title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=16, leading=20, alignment=0, textColor=PRIMARY_COLOR)
     header_date = ParagraphStyle('HeaderDate', fontName=korean_font, fontSize=8.5, leading=11, alignment=2, textColor=colors.HexColor('#64748B'))
     
-    section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=10, leading=14, alignment=0, textColor=PRIMARY_COLOR, leftIndent=0, firstLineIndent=0)
-    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, alignment=0, textColor=TEXT_COLOR, leftIndent=0, firstLineIndent=0)
+    section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=10, leading=14, alignment=0, textColor=PRIMARY_COLOR)
+    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, alignment=0, textColor=TEXT_COLOR)
     
-    table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=8.5, leading=11, alignment=0, textColor=colors.HexColor('#64748B'), leftIndent=0, firstLineIndent=0)
-    table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=PRIMARY_COLOR, leftIndent=0, firstLineIndent=0)
+    table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=8.5, leading=11, alignment=0, textColor=colors.HexColor('#64748B'))
+    table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=PRIMARY_COLOR)
 
     header_data = [
         [Paragraph("<b>SMC SCOUTING REPORT</b>", title_style), Paragraph(f"<b>발급일:</b> {datetime.today().strftime('%Y-%m-%d')}", header_date)]
     ]
     header_table = Table(header_data, colWidths=[350, 170])
-    header_table.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-    ]))
+    header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('BOTTOMPADDING', (0,0), (-1,-1), 6)]))
     story.append(header_table)
     story.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY_COLOR, spaceAfter=12))
 
@@ -321,12 +317,8 @@ def generate_pdf_report(player_data):
     
     profile_table = Table(profile_data, colWidths=[90, 170, 90, 170])
     profile_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT),
-        ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('PADDING', (0,0), (-1,-1), 6),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT), ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 6), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
     ]))
     story.append(profile_table)
     story.append(Spacer(1, 14))
@@ -334,23 +326,12 @@ def generate_pdf_report(player_data):
     def add_modern_card(title, content, accent_hex):
         story.append(Spacer(1, 4))
         cleaned_content = str(content).replace('\n', '<br/>') if content and str(content).strip() else "작성된 관찰 내용이 없습니다."
-        
-        card_data = [
-            [Paragraph(f"<b>{title}</b>", section_title_style)],
-            [Paragraph(cleaned_content, body_style)]
-        ]
+        card_data = [[Paragraph(f"<b>{title}</b>", section_title_style)], [Paragraph(cleaned_content, body_style)]]
         card_table = Table(card_data, colWidths=[520])
         card_table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F1F5F9')),
-            ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#FFFFFF')),
-            ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR),
-            ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(accent_hex)),
-            ('TOPPADDING', (0,0), (-1,-1), 7),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 7),
-            ('LEFTPADDING', (0,0), (-1,-1), 12),
-            ('RIGHTPADDING', (0,0), (-1,-1), 12),
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F1F5F9')), ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#FFFFFF')),
+            ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR), ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(accent_hex)),
+            ('TOPPADDING', (0,0), (-1,-1), 7), ('BOTTOMPADDING', (0,0), (-1,-1), 7), ('LEFTPADDING', (0,0), (-1,-1), 12), ('RIGHTPADDING', (0,0), (-1,-1), 12)
         ]))
         story.append(card_table)
         story.append(Spacer(1, 8))
@@ -361,7 +342,7 @@ def generate_pdf_report(player_data):
 
     story.append(Spacer(1, 8))
     story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER_COLOR, spaceAfter=6))
-    footer_style = ParagraphStyle('FooterStyle', fontName=korean_font, fontSize=8, leading=10, alignment=1, textColor=colors.HexColor('#94A3B8'), leftIndent=0, firstLineIndent=0)
+    footer_style = ParagraphStyle('FooterStyle', fontName=korean_font, fontSize=8, leading=10, alignment=1, textColor=colors.HexColor('#94A3B8'))
     story.append(Paragraph("SUNGMUN COMPANY — Professional Player Scouting Database System", footer_style))
 
     doc.build(story)
@@ -369,7 +350,7 @@ def generate_pdf_report(player_data):
     return buffer
 
 # ----------------------------------------------------
-# 📄 경기 관찰 일지용 PDF 보고서 생성 함수 추가
+# 📄 경기 관찰 일지용 PDF 보고서 생성 함수
 # ----------------------------------------------------
 def generate_pdf_report_for_memo(row_data):
     korean_font = register_korean_font()
@@ -439,7 +420,6 @@ def generate_pdf_report_for_memo(row_data):
 
 df = load_data()
 
-# 포메이션별 라인업 구조 데이터 정의 추가
 formation_layouts = {
     "4-3-3": [
         {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
@@ -896,7 +876,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 선수 등록 (신장/체중 입력 칸을 깔끔한 텍스트 입력창으로 개선)
+# 3. 선수 등록 (신장/체중 레이아웃을 좌우 균형에 맞게 깔끔하게 정돈)
 # ----------------------------------------------------
 elif menu == "선수 등록":
     st.header("📋 신규 관찰 선수 등록")
@@ -922,10 +902,12 @@ elif menu == "선수 등록":
             foot = st.selectbox("주발", ["오른발", "왼발", "양발"])
             date = st.date_input("관찰/작성일자", value=datetime.today())
             
-            st.write("---")
-            # ✨ 빈 줄이나 셀렉트박스 구분선 없이 깔끔한 입력창 형태 적용
-            height_val = st.text_input("신장 (cm)", value="175", placeholder="예: 182")
-            weight_val = st.text_input("체중 (kg)", value="70", placeholder="예: 75")
+            # ✨ 좌우 균형에 맞게 2개 열로 나란히 배치하여 외톨이 느낌 제거
+            hw_col1, hw_col2 = st.columns(2)
+            with hw_col1:
+                height_val = st.text_input("신장 (cm)", value="175", placeholder="예: 182")
+            with hw_col2:
+                weight_val = st.text_input("체중 (kg)", value="70", placeholder="예: 75")
 
         st.subheader("📝 관찰 리포트 / 첫 메모")
         pros = st.text_area("장점 및 주요 특기")
@@ -1146,8 +1128,11 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                         
                         edit_date = st.date_input("관찰 작성일자", value=datetime.today(), key=f"inline_edit_date_{target_idx}")
                         
-                        edit_height = st.text_input("신장 (cm)", value=str(p.get("신장(cm)", "175")), key=f"inline_edit_h_{target_idx}")
-                        edit_weight = st.text_input("체중 (kg)", value=str(p.get("체중(kg)", "70")), key=f"inline_edit_w_{target_idx}")
+                        edit_hw1, edit_hw2 = st.columns(2)
+                        with edit_hw1:
+                            edit_height = st.text_input("신장 (cm)", value=str(p.get("신장(cm)", "175")), key=f"inline_edit_h_{target_idx}")
+                        with edit_hw2:
+                            edit_weight = st.text_input("체중 (kg)", value=str(p.get("체중(kg)", "70")), key=f"inline_edit_w_{target_idx}")
 
                     st.subheader("➕ 오늘 관찰한 내용 추가 입력 (누적 기록)")
                     new_pros = st.text_area("새 관찰 장점", key=f"inline_new_pros_{target_idx}")
