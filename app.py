@@ -64,7 +64,7 @@ st.markdown("""
         border-radius: 18px;
         padding: 20px 15px;
         box-shadow: inset 0 0 40px rgba(0,0,0,0.6), 0 8px 20px rgba(0,0,0,0.4);
-        margin-bottom: 20px;
+        margin-bottom: 15px;
     }
     
     /* 🔴 피치 위 포지션 핀 스타일 */
@@ -73,8 +73,8 @@ st.markdown("""
         color: white;
         border: 2.5px solid #ffffff;
         border-radius: 50%;
-        width: 52px;
-        height: 52px;
+        width: 54px;
+        height: 54px;
         margin: 0 auto 4px auto;
         display: flex;
         flex-direction: column;
@@ -299,7 +299,7 @@ def generate_pdf_report(player_data):
 
 df = load_data()
 
-# 포메이션별 라인업 구조 데이터 명확하게 정의 (3-4-3 추가 완료)
+# 포메이션별 라인업 구조 데이터 정의
 formation_layouts = {
     "4-3-3": [
         {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
@@ -334,30 +334,6 @@ formation_layouts = {
     ]
 }
 
-def render_pitch_graphic(team_name, formation_name):
-    st.markdown(f"""
-    <div class="match-soccer-pitch">
-        <div style="text-align: center; color: #ffeb3b; font-weight: 900; font-size: 16px; letter-spacing: 2px; text-shadow: 2px 2px 4px #000; margin-bottom: 10px;">
-            🏟️ {team_name} ({formation_name})
-        </div>
-    """, unsafe_allow_html=True)
-    
-    layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
-    
-    for row in layout:
-        st.markdown(f"<div style='color:#a3e4d7; font-weight:bold; font-size:10px; margin-bottom:3px;'>📍 {row['line']}</div>", unsafe_allow_html=True)
-        cols = st.columns(len(row['positions']))
-        for idx, pos in enumerate(row['positions']):
-            with cols[idx]:
-                st.markdown(f"""
-                <div class="match-pitch-pin">
-                    <span style="font-size: 9px; color: #ffeb3b;">POS</span>
-                    <span style="font-size: 12px; line-height: 1.1;">{pos}</span>
-                </div>
-                """, unsafe_allow_html=True)
-    
-    st.markdown("</div>", unsafe_allow_html=True)
-
 # 사이드바 로고 및 메뉴 구성
 display_logo()
 
@@ -375,11 +351,11 @@ menu = st.sidebar.radio(
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (3-4-3 포함 실시간 반영)
+# 1. 🏟️ 현장 경기 관찰 메모 (포지션별 등번호 입력 및 피치 연동)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("포메이션이나 팀명을 바꾸면 즉시 잔디 피치 그래픽에 반영됩니다.")
+    st.caption("대회명, 팀명, 포메이션을 선택하고 포지션별 등번호를 입력하면 피치 그래픽에 즉시 반영됩니다.")
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
@@ -393,28 +369,71 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     with col_t1:
         home_team = st.text_input("🏠 홈팀 명*", value="홈팀")
         home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2"], key="home_form")
-        home_lineup = st.text_area("홈팀 주요 라인업 / 등번호", placeholder="예: GK 1번 홍길동, DF 4번 김철수...")
     with col_t2:
         away_team = st.text_input("✈️ 어웨이팀 명*", value="어웨이팀")
         away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2"], key="away_form")
-        away_lineup = st.text_area("어웨이팀 주요 라인업 / 등번호", placeholder="예: FW 9번 이영호, MF 8번 박지성...")
 
     st.write("---")
 
-    # 🏟️ 실시간 포메이션 연동 잔디 피치 미리보기
-    st.subheader("🏟️ 선택한 포메이션별 그라운드 피치 실시간 미리보기")
+    # 홈팀 & 어웨이팀 포지션별 등번호 입력 컨테이너 함수
+    def render_team_pitch_with_inputs(team_name, formation_name, prefix):
+        st.markdown(f"### 🛡️ [{team_name}] 포메이션 및 등번호 입력 ({formation_name})")
+        layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
+        
+        team_entered_numbers = {}
+
+        # 1) 잔디 피치 시각화 먼저 출력
+        st.markdown(f"""
+        <div class="match-soccer-pitch">
+            <div style="text-align: center; color: #ffeb3b; font-weight: 900; font-size: 15px; letter-spacing: 2px; text-shadow: 2px 2px 4px #000; margin-bottom: 8px;">
+                🏟️ {team_name} ({formation_name})
+            </div>
+        """, unsafe_allow_html=True)
+        
+        for row in layout:
+            st.markdown(f"<div style='color:#a3e4d7; font-weight:bold; font-size:10px; margin-bottom:2px;'>📍 {row['line']}</div>", unsafe_allow_html=True)
+            cols = st.columns(len(row['positions']))
+            for idx, pos in enumerate(row['positions']):
+                # 세션에 저장된 등번호 가져오기 (없으면 빈칸 혹은 포지션명)
+                key_name = f"{prefix}_{pos}"
+                current_num = st.session_state.get(key_name, "")
+                display_num = f"#{current_num}" if current_num else pos
+
+                with cols[idx]:
+                    st.markdown(f"""
+                    <div class="match-pitch-pin">
+                        <span style="font-size: 8px; color: #ffeb3b;">{pos}</span>
+                        <span style="font-size: 11px; line-height: 1.1;">{display_num}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # 2) 각 포지션별 등번호 입력 텍스트박스 배치
+        st.markdown(f"**📝 {team_name} 포지션별 등번호 기입**")
+        for row in layout:
+            cols_input = st.columns(len(row['positions']))
+            for idx, pos in enumerate(row['positions']):
+                key_name = f"{prefix}_{pos}"
+                with cols_input[idx]:
+                    val = st.text_input(f"{pos}", value=st.session_state.get(key_name, ""), key=key_name, placeholder="등번호")
+                    if val.strip():
+                        team_entered_numbers[pos] = val.strip()
+        
+        return team_entered_numbers
+
+    # 홈팀 / 어웨이팀 입력 영역 분리
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
-        render_pitch_graphic(home_team if home_team else "홈팀", home_formation)
+        home_numbers = render_team_pitch_with_inputs(home_team if home_team else "홈팀", home_formation, "home")
     with pitch_col2:
-        render_pitch_graphic(away_team if away_team else "어웨이팀", away_formation)
+        away_numbers = render_team_pitch_with_inputs(away_team if away_team else "어웨이팀", away_formation, "away")
 
     st.write("---")
     st.subheader("⭐ 눈에 띈 선수 & 경기 핵심 메모")
     outstanding_memo = st.text_area(
         "눈에 띈 선수 및 경기 메모", 
-        placeholder="[예시]\n- 홈팀 10번: 탈압박 능력 탁월, 전진 패스 예리함\n- 어웨이팀 7번: 스피드 매우 빠름, 후반전 체력 저하 체크 필요\n- 경기 흐름: 전반전 탐색전 이후 후반 난타전 양상",
-        height=200
+        placeholder="[예시]\n- 홈팀 10번: 탈압박 능력 탁월, 전진 패스 예리함\n- 어웨이팀 7번: 스피드 매우 빠름, 후반전 체력 저하 체크 필요",
+        height=180
     )
 
     st.write("")
@@ -423,14 +442,18 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다.")
         else:
             with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
+                # 입력된 등번호 요약 문자열 생성
+                home_num_str = ", ".join([f"{pos}: #{num}" for pos, num in home_numbers.items()]) if home_numbers else "입력 없음"
+                away_num_str = ", ".join([f"{pos}: #{num}" for pos, num in away_numbers.items()]) if away_numbers else "입력 없음"
+
                 memo_player_name = f"[{tournament_name}] {home_team} vs {away_team}"
                 memo_team = f"{home_team} (홈) vs {away_team} (어웨이)"
                 memo_overall = (
                     f"📅 일자: {match_date} | 대회: {tournament_name}\n\n"
                     f"🏠 [홈팀: {home_team}] 포메이션: {home_formation}\n"
-                    f"- 라인업 요약: {home_lineup}\n\n"
+                    f"- 포지션별 등번호: {home_num_str}\n\n"
                     f"✈️ [어웨이팀: {away_team}] 포메이션: {away_formation}\n"
-                    f"- 라인업 요약: {away_lineup}\n\n"
+                    f"- 포지션별 등번호: {away_num_str}\n\n"
                     f"⭐ [눈에 띈 선수 및 현장 메모]\n{outstanding_memo}"
                 )
 
