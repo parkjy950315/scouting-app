@@ -38,7 +38,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 깔끔하고 안정적인 기본 CSS 스타일
+# 📱 깔끔하고 안정적인 기본 CSS 스타일 및 잔디 피치 스타일
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -55,6 +55,33 @@ st.markdown("""
         border-radius: 10px;
         background-color: rgba(255, 255, 255, 0.05);
         cursor: pointer;
+    }
+    
+    /* ⚽ 잔디 피치 작전판 그라운드 박스 스타일 */
+    .match-soccer-pitch {
+        background: radial-gradient(circle, #2e8b57 0%, #154335 100%);
+        border: 4px solid #ffffff;
+        border-radius: 18px;
+        padding: 20px 15px;
+        box-shadow: inset 0 0 40px rgba(0,0,0,0.6), 0 8px 20px rgba(0,0,0,0.4);
+        margin-bottom: 20px;
+    }
+    
+    /* 🔴 피치 위 포지션 핀 스타일 */
+    .match-pitch-pin {
+        background: radial-gradient(circle, #ff5252 0%, #b71c1c 100%);
+        color: white;
+        border: 2.5px solid #ffffff;
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 4px auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        font-weight: bold;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -272,6 +299,58 @@ def generate_pdf_report(player_data):
 
 df = load_data()
 
+# 포메이션별 라인업 구조 데이터 정의
+formation_layouts = {
+    "4-3-3": [
+        {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
+        {"line": "MF LINE", "positions": ["LCM", "CDM", "RCM"]},
+        {"line": "DF LINE", "positions": ["LB", "CB1", "CB2", "RB"]},
+        {"line": "GK LINE", "positions": ["GK"]}
+    ],
+    "4-4-2": [
+        {"line": "FW LINE", "positions": ["ST1", "ST2"]},
+        {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
+        {"line": "DF LINE", "positions": ["LB", "CB1", "CB2", "RB"]},
+        {"line": "GK LINE", "positions": ["GK"]}
+    ],
+    "4-2-3-1": [
+        {"line": "FW LINE", "positions": ["ST"]},
+        {"line": "AM LINE", "positions": ["LAM", "CAM", "RAM"]},
+        {"line": "DM LINE", "positions": ["LDM", "RDM"]},
+        {"line": "DF LINE", "positions": ["LB", "CB1", "CB2", "RB"]},
+        {"line": "GK LINE", "positions": ["GK"]}
+    ],
+    "3-5-2": [
+        {"line": "FW LINE", "positions": ["ST1", "ST2"]},
+        {"line": "MF LINE", "positions": ["LWB", "LCM", "CDM", "RCM", "RWB"]},
+        {"line": "DF LINE", "positions": ["CB1", "CB2", "CB3"]},
+        {"line": "GK LINE", "positions": ["GK"]}
+    ]
+}
+
+def render_pitch_graphic(team_name, formation_name):
+    st.markdown(f"""
+    <div class="match-soccer-pitch">
+        <div style="text-align: center; color: #ffeb3b; font-weight: 900; font-size: 18px; letter-spacing: 2px; text-shadow: 2px 2px 4px #000; margin-bottom: 12px;">
+            🏟️ {team_name} FIELD PITCH ({formation_name})
+        </div>
+    """, unsafe_allow_html=True)
+    
+    layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
+    for row in layout:
+        st.markdown(f"<div style='color:#a3e4d7; font-weight:bold; font-size:11px; margin-bottom:4px;'>📍 {row['line']}</div>", unsafe_allow_html=True)
+        cols = st.columns(len(row['positions']))
+        for idx, pos in enumerate(row['positions']):
+            with cols[idx]:
+                st.markdown(f"""
+                <div class="match-pitch-pin">
+                    <span style="font-size: 10px; color: #ffeb3b;">POS</span>
+                    <span style="font-size: 13px; line-height: 1.1;">{pos}</span>
+                </div>
+                """, unsafe_allow_html=True)
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+
 # 사이드바 로고 및 메뉴 구성
 display_logo()
 
@@ -289,7 +368,7 @@ menu = st.sidebar.radio(
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (대회명, 팀명, 포메이션, 라인업, 눈에 띈 선수 메모)
+# 1. 🏟️ 현장 경기 관찰 메모 (포메이션 선택 시 그라운드 그래픽 연동)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -306,13 +385,23 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
         col_t1, col_t2 = st.columns(2)
         with col_t1:
-            home_team = st.text_input("🏠 홈팀 명*")
-            home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2", "기타"], key="home_form")
+            home_team = st.text_input("🏠 홈팀 명*", value="홈팀")
+            home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2"], key="home_form")
             home_lineup = st.text_area("홈팀 주요 라인업 / 등번호", placeholder="예: GK 1번 홍길동, DF 4번 김철수...")
         with col_t2:
-            away_team = st.text_input("✈️ 어웨이팀 명*")
-            away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2", "기타"], key="away_form")
+            away_team = st.text_input("✈️ 어웨이팀 명*", value="어웨이팀")
+            away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2"], key="away_form")
             away_lineup = st.text_area("어웨이팀 주요 라인업 / 등번호", placeholder="예: FW 9번 이영호, MF 8번 박지성...")
+
+        st.write("---")
+
+        # 실시간 포메이션 그라운드 그래픽 미리보기 시각화
+        st.subheader("🏟️ 팀별 그라운드 포메이션 피치 미리보기")
+        pitch_col1, pitch_col2 = st.columns(2)
+        with pitch_col1:
+            render_pitch_graphic(home_team if home_team else "홈팀", home_formation)
+        with pitch_col2:
+            render_pitch_graphic(away_team if away_team else "어웨이팀", away_formation)
 
         st.write("---")
         st.subheader("⭐ 눈에 띈 선수 & 경기 핵심 메모")
