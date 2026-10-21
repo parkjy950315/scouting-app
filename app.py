@@ -351,7 +351,7 @@ menu = st.sidebar.radio(
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (포지션별 등번호 입력 및 피치 연동)
+# 1. 🏟️ 현장 경기 관찰 메모 (# 기호 제거 및 깔끔한 표시)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -375,14 +375,12 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    # 홈팀 & 어웨이팀 포지션별 등번호 입력 컨테이너 함수
     def render_team_pitch_with_inputs(team_name, formation_name, prefix):
         st.markdown(f"### 🛡️ [{team_name}] 포메이션 및 등번호 입력 ({formation_name})")
         layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
         
         team_entered_numbers = {}
 
-        # 1) 잔디 피치 시각화 먼저 출력
         st.markdown(f"""
         <div class="match-soccer-pitch">
             <div style="text-align: center; color: #ffeb3b; font-weight: 900; font-size: 15px; letter-spacing: 2px; text-shadow: 2px 2px 4px #000; margin-bottom: 8px;">
@@ -394,10 +392,10 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.markdown(f"<div style='color:#a3e4d7; font-weight:bold; font-size:10px; margin-bottom:2px;'>📍 {row['line']}</div>", unsafe_allow_html=True)
             cols = st.columns(len(row['positions']))
             for idx, pos in enumerate(row['positions']):
-                # 세션에 저장된 등번호 가져오기 (없으면 빈칸 혹은 포지션명)
                 key_name = f"{prefix}_{pos}"
                 current_num = st.session_state.get(key_name, "")
-                display_num = f"#{current_num}" if current_num else pos
+                # # 기호 제거: 등번호가 입력되어 있으면 등번호만 표시, 아니면 포지션 이름 표시
+                display_num = current_num if current_num else pos
 
                 with cols[idx]:
                     st.markdown(f"""
@@ -408,7 +406,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # 2) 각 포지션별 등번호 입력 텍스트박스 배치
         st.markdown(f"**📝 {team_name} 포지션별 등번호 기입**")
         for row in layout:
             cols_input = st.columns(len(row['positions']))
@@ -421,7 +418,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         
         return team_entered_numbers
 
-    # 홈팀 / 어웨이팀 입력 영역 분리
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
         home_numbers = render_team_pitch_with_inputs(home_team if home_team else "홈팀", home_formation, "home")
@@ -442,9 +438,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다.")
         else:
             with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
-                # 입력된 등번호 요약 문자열 생성
-                home_num_str = ", ".join([f"{pos}: #{num}" for pos, num in home_numbers.items()]) if home_numbers else "입력 없음"
-                away_num_str = ", ".join([f"{pos}: #{num}" for pos, num in away_numbers.items()]) if away_numbers else "입력 없음"
+                home_num_str = ", ".join([f"{pos}: {num}번" for pos, num in home_numbers.items()]) if home_numbers else "입력 없음"
+                away_num_str = ", ".join([f"{pos}: {num}번" for pos, num in away_numbers.items()]) if away_numbers else "입력 없음"
 
                 memo_player_name = f"[{tournament_name}] {home_team} vs {away_team}"
                 memo_team = f"{home_team} (홈) vs {away_team} (어웨이)"
