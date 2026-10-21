@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 진짜 축구장 그라운드 통째 배경 CSS 스타일
+# 📱 축구장 그라운드 통짜 잔디 UI 스타일 (완벽 격리)
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -52,29 +52,28 @@ st.markdown("""
         padding-top: 2rem !important;
     }
     
-    /* ⚽ 통짜 축구장 잔디 그라운드 컨테이너 CSS */
-    div[data-testid="stVerticalBlock"] > div.pitch-board-wrapper {
-        background: radial-gradient(circle, #2e8b57 0%, #194d3e 100%) !important;
+    /* ⚽ 잔디 그라운드 컨테이너 스타일 */
+    .st-key-pitch_inner_box {
+        background: radial-gradient(circle, #2e8b57 0%, #154335 100%) !important;
         background-image: 
             linear-gradient(rgba(255,255,255,0.1) 2px, transparent 2px),
-            linear-gradient(90deg, rgba(255,255,255,0.1) 2px, transparent 2px),
-            radial-gradient(circle, #2e8b57 0%, #154335 100%) !important;
-        background-size: 50px 50px, 50px 50px, 100% 100% !important;
+            linear-gradient(90deg, rgba(255,255,255,0.1) 2px, transparent 2px) !important;
+        background-size: 45px 45px !important;
         border: 4px solid #ffffff !important;
         border-radius: 20px !important;
-        padding: 25px 20px !important;
+        padding: 25px 15px !important;
         box-shadow: inset 0 0 50px rgba(0,0,0,0.6), 0 10px 25px rgba(0,0,0,0.4) !important;
         margin-bottom: 25px !important;
     }
     
-    /* 🔴 피치 위 원형 축구 핀 버튼 스타일 */
+    /* 🔴 잔디 그라운드 안의 원형 축구 핀 버튼 커스텀 */
     div.stButton > button {
         background: radial-gradient(circle, #ff4d4d 0%, #b71c1c 100%) !important;
         color: white !important;
         border: 3px solid #ffffff !important;
         border-radius: 50% !important;
-        width: 68px !important;
-        height: 68px !important;
+        width: 65px !important;
+        height: 65px !important;
         padding: 0 !important;
         font-weight: 800 !important;
         font-size: 13px !important;
@@ -101,8 +100,8 @@ st.markdown("""
 
     @media (max-width: 768px) {
         div.stButton > button {
-            width: 54px !important;
-            height: 54px !important;
+            width: 52px !important;
+            height: 52px !important;
             font-size: 11px !important;
         }
     }
@@ -340,11 +339,11 @@ menu = st.sidebar.radio(
 )
 
 # ----------------------------------------------------
-# 1. 📋 통짜 잔디밭 피치 작전판 & 클릭 노트
+# 1. 📋 잔디 그라운드 일체형 전술판 & 터치 노트
 # ----------------------------------------------------
 if menu == "📋 실시간 전술판 & 터치 노트":
     st.header("🏟️ SMC 실시간 터치 전술판 & 노트")
-    st.caption("🟢 초록색 축구장 피치 상자 내부의 **원형 핀 버튼을 터치**하여 등번호 수정 및 관찰 기록을 작성하세요[cite: 2].")
+    st.caption("🟢 초록색 축구장 그라운드 피치 판 안의 **원형 핀 버튼을 터치**하여 선수 선택 및 번호 변경을 진행하세요[cite: 2].")
 
     st.markdown("### 🏟️ 1. 팀 및 포메이션 설정")
     col_t1, col_t2 = st.columns(2)
@@ -424,23 +423,19 @@ if menu == "📋 실시간 전술판 & 터치 노트":
             st.session_state.pitch_numbers[k] = p['default']
 
     # ====================================================
-    # ⚽ [완벽히 가두어진 통짜 축구장 잔디밭 컨테이너]
+    # ⚽ [잔디 그라운드 박스 안에 완전히 포함된 통짜 전술판]
     # ====================================================
     st.markdown(f"### ⚽ [{home_team}] {form_home} 잔디 전술판")
 
-    # CSS 클래스가 적용된 상자 내부로 버튼 가두기
-    pitch_container = st.container()
-    
-    with pitch_container:
+    with st.container(key="pitch_inner_box"):
         st.markdown(f"""
-        <div style="background: radial-gradient(circle, #2e8b57 0%, #174235 100%); border: 4px solid #ffffff; border-radius: 20px; padding: 20px 15px; box-shadow: inset 0 0 40px rgba(0,0,0,0.6); margin-bottom: 20px;">
-            <div style="text-align: center; color: #ffeb3b; font-weight: 900; font-size: 20px; letter-spacing: 2px; text-shadow: 2px 2px 4px #000;">
-                🏟️ {home_team} FIELD PITCH ({form_home})
-            </div>
-            <div style="text-align: center; color: #ffffff; font-size: 13px; margin: 5px 0 15px 0; opacity: 0.9;">
-                👇 아래 피치 위의 포지션 핀을 직접 누르면 번호 변경 및 선택이 가능합니다.
-            </div>
-            <div style="border-bottom: 2px solid rgba(255,255,255,0.3); margin-bottom: 15px;"></div>
+        <div style="text-align: center; color: #ffeb3b; font-weight: 900; font-size: 20px; letter-spacing: 2px; text-shadow: 2px 2px 4px #000; margin-bottom: 5px;">
+            🏟️ {home_team} FIELD PITCH ({form_home})
+        </div>
+        <div style="text-align: center; color: #ffffff; font-size: 13px; margin-bottom: 15px; opacity: 0.9;">
+            👇 그라운드 잔디 위 포지션 핀 버튼을 터치하여 선택하세요[cite: 2].
+        </div>
+        <div style="border-bottom: 2px solid rgba(255,255,255,0.3); margin-bottom: 15px;"></div>
         """, unsafe_allow_html=True)
 
         lines_order = list(dict.fromkeys([p['line'] for p in pins]))
@@ -459,8 +454,6 @@ if menu == "📋 실시간 전술판 & 터치 노트":
                     if st.button(button_label, key=f"btn_pin_{pin_key}"):
                         st.session_state.selected_pin_key = pin_key
 
-        st.markdown("</div>", unsafe_allow_html=True)
-
     st.divider()
 
     # ====================================================
@@ -472,7 +465,7 @@ if menu == "📋 실시간 전술판 & 터치 노트":
     cur_line, cur_pos = cur_key.split("_")
     cur_num = st.session_state.pitch_numbers.get(cur_key, 10)
 
-    st.success(f"📌 현재 피치에서 선택된 핀: **[{home_team}] {cur_line} - {cur_pos} (현재 등번호: {cur_num}번)**")
+    st.success(f"📌 현재 잔디 피치에서 선택된 핀: **[{home_team}] {cur_line} - {cur_pos} (현재 등번호: {cur_num}번)**")
 
     c_edit1, c_edit2 = st.columns([1, 2])
     with c_edit1:
@@ -487,7 +480,7 @@ if menu == "📋 실시간 전술판 & 터치 노트":
     with c_edit2:
         st.write("")
         st.write("")
-        st.info("💡 등번호를 변경하면 위 잔디 피치 그라운드 속 핀 번호가 실시간으로 변경됩니다.")
+        st.info("💡 등번호를 수정하면 위 초록색 잔디 그라운드 안의 핀 번호가 실시간으로 자동 변경됩니다.")
 
     st.write("---")
 
