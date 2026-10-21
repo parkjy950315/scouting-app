@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 디자인 및 잔디 피치 작전판 CSS
+# 📱 PC & 모바일 반응형 디자인 및 스타일
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -58,42 +58,6 @@ st.markdown("""
         background-color: rgba(255, 255, 255, 0.08);
         cursor: pointer;
     }
-    
-    /* ⚽ 실제 축구장 피치(그라운드) 디자인 */
-    .soccer-pitch {
-        background-color: #1e7e34;
-        background-image: 
-            linear-gradient(rgba(255,255,255,0.12) 2px, transparent 2px),
-            linear-gradient(90deg, rgba(255,255,255,0.12) 2px, transparent 2px),
-            linear-gradient(180deg, #1b4d3e 0%, #2e8b57 50%, #1b4d3e 100%);
-        background-size: 60px 60px, 60px 60px, 100% 100%;
-        border: 4px solid #ffffff;
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        margin-bottom: 20px;
-    }
-    
-    /* 🔴 피치 위에 뜬 선수 핀 마커 스타일 */
-    .pitch-marker {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background: radial-gradient(circle, #ff5252 0%, #c62828 100%);
-        color: white;
-        border: 3px solid #ffffff;
-        border-radius: 50%;
-        width: 60px;
-        height: 60px;
-        font-weight: 800;
-        font-size: 12px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-        margin: 0 auto;
-        text-align: center;
-        line-height: 1.1;
-    }
-
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 290px !important;
@@ -107,11 +71,6 @@ st.markdown("""
             padding-left: 1rem !important;
             padding-right: 1rem !important;
             padding-top: 2rem !important;
-        }
-        .pitch-marker {
-            width: 48px;
-            height: 48px;
-            font-size: 10px;
         }
     }
     </style>
@@ -354,152 +313,113 @@ menu = st.sidebar.radio(
 )
 
 # ----------------------------------------------------
-# 1. 📋 잔디 피치 작전판 그라운드 핀 터치 노트
+# 1. 📋 전술판 및 현장 터치 스카우트 노트
 # ----------------------------------------------------
 if menu == "📋 실시간 전술판 & 터치 노트":
-    st.header("🏟️ SMC 실시간 잔디 작전판 & 터치 노트")
-    st.caption("※ 초록색 축구장 피치(그라운드) 전술판 위에서 포지션별 핀을 확인하고 기록하세요.")
+    st.header("🏟️ SMC 실시간 전술판 & 터치 스카우트 노트")
+    st.caption("※ 경기 중 포메이션별 포지션별 선수의 등번호를 지정하고, 역량 태그와 메모를 즉시 기록하세요.")
 
-    st.markdown("### 🏟️ 1. 팀 및 포메이션 설정")
+    st.markdown("### 🏟️ 1. 포메이션 및 등번호 매칭")
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.text_input("관찰 팀 이름", value="홈팀")
-        form_home = st.selectbox("포메이션 구조", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2"], key="form_home")
+        team_name = st.text_input("관찰 팀 이름", value="장훈고")
+        formation = st.selectbox("포메이션 선택", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2"])
     with col_t2:
-        opponent_team = st.text_input("상대 팀 이름", value="상대팀")
-
-    st.divider()
-
-    # ====================================================
-    # ⚽ [실제 축구장 피치 배경 위에 포지션별 핀 배치 UI]
-    # ====================================================
-    st.markdown(f"""
-    <div class="soccer-pitch">
-        <div style="text-align: center; margin-bottom: 15px;">
-            <h2 style="margin: 0; color: #ffeb3b; font-weight: 900; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">
-                ⚽ TACTICAL PITCH — {home_team} ({form_home})
-            </h2>
-            <p style="font-size: 13px; color: #e8f8f5; margin: 5px 0 0 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">
-                피치 위에 배치된 포지션별 핀(마커)과 등번호를 설정하세요.
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
+        opponent_name = st.text_input("상대 팀 이름", value="상대팀")
 
     # 포메이션별 포지션 슬롯 구성
     formation_slots = {
-        "4-3-3": {"FW": ["LW", "CF", "RW"], "MF": ["LCM", "CDM", "RCM"], "DF": ["LB", "CB1", "CB2", "RB"], "GK": ["GK"]},
-        "4-4-2": {"FW": ["ST1", "ST2"], "MF": ["LM", "LCM", "RCM", "RM"], "DF": ["LB", "CB1", "CB2", "RB"], "GK": ["GK"]},
-        "4-2-3-1": {"FW": ["ST"], "MF": ["LAM", "CAM", "RAM"], "DM": ["LDM", "RDM"], "DF": ["LB", "CB1", "CB2", "RB"], "GK": ["GK"]},
-        "3-5-2": {"FW": ["ST1", "ST2"], "MF": ["LWB", "LCM", "CDM", "RCM", "RWB"], "DF": ["CB1", "CB2", "CB3"], "GK": ["GK"]}
+        "4-3-3": {"FW": ["LW", "CF", "RW"], "MF": ["LCM", "CDM", "RCM"], "DF": ["LB", "LCB", "RCB", "RB"], "GK": ["GK"]},
+        "4-4-2": {"FW": ["ST1", "ST2"], "MF": ["LM", "LCM", "RCM", "RM"], "DF": ["LB", "LCB", "RCB", "RB"], "GK": ["GK"]},
+        "4-2-3-1": {"FW": ["ST"], "MF": ["LAM", "CAM", "RAM"], "DM": ["LDM", "RDM"], "DF": ["LB", "LCB", "RCB", "RB"], "GK": ["GK"]},
+        "3-5-2": {"FW": ["ST1", "ST2"], "MF": ["LWB", "LCM", "CDM", "RCM", "RWB"], "DF": ["LCB", "CB", "RCB"], "GK": ["GK"]}
     }
 
-    active_slots = formation_slots.get(form_home, formation_slots["4-3-3"])
+    active_slots = formation_slots.get(formation, formation_slots["4-3-3"])
     player_mapping = {}
 
-    # 피치 내부에서 라인별 핀 배치 시뮬레이션
-    for line_name, positions in active_slots.items():
-        st.markdown(f"<div style='color: #a3e4d7; font-weight: bold; margin: 12px 0 6px 0; font-size: 13px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);'>📍 {line_name} 라인 포진</div>", unsafe_allow_html=True)
-        cols = st.columns(len(positions))
-        for i, pos_name in enumerate(positions):
-            with cols[i]:
-                st.markdown(f"""
-                <div class="pitch-marker">
-                    <span style="font-size:11px;">{pos_name}</span>
-                </div>
-                """, unsafe_allow_html=True)
-                num = st.number_input(f"{pos_name} 등번호", min_value=1, max_value=99, value=10+i, key=f"pitch_{line_name}_{i}", label_visibility="collapsed")
-                player_mapping[f"{line_name} - {pos_name}"] = num
-
-    st.markdown("</div>", unsafe_allow_html=True) # 피치 박스 닫기
+    with st.container():
+        for line_name, positions in active_slots.items():
+            st.markdown(f"**[{line_name} 라인]**")
+            cols = st.columns(len(positions))
+            for i, pos_name in enumerate(positions):
+                with cols[i]:
+                    num = st.number_input(f"{pos_name}", min_value=1, max_value=99, value=10+i, key=f"{line_name}_{i}")
+                    player_mapping[f"{line_name} - {pos_name}"] = num
 
     st.divider()
 
-    # ====================================================
-    # 🎯 2. 스마트폰 터치 최적화 메모 작성 영역 (스크롤 막힘 방지)
-    # ====================================================
     st.markdown("### ⭐ 눈에 띤 선수별 집중 메모")
-    st.caption("※ 위에서 등번호가 기입된 선수들 중 메모를 남기고 싶은 선수를 터치하세요. (키보드 팝업 없음)")
+    st.caption("위에서 등번호가 기입된 선수들 중 메모를 남기고 싶은 선수를 선택하세요.")
 
-    if player_mapping:
-        selected_players_memo = []
-        cols_memo = st.columns(2)
-        idx = 0
-        for pos_key, b_num in player_mapping.items():
-            target_col = cols_memo[idx % 2]
-            with target_col:
-                player_label = f"[{home_team}] {pos_key} (#{b_num})"
-                if st.checkbox(player_label, key=f"memo_chk_{home_team}_{pos_key}"):
-                    selected_players_memo.append((pos_key, b_num))
-            idx += 1
+    selected_players = st.multiselect(
+        "메모할 선수를 체크하세요 (복수 선택 가능)",
+        options=list(player_mapping.keys()),
+        format_func=lambda x: f"[{team_name}] {x} (#{player_mapping[x]})"
+    )
 
-        if selected_players_memo:
-            st.info(f"📍 현재 선택된 선수: {len(selected_players_memo)}명")
-            
-            # 역량 태그 선택 영역
-            col_p1, col_p2 = st.columns(2)
-            with col_p1:
-                height_tag = st.multiselect("📐 체형 및 신장", ["170대", "180초반", "180중반", "180후반", "190이상", "단단함", "비율좋음", "피지컬우수"], default=["180중반", "비율좋음"], key="m_h_tag")
-            with col_p2:
-                speed_tag = st.select_slider("⚡ 스피드 / 활동량", options=["느림", "평범", "빠름", "매우빠름"], value="빠름", key="m_s_slider")
+    if selected_players:
+        col_p1, col_p2 = st.columns(2)
+        with col_p1:
+            height_tag = st.multiselect("📐 체형 및 신장", ["170대", "180초반", "180중반", "180후반", "190이상", "단단함", "비율좋음", "피지컬우수"], default=["180중반", "비율좋음"])
+        with col_p2:
+            speed_tag = st.select_slider("⚡ 스피드 / 활동량", options=["느림", "평범", "빠름", "매우빠름"], value="빠름")
 
-            col_s1, col_s2 = st.columns(2)
-            with col_s1:
-                def_tag = st.multiselect("🛡️ 수비 스타일", ["파이터형(강한압박)", "지능형(길목차단)", "커버링위주", "1v1차단우수", "헤딩경합승리"], default=["파이터형(강한압박)"], key="m_def_tag")
-            with col_s2:
-                tech_tag = st.multiselect("⚽ 공격 / 테크닉", ["첫터치부드러움", "탈압박우수", "전환패스우수", "양발자유자재", "골결정력우수"], key="m_tech_tag")
+        col_s1, col_s2 = st.columns(2)
+        with col_s1:
+            def_tag = st.multiselect("🛡️ 수비 스타일", ["파이터형(강한압박)", "지능형(길목차단)", "커버링위주", "1v1차단우수", "헤딩경합승리"], default=["파이터형(강한압박)"])
+        with col_s2:
+            tech_tag = st.multiselect("⚽ 공격 / 테크닉", ["첫터치부드러움", "탈압박우수", "전환패스우수", "양발자유자재", "골결정력우수"])
 
-            with st.expander("🧠 [고급 평가] 전환, 스캐닝, 압박 대처, 멘탈 성향 세부 체크"):
-                ca1, ca2 = st.columns(2)
-                with ca1:
-                    transition_tag = st.multiselect("🔄 공수 전환", ["수비전환 즉각적", "역습판단 빠름", "수비참여 부족", "템포 지연"], key="m_tr_tag")
-                    scanning_tag = st.multiselect("👀 인지 및 판단 (스캐닝)", ["주변 확인(스캐닝) 우수", "터치 전 다음 플레이 결정", "볼을 오래 끌어 템포 죽임"], key="m_sc_tag")
-                with ca2:
-                    pressure_tag = st.multiselect("🧗 압박 대처 & 멘탈", ["강압박 속 침착함 유지", "기복 없이 안정적", "콜사운드 명확/리더십", "흥분/파울 성향 있음"], key="m_pr_tag")
+        with st.expander("🧠 [고급 평가] 전환, 스캐닝, 압박 대처, 멘탈 성향 세부 체크"):
+            ca1, ca2 = st.columns(2)
+            with ca1:
+                transition_tag = st.multiselect("🔄 공수 전환", ["수비전환 즉각적", "역습판단 빠름", "수비참여 부족", "템포 지연"])
+                scanning_tag = st.multiselect("👀 인지 및 판단 (스캐닝)", ["주변 확인(스캐닝) 우수", "터치 전 다음 플레이 결정", "볼을 오래 끌어 템포 죽임"])
+            with ca2:
+                pressure_tag = st.multiselect("🧗 압박 대처 & 멘탈", ["강압박 속 침착함 유지", "기복 없이 안정적", "콜사운드 명확/리더십", "흥분/파울 성향 있음"])
 
-            verdict = st.radio("🔥 현장 관찰 등급", ["🔥 A급 (즉시 관찰/계약 검토)", "👀 B급 (지속 관찰 필요)", "C급 (보통)", "미달"], horizontal=True, key="m_verdict")
-            detail_memo = st.text_input("📝 추가 한줄 자유 메모", placeholder="예: 전반 20분 상대 CF 공중볼 완벽 제압", key="m_detail")
+        verdict = st.radio("🔥 현장 관찰 등급", ["🔥 A급 (즉시 관찰/계약 검토)", "👀 B급 (지속 관찰 필요)", "C급 (보통)", "미달"], horizontal=True)
+        detail_memo = st.text_input("📝 추가 한줄 자유 메모", placeholder="예: 전반 20분 상대 CF 공중볼 완벽 제압")
 
-            all_tags = height_tag + [f"스피드:{speed_tag}"] + def_tag + tech_tag + transition_tag + scanning_tag + pressure_tag
+        all_tags = height_tag + [f"스피드:{speed_tag}"] + def_tag + tech_tag + transition_tag + scanning_tag + pressure_tag
 
-            st.divider()
+        st.divider()
 
-            if st.button("💾 선택한 선수들 구글 시트에 일괄 임시 저장", type="primary", use_container_width=True):
-                new_rows_list = []
-                for pos_key, b_num in selected_players_memo:
-                    temp_player_name = f"[{home_team}] {b_num}번"
-                    pros_summary = f"[체형/특징] {', '.join(all_tags)}"
-                    overall_summary = f"상대팀: vs {opponent_team} | 포메이션: {form_home} ({pos_key}) | 관찰등급: {verdict}"
-                    if detail_memo:
-                        overall_summary += f" | 메모: {detail_memo}"
+        if st.button("💾 선택한 선수들 구글 시트에 일괄 임시 저장", type="primary", use_container_width=True):
+            new_rows_list = []
+            for pos_key in selected_players:
+                b_num = player_mapping[pos_key]
+                temp_player_name = f"[{team_name}] {b_num}번"
+                pros_summary = f"[체형/특징] {', '.join(all_tags)}"
+                overall_summary = f"상대팀: vs {opponent_name} | 포메이션: {formation} ({pos_key}) | 관찰등급: {verdict}"
+                if detail_memo:
+                    overall_summary += f" | 메모: {detail_memo}"
 
-                    new_rows_list.append({
-                        "선수명": temp_player_name,
-                        "소속팀": home_team,
-                        "등번호": str(b_num),
-                        "포지션": pos_key.split(" - ")[-1],
-                        "생년월일": "",
-                        "만 나이": "",
-                        "연 나이": "",
-                        "주발": "",
-                        "신장(cm)": "",
-                        "체중(kg)": "",
-                        "진행 상태": "현장 관찰 메모 (임시)",
-                        "장점/특기": pros_summary,
-                        "보완점/단점": "",
-                        "종합 평가": overall_summary,
-                        "작성일자": datetime.today().strftime('%Y-%m-%d')
-                    })
+                new_rows_list.append({
+                    "선수명": temp_player_name,
+                    "소속팀": team_name,
+                    "등번호": str(b_num),
+                    "포지션": pos_key.split(" - ")[-1],
+                    "생년월일": "",
+                    "만 나이": "",
+                    "연 나이": "",
+                    "주발": "",
+                    "신장(cm)": "",
+                    "체중(kg)": "",
+                    "진행 상태": "현장 관찰 메모 (임시)",
+                    "장점/특기": pros_summary,
+                    "보완점/단점": "",
+                    "종합 평가": overall_summary,
+                    "작성일자": datetime.today().strftime('%Y-%m-%d')
+                })
 
-                with st.spinner("구글 시트에 메모를 일괄 기록하는 중..."):
-                    new_df_to_add = pd.DataFrame(new_rows_list)
-                    updated_df = new_df_to_add if df.empty else pd.concat([df, new_df_to_add], ignore_index=True)
-                    if save_data_to_sheet(updated_df):
-                        st.success(f"🎉 선택하신 {len(selected_players_memo)}명의 선수의 현장 메모가 구글 시트에 안전하게 임시 저장되었습니다!")
-                        st.balloons()
-        else:
-            st.info("💡 메모를 남기고 싶은 선수의 체크박스를 터치하세요. (여러 명 동시 선택 가능)")
-    else:
-        st.warning("⚠️ 먼저 위에 등번호를 입력해 주세요.")
+            with st.spinner("구글 시트에 메모를 일괄 기록하는 중..."):
+                new_df_to_add = pd.DataFrame(new_rows_list)
+                updated_df = new_df_to_add if df.empty else pd.concat([df, new_df_to_add], ignore_index=True)
+                if save_data_to_sheet(updated_df):
+                    st.success(f"🎉 선택하신 {len(selected_players)}명의 선수의 현장 메모가 구글 시트에 안전하게 임시 저장되었습니다!")
+                    st.balloons()
 
 # ----------------------------------------------------
 # 2. 선수 정식 등록
