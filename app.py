@@ -61,7 +61,6 @@ st.markdown("""
         cursor: pointer;
     }
     
-    /* 모바일 입력창 컴팩트 디자인 */
     input {
         font-size: 16px !important;
     }
@@ -422,7 +421,6 @@ formation_layouts = {
     ]
 }
 
-# ⚽ 피치 그래픽 렌더러 (입력된 등번호가 피치 위 빨간 원에 즉시 반영됨)
 def render_pitch_graphic_with_numbers(team_name, formation_name, num_dict):
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     
@@ -476,7 +474,7 @@ menu = st.sidebar.radio("이동할 메뉴", [
 ])
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (모바일 스크롤 & 입력 최적화 버전)
+# 1. 🏟️ 현장 경기 관찰 메모
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -507,10 +505,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         all_positions = [pos for row in layout for pos in row['positions']]
         nums_dict = {pos: st.session_state.get(f"{prefix}_{pos}", "") for pos in all_positions}
 
-        # 1. 등번호가 실시간 반영되는 그라운드 시각화 상단 배치
         render_pitch_graphic_with_numbers(team_name if team_name else "팀", formation_name, nums_dict)
 
-        # 2. 스크롤을 최소화하기 위한 컴팩트 가로 배치 입력 그리드 (폰에서 키보드가 올라와도 조작 용이)
         st.markdown(f"**⚡ [{team_name}] 포지션별 등번호 입력**")
         
         for row in layout:
@@ -639,18 +635,18 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회
+# 2. 📂 경기 일지 조회 (수정 및 추가 메모 덧붙이기 기능 포함)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
-    st.caption("작성된 현장 경기 일지를 조회, 검색, PDF 다운로드하거나 일괄 삭제할 수 있습니다.")
+    st.caption("작성된 현장 경기 일지를 조회, 검색, PDF 다운로드, 메모 추가 수정하거나 일괄 삭제할 수 있습니다.")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
     if memo_df.empty:
         st.info("아직 저장된 경기 관찰 일지가 없습니다. [🏟️ 현장 경기 관찰 메모] 메뉴에서 첫 일지를 작성해 보세요!")
     else:
-        tab_view, tab_delete = st.tabs(["📋 일지 목록 및 조회", "🗑️ 일지 일괄 삭제"])
+        tab_view, tab_delete = st.tabs(["📋 일지 목록 및 조회/수정", "🗑️ 일지 일괄 삭제"])
 
         with tab_view:
             if "작성일자" in memo_df.columns:
@@ -684,7 +680,7 @@ elif menu == "📂 경기 일지 조회":
             if selected_month_filter != "전체":
                 filtered_memo_df = filtered_memo_df[filtered_memo_df["작성일자"].str.startswith(selected_month_filter)]
 
-            st.subheader("📋 경기 일지 목록 (조회할 일지를 **클릭**하세요)")
+            st.subheader("📋 경기 일지 목록 (조회 및 수정할 일지를 **클릭**하세요)")
 
             if filtered_memo_df.empty:
                 st.warning("🔍 검색 조건에 일치하는 경기 일지가 없습니다.")
@@ -794,10 +790,49 @@ elif menu == "📂 경기 일지 조회":
                             render_pitch_graphic_with_numbers(a_team_name, away_form, away_nums)
 
                         st.markdown("---")
-                        st.markdown("**📝 상세 관찰 기록 및 총평**")
+                        st.markdown("**📝 기존 저장된 상세 관찰 기록 및 총평**")
                         st.info(clean_content)
+
+                        # ----------------------------------------------------
+                        # ✨ [신규 기능] 기존 경기 일지 수정 및 추가 메모 덧붙이기 폼
+                        # ----------------------------------------------------
+                        st.write("---")
+                        with st.expander(f"✏️ [{match_title}] 경기 일지 내용 수정 및 추가 메모 덧붙이기", expanded=False):
+                            additional_memo_input = st.text_area(
+                                "➕ 추가로 덧붙일 관찰 메모",
+                                placeholder="후반전 추가골 상황, 선수 교체 전술 변화 등을 이어서 적어주세요...",
+                                key=f"add_memo_textarea_{target_memo_idx}",
+                                height=120
+                            )
+                            
+                            col_save_memo, col_del_memo = st.columns([1, 1])
+                            with col_save_memo:
+                                if st.button("🔄 수정사항 및 추가 메모 저장하기", type="primary", use_container_width=True, key=f"btn_save_memo_{target_memo_idx}"):
+                                    with st.spinner("구글 시트에 일지를 업데이트하는 중..."):
+                                        today_str = datetime.today().strftime('%Y-%m-%d')
+                                        
+                                        if additional_memo_input.strip():
+                                            updated_overall_content = f"{raw_content}\n\n[{today_str} 추가 메모 기록]\n{additional_memo_input.strip()}"
+                                        else:
+                                            updated_overall_content = raw_content
+
+                                        df.loc[target_memo_idx, "종합 평가"] = updated_overall_content
+                                        
+                                        if save_data_to_sheet(df):
+                                            st.success("🎉 경기 관찰 일지가 성공적으로 수정·업데이트되었습니다!")
+                                            st.rerun()
+
+                            with col_del_memo:
+                                confirm_memo_del = st.checkbox("⚠️ 이 경기 일지 삭제 확인", key=f"chk_memo_del_{target_memo_idx}")
+                                if confirm_memo_del:
+                                    if st.button("🗑️ 해당 경기 일지 영구 삭제", type="secondary", use_container_width=True, key=f"btn_memo_del_{target_memo_idx}"):
+                                        with st.spinner("구글 시트에서 경기 일지를 삭제하는 중..."):
+                                            updated_df = df.drop([target_memo_idx]).reset_index(drop=True)
+                                            if save_data_to_sheet(updated_df):
+                                                st.success("🎉 해당 경기 일지가 성공적으로 삭제되었습니다!")
+                                                st.rerun()
                 else:
-                    st.info("💡 위 목록 표에서 조회할 **경기 일지 행을 클릭**하시면 하단에 상세 내용과 시각화 화면이 나타납니다.")
+                    st.info("💡 위 목록 표에서 조회하거나 수정할 **경기 일지 행을 클릭**하시면 하단에 상세 내용과 수정 폼이 나타납니다.")
 
         with tab_delete:
             st.subheader("🗑️ 경기 일지 다중 선택 및 일괄 삭제")
