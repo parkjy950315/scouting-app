@@ -529,10 +529,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             if val.strip():
                 team_entered_numbers[pos] = val.strip()
 
-        # 1. 시각화 그라운드 출력
         render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
 
-        # 2. 포메이션 형태 맞춤형 직접 입력 그리드
         display_t_name = team_name if team_name else "입력 대기중인 팀"
         st.markdown(f"**⚡ {display_t_name} 포메이션 진형별 등번호 직접 입력**")
         
@@ -560,11 +558,10 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         home_numbers = render_team_interactive_grid(home_team, home_formation, "home")
     with pitch_col2:
         st.markdown("### ✈️ 어웨이팀 그라운드 및 등번호")
-        away_numbers = render_team_interactive_grid(away_team, away_formation, "away")
+        away_numbers = render_team_interactive_grid(home_team if 'home_team' in locals() else "", away_formation, "away")
 
     st.write("---")
 
-    # 💡 포메이션 시각화 기반 포지션별 직접 선택 메모 시스템
     st.subheader("⭐ 시각화 포지션별 집중 관찰 메모")
     st.caption("위 그라운드 포메이션에 등번호를 입력하면 아래에 해당 포지션들이 자동으로 활성화됩니다. 메모할 포지션을 체크하세요!")
 
@@ -680,18 +677,18 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회
+# 2. 📂 경기 일지 조회 (메모 추가 및 수정 기능 포함)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
-    st.header("📂 현장 경기 관찰 일지 모음")
-    st.caption("작성된 현장 경기 일지를 조회, 검색, PDF 다운로드하거나 일괄 삭제할 수 있습니다.")
+    st.header("📂 현장 경기 관찰 일지 모음 및 추가 수정")
+    st.caption("작성된 현장 경기 일지를 조회하고, 하단에서 기존 메모에 내용을 이어서 추가하거나 수정할 수 있습니다.")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
     if memo_df.empty:
         st.info("아직 저장된 경기 관찰 일지가 없습니다. [🏟️ 현장 경기 관찰 메모] 메뉴에서 첫 일지를 작성해 보세요!")
     else:
-        tab_view, tab_delete = st.tabs(["📋 일지 목록 및 조회", "🗑️ 일지 일괄 삭제"])
+        tab_view, tab_delete = st.tabs(["📋 일지 목록 조회 및 이어서 수정", "🗑️ 일지 일괄 삭제"])
 
         with tab_view:
             if "작성일자" in memo_df.columns:
@@ -725,7 +722,7 @@ elif menu == "📂 경기 일지 조회":
             if selected_month_filter != "전체":
                 filtered_memo_df = filtered_memo_df[filtered_memo_df["작성일자"].str.startswith(selected_month_filter)]
 
-            st.subheader("📋 경기 일지 목록 (조회할 일지를 **클릭**하세요)")
+            st.subheader("📋 경기 일지 목록 (조회 및 수정할 일지를 **클릭**하세요)")
 
             if filtered_memo_df.empty:
                 st.warning("🔍 검색 조건에 일치하는 경기 일지가 없습니다.")
@@ -834,10 +831,43 @@ elif menu == "📂 경기 일지 조회":
                             render_pitch_graphic_from_saved(a_team_name, away_form, away_nums)
 
                         st.markdown("---")
-                        st.markdown("**📝 상세 관찰 기록 및 총평**")
+                        st.markdown("**📝 현재 저장된 상세 관찰 기록 및 총평**")
                         st.info(clean_content)
+
+                        # 💡 기존 메모에 이어서 수정 및 추가할 수 있는 폼 영역
+                        st.markdown("---")
+                        with st.expander("✏️ 이 경기 일지에 새로운 메모 추가 및 내용 수정하기", expanded=True):
+                            st.caption("기존 작성된 내용 아래에 새로운 관찰 내용이나 수정 사항을 이어서 작성할 수 있습니다.")
+                            
+                            # 기존 전체 총평 부분 추출
+                            existing_general_memo = ""
+                            if "📝 [경기 전체 총평]\n" in raw_content:
+                                existing_general_memo = raw_content.split("📝 [경기 전체 총평]\n")[-1]
+                            else:
+                                existing_general_memo = raw_content
+
+                            updated_general_input = st.text_area(
+                                "총평 내용 수정 및 이어쓰기",
+                                value=existing_general_memo,
+                                key=f"edit_memo_textarea_{target_memo_idx}",
+                                height=180
+                            )
+
+                            if st.button("💾 수정 내용 및 추가 메모 반영하기", type="primary", use_container_width=True, key=f"btn_save_memo_edit_{target_memo_idx}"):
+                                with st.spinner("구글 시트의 일지 내용을 업데이트하는 중..."):
+                                    # 메타데이터와 기존 선수별 메모는 그대로 보존하고 총평 부분만 업데이트
+                                    meta_part = raw_content.split("📝 [경기 전체 총평]")[0]
+                                    new_full_content = f"{meta_part}📝 [경기 전체 총평]\n{updated_general_input.strip()}"
+
+                                    records = df.to_dict('records')
+                                    records[target_memo_idx]["종합 평가"] = new_full_content
+                                    updated_df = pd.DataFrame(records).astype(str)
+
+                                    if save_data_to_sheet(updated_df):
+                                        st.success("🎉 경기 일지 메모가 성공적으로 수정·업데이트되었습니다!")
+                                        st.rerun()
                 else:
-                    st.info("💡 위 목록 표에서 조회할 **경기 일지 행을 클릭**하시면 하단에 상세 내용과 시각화 화면이 나타납니다.")
+                    st.info("💡 위 목록 표에서 조회하거나 수정할 **경기 일지 행을 클릭**하세요.")
 
         with tab_delete:
             st.subheader("🗑️ 경기 일지 다중 선택 및 일괄 삭제")
