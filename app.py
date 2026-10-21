@@ -684,7 +684,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (수정 시 상태 보존 완벽 처리)
+# 2. 📂 경기 일지 조회 (기존 메모 누적 보존 완벽 수정형)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -868,7 +868,6 @@ elif menu == "📂 경기 일지 조회":
 
                             formation_list = ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"]
                             
-                            # ✨ 포메이션 초기 상태 주입
                             key_hf = f"edit_hf_{target_memo_idx}"
                             key_af = f"edit_af_{target_memo_idx}"
 
@@ -887,7 +886,6 @@ elif menu == "📂 경기 일지 조회":
 
                             st.write("---")
 
-                            # ✨ [핵심 개선] 세션 키와 value를 수동으로 안전 결합하는 그리드 함수
                             def render_editable_team_grid_stable(team_name, formation_name, prefix, prev_nums):
                                 layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
                                 updated_team_nums = {}
@@ -899,7 +897,6 @@ elif menu == "📂 경기 일지 조회":
                                     for idx, pos in enumerate(row['positions']):
                                         k_name = f"mod_fix_{prefix}_{target_memo_idx}_{pos}"
                                         
-                                        # 최초 진입 시 데이터가 세션에 없으면 기본값으로 채움
                                         if k_name not in st.session_state:
                                             st.session_state[k_name] = prev_nums.get(pos, "")
 
@@ -1014,8 +1011,11 @@ elif menu == "📂 경기 일지 조회":
                                         h_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_h_nums.items() if num]) if final_edit_h_nums else "없음"
                                         a_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_a_nums.items() if num]) if final_edit_a_nums else "없음"
 
-                                        final_player_memos = {}
-                                        if active_edit_players and selected_edit_memo_players:
+                                        # ✨ [핵심 해결] 기존에 저장되어 있던 선수별 메모 딕셔너리(`saved_player_memos`)를 기반으로 시작!
+                                        final_player_memos = dict(saved_player_memos)
+
+                                        # 선택되어 수정창에 노출된 선수들의 입력값으로 업데이트 또는 새로 추가
+                                        if selected_edit_memo_players:
                                             for p_lbl in selected_edit_memo_players:
                                                 inkey = edit_input_keys_map.get(p_lbl)
                                                 if inkey:
@@ -1063,7 +1063,7 @@ elif menu == "📂 경기 일지 조회":
                                         df.loc[target_memo_idx, "종합 평가"] = updated_overall_content
                                         
                                         if save_data_to_sheet(df):
-                                            st.success("🎉 포메이션과 개개인 관찰 메모가 손실 없이 완벽히 저장되었습니다!")
+                                            st.success("🎉 기존 메모가 보존된 상태에서 추가/수정된 내용이 완벽하게 누적 저장되었습니다!")
                                             st.rerun()
 
                             with col_del_memo:
