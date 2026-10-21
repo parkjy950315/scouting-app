@@ -238,7 +238,7 @@ def parse_numbers_from_text(text_block):
     return nums_map
 
 def extract_pos_key(label):
-    """ 라벨에서 [홈/어웨이] 팀 - 포지션 키 추출 (등번호 무관 매칭용) """
+    """ 라벨에서 [홈/어웨이] 팀 - 포지션 키 추출 """
     if " - " in label:
         parts = label.split(" - ")
         prefix_team = parts[0].strip()
@@ -685,7 +685,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (라벨 무관 메모 100% 매칭 및 복원 보장)
+# 2. 📂 경기 일지 조회 (메모 완전 누적 유지형)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -805,7 +805,7 @@ elif menu == "📂 경기 일지 조회":
                         a_nums_saved = saved_packet.get("away_nums", {})
                         saved_player_memos = saved_packet.get("player_memos", {})
 
-                        # 🛡️ [이중 복원] 텍스트 파싱 보완
+                        # 🛡️ 이중 복원 장치
                         if "🏠 [홈팀:" in raw_content or "✈️ [어웨이팀:" in raw_content:
                             try:
                                 home_chunk = raw_content.split("🏠 [홈팀:")[1].split("✈️ [어웨이팀:")[0] if "🏠 [홈팀:" in raw_content and "✈️ [어웨이팀:" in raw_content else ""
@@ -826,7 +826,6 @@ elif menu == "📂 경기 일지 조회":
                         if not h_form_saved: h_form_saved = "4-3-3"
                         if not a_form_saved: a_form_saved = "4-3-3"
 
-                        # 텍스트 내 개개인 메모 복원
                         if not saved_player_memos and "⭐ [선수별 집중 관찰 메모]" in raw_content:
                             try:
                                 memo_section = raw_content.split("⭐ [선수별 집중 관찰 메모]")[1].split("📝 [경기 전체 총평]")[0].strip()
@@ -928,7 +927,6 @@ elif menu == "📂 경기 일지 조회":
                                 if num:
                                     active_edit_players.append(f"[어웨이] {edit_at_name} - {pos} (#{num})")
 
-                            # ✨ [핵심 해결] 팀-포지션 고유 키 매핑
                             pos_to_saved_memo = {}
                             for orig_lbl, orig_note in saved_player_memos.items():
                                 p_key = extract_pos_key(orig_lbl)
@@ -937,7 +935,6 @@ elif menu == "📂 경기 일지 조회":
                             updated_player_specific_memos = {}
 
                             if active_edit_players:
-                                # 저장된 메모가 존재하는 선수만 유일하게 선택
                                 default_selected_memos = []
                                 for act_p in active_edit_players:
                                     act_p_key = extract_pos_key(act_p)
@@ -959,17 +956,17 @@ elif menu == "📂 경기 일지 조회":
                                         p_key = extract_pos_key(p_label)
                                         p_memo_key = f"edit_memo_val_{target_memo_idx}_{p_key}"
                                         
-                                        # 복원 데이터 주입
-                                        if p_memo_key not in st.session_state or not st.session_state[p_memo_key]:
+                                        # 최초 렌더링 시 기존 저장 메모 주입
+                                        if p_memo_key not in st.session_state:
                                             st.session_state[p_memo_key] = pos_to_saved_memo.get(p_key, "")
 
+                                        # ✨ [핵심 수정] value 인자를 사용하지 않고 key만 연결하여 Streamlit 상태가 사용자가 입력하는 그대로 고정되게 함
                                         updated_p_note = st.text_area(
                                             f"{p_label} 세부 메모 수정",
-                                            value=st.session_state.get(p_memo_key, ""),
-                                            key=f"ta_widget_{target_memo_idx}_{p_key}",
+                                            key=p_memo_key,
                                             height=100
                                         )
-                                        st.session_state[p_memo_key] = updated_p_note
+                                        
                                         if updated_p_note.strip():
                                             updated_player_specific_memos[p_label] = updated_p_note.strip()
                             else:
@@ -1010,19 +1007,29 @@ elif menu == "📂 경기 일지 조회":
                                         h_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_h_nums.items() if num]) if final_edit_h_nums else "없음"
                                         a_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_a_nums.items() if num]) if final_edit_a_nums else "없음"
 
+                                        # ✨ [핵심 저장 수수] 세션 메모리에 있는 최종 수정값을 100% 확보
+                                        final_player_memos = {}
+                                        if active_edit_players:
+                                            for p_lbl in selected_edit_memo_players:
+                                                pk = extract_pos_key(p_lbl)
+                                                pmk = f"edit_memo_val_{target_memo_idx}_{pk}"
+                                                val_in_state = st.session_state.get(pmk, "")
+                                                if val_in_state.strip():
+                                                    final_player_memos[p_lbl] = val_in_state.strip()
+
                                         new_packet = {
                                             "home_form": edit_hf_sel,
                                             "home_nums": final_edit_h_nums,
                                             "away_form": edit_af_sel,
                                             "away_nums": final_edit_a_nums,
-                                            "player_memos": updated_player_specific_memos
+                                            "player_memos": final_player_memos
                                         }
                                         new_meta_json_str = f"[SMC_JSON_DATA:{json.dumps(new_packet, ensure_ascii=False)}]"
 
                                         player_notes_formatted = ""
-                                        if updated_player_specific_memos:
+                                        if final_player_memos:
                                             player_notes_formatted = "\n\n⭐ [선수별 집중 관찰 메모]\n"
-                                            for p_label, p_note in updated_player_specific_memos.items():
+                                            for p_label, p_note in final_player_memos.items():
                                                 player_notes_formatted += f"- {p_label}:\n  {p_note}\n"
 
                                         old_clean_body = clean_content
