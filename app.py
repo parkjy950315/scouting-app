@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 최적화 스타일 설정 (모바일 세로 나열 방지 및 그라운드 컴팩트화)
+# 📱 PC & 모바일 최적화 스타일 설정 (세로 스크롤 및 고정 정렬)
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -61,55 +61,7 @@ st.markdown("""
         cursor: pointer;
     }
     
-    /* ⚽ 화사하고 세련된 잔디 피치 그라운드 */
-    .match-soccer-pitch {
-        background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%);
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        border-radius: 16px;
-        padding: 16px 10px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1);
-        margin-bottom: 15px;
-    }
-    
-    /* ⚽ 세련된 원형(Circle) 포지션 핀 스타일 */
-    .match-pitch-pin {
-        background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%);
-        color: white;
-        border: 2px solid rgba(255, 255, 255, 0.9);
-        border-radius: 50%;
-        width: 44px;
-        height: 44px;
-        margin: 0 auto 2px auto;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    }
-
-    /* 📱 모바일 환경에서 st.columns가 세로로 깨지는 현상 강제 방지 및 컴팩트 정렬 */
     @media (max-width: 768px) {
-        div[data-testid="column"] {
-            width: unset !important;
-            flex: 1 !important;
-            min-width: 0 !important;
-        }
-        div[data-testid="stHorizontalBlock"] {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            gap: 4px !important;
-        }
-        .match-pitch-pin {
-            width: 36px !important;
-            height: 36px !important;
-        }
-        .match-pitch-pin span:nth-child(1) {
-            font-size: 7px !important;
-        }
-        .match-pitch-pin span:nth-child(2) {
-            font-size: 10px !important;
-        }
         [data-testid="stSidebar"] {
             min-width: 290px !important;
             max-width: 330px !important;
@@ -466,31 +418,33 @@ formation_layouts = {
     ]
 }
 
+# ⚽ 모바일/PC 모두에서 뭉그러지지 않고 깔끔하게 정렬되는 HTML 플렉스박스 피치 렌더러
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
-    st.markdown(f"""
-    <div class="match-soccer-pitch">
-        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 5px;">
-            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 11px; font-weight: normal;">({formation_name})</span>
-        </div>
-    """, unsafe_allow_html=True)
-    
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     
+    html_content = f"""
+    <div style="background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 18px 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1); margin-bottom: 15px;">
+        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px;">
+            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 11px; font-weight: normal;">({formation_name})</span>
+        </div>
+    """
+    
     for row in layout:
-        st.markdown(f"<div style='color:#e2e8f0; font-weight:600; font-size:9px; letter-spacing: 1px; margin-bottom:3px; text-transform: uppercase;'>📍 {row['line']}</div>", unsafe_allow_html=True)
-        cols = st.columns(len(row['positions']))
-        for idx, pos in enumerate(row['positions']):
+        html_content += f"<div style='color:#e2e8f0; font-weight:600; font-size:9px; letter-spacing: 1px; margin-bottom:4px; text-transform: uppercase;'>📍 {row['line']}</div>"
+        html_content += "<div style='display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; flex-wrap: nowrap;'>"
+        for pos in row['positions']:
             assigned_num = num_dict.get(pos, "")
             display_num = assigned_num if assigned_num else "-"
-
-            with cols[idx]:
-                st.markdown(f"""
-                <div class="match-pitch-pin">
-                    <span style="font-size: 7px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
-                    <span style="font-size: 11px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
-                </div>
-                """, unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+            html_content += f"""
+            <div style="background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%); color: white; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; width: 44px; height: 44px; min-width: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                <span style="font-size: 7px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
+                <span style="font-size: 11px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
+            </div>
+            """
+        html_content += "</div>"
+        
+    html_content += "</div>"
+    st.markdown(html_content, unsafe_allow_html=True)
 
 display_logo()
 
@@ -543,29 +497,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
         team_entered_numbers = {}
 
-        st.markdown(f"""
-        <div class="match-soccer-pitch">
-            <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 5px;">
-                🏟️ {team_name} <span style="color: #cbd5e1; font-size: 11px; font-weight: normal;">({formation_name})</span>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        for row in layout:
-            st.markdown(f"<div style='color:#e2e8f0; font-weight:600; font-size:9px; letter-spacing: 1px; margin-bottom:3px; text-transform: uppercase;'>📍 {row['line']}</div>", unsafe_allow_html=True)
-            cols = st.columns(len(row['positions']))
-            for idx, pos in enumerate(row['positions']):
-                key_name = f"{prefix}_{pos}"
-                current_num = st.session_state.get(key_name, "")
-                display_num = current_num if current_num else "-"
-
-                with cols[idx]:
-                    st.markdown(f"""
-                    <div class="match-pitch-pin">
-                        <span style="font-size: 7px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
-                        <span style="font-size: 11px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        render_pitch_graphic_from_saved(team_name, formation_name, {pos: st.session_state.get(f"{prefix}_{pos}", "") for row in layout for pos in row['positions']})
 
         st.markdown(f"**📝 {team_name} 포지션별 등번호 기입**")
         for row in layout:
