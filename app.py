@@ -334,7 +334,9 @@ def generate_pdf_report_for_memo(row_data):
     table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=8.5, leading=11, alignment=0, textColor=colors.HexColor('#64748B'))
     table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=PRIMARY_COLOR)
 
-    match_title = row_data.get('선수명', '경기 기록')
+    # 💡 PDF 상단 제목에서도 불필요한 타임스탬프 문구 제거
+    raw_match_title = row_data.get('선수명', '경기 기록')
+    match_title = re.sub(r' \(타임:\d+\)', '', str(raw_match_title))
     match_date = row_data.get('작성일자', '-')
     match_teams = row_data.get('소속팀', '-')
 
@@ -634,9 +636,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
                 t_name_prefix = f"[{tournament_name}] " if tournament_name.strip() else ""
                 
-                # 💡 핵심 수정: 같은 팀 간의 경기라도 날짜(작성일자)를 함께 조합하여 고유한 식별이 되도록 변경
+                # 내부적으로는 중복 방지용 고유 타임스탬프 결합 (데이터 무결성 유지)
                 timestamp_id = datetime.now().strftime('%H%M%S')
-                memo_player_name = f"{t_name_prefix}{home_team.strip()} vs {away_team.strip()} ({str(match_date)} 타임:{timestamp_id})"
+                memo_player_name = f"{t_name_prefix}{home_team.strip()} vs {away_team.strip()} (타임:{timestamp_id})"
                 memo_team = f"{home_team.strip()} (홈) vs {away_team.strip()} (어웨이)"
                 
                 memo_overall = (
@@ -730,7 +732,7 @@ elif menu == "📂 경기 일지 조회":
             else:
                 display_memo_df = filtered_memo_df[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
                 
-                # 💡 화면에 표시할 때는 내부 고유 식별 타임스탬프 문구를 깔끔하게 지워서 보여줌
+                # 💡 화면 목록 표에서 타임스탬프 문구 완벽 제거
                 display_memo_df["선수명"] = display_memo_df["선수명"].apply(lambda x: re.sub(r' \(타임:\d+\)', '', str(x)))
                 display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
 
@@ -745,7 +747,6 @@ elif menu == "📂 경기 일지 조회":
 
                 if selected_memo_rows:
                     selected_row_filtered = filtered_memo_df.iloc[selected_memo_rows[0]]
-                    # 💡 정확한 고유 식별자(선수명 전체 값)를 기준으로 정확한 행 탐색
                     match_indices = df[(df["선수명"] == selected_row_filtered["선수명"]) & 
                                        (df["진행 상태"] == "현장 관찰 메모 (임시)")].index
 
@@ -753,6 +754,7 @@ elif menu == "📂 경기 일지 조회":
                         target_memo_idx = match_indices[0]
                         p_memo = df.loc[target_memo_idx]
 
+                        # 💡 상세 타이틀에서도 타임스탬프 문구 제거
                         match_title = re.sub(r' \(타임:\d+\)', '', p_memo.get("선수명", "경기 기록"))
                         match_date_str = p_memo.get("작성일자", "-")
                         match_teams = p_memo.get("소속팀", "-")
