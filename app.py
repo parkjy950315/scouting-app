@@ -683,7 +683,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (등번호 고정 및 선수별 메모 누적 완벽 해결)
+# 2. 📂 경기 일지 조회 (홈/어웨이 팀별 선수 매칭 완벽 분리 수정)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -894,7 +894,6 @@ elif menu == "📂 경기 일지 조회":
                                     st.markdown(f"<div style='font-size: 10px; font-weight: bold; color: #64748B; margin-top: 2px;'>{row['line']}</div>", unsafe_allow_html=True)
                                     cols = st.columns(len(row['positions']))
                                     for idx, pos in enumerate(row['positions']):
-                                        # ✨ 등번호가 뒤섞이지 않도록 세션 상태에 기존 등번호 확실히 주입
                                         k_name = f"mod_fix_{prefix}_{target_memo_idx}_{pos}"
                                         if k_name not in st.session_state and pos in prev_nums:
                                             st.session_state[k_name] = prev_nums[pos]
@@ -930,21 +929,26 @@ elif menu == "📂 경기 일지 조회":
                                 if num:
                                     active_edit_players.append(f"[어웨이] {edit_at_name} - {pos} (#{num})")
 
+                            # 🛡️ [버그 수정] 홈팀과 어웨이팀 진영을 완벽히 분리하여 매핑
                             pos_to_saved_memo = {}
                             for orig_lbl, orig_note in saved_player_memos.items():
                                 pos_to_saved_memo[orig_lbl] = orig_note
+                                match_side = "[홈]" if "[홈]" in orig_lbl else ("[어웨이]" if "[어웨이]" in orig_lbl else "")
                                 p_key = extract_pos_key(orig_lbl)
-                                pos_to_saved_memo[p_key] = orig_note
-                                clean_pos_only = p_key.split("-")[-1].strip() if "-" in p_key else p_key
-                                pos_to_saved_memo[clean_pos_only] = orig_note
+                                pure_pos = p_key.split("-")[-1].strip() if "-" in p_key else p_key
+                                if match_side:
+                                    pos_to_saved_memo[f"{match_side}_{pure_pos}"] = orig_note
 
                             if active_edit_players:
                                 default_selected_memos = []
                                 for act_p in active_edit_players:
+                                    act_side = "[홈]" if "[홈]" in act_p else ("[어웨이]" if "[어웨이]" in act_p else "")
                                     act_p_key = extract_pos_key(act_p)
                                     pure_pos = act_p_key.split("-")[-1].strip() if "-" in act_p_key else act_p_key
+                                    side_pos_key = f"{act_side}_{pure_pos}"
                                     
-                                    if act_p in saved_player_memos or act_p_key in pos_to_saved_memo or pure_pos in pos_to_saved_memo:
+                                    # 홈은 홈끼리, 어웨이는 어웨이끼리만 정확히 매칭되도록 조건 강화
+                                    if act_p in saved_player_memos or act_p in pos_to_saved_memo or side_pos_key in pos_to_saved_memo:
                                         default_selected_memos.append(act_p)
 
                                 selected_edit_memo_players = st.multiselect(
@@ -959,14 +963,15 @@ elif menu == "📂 경기 일지 조회":
                                 if selected_edit_memo_players:
                                     st.markdown("---")
                                     for i, p_label in enumerate(selected_edit_memo_players):
+                                        act_side = "[홈]" if "[홈]" in p_label else ("[어웨이]" if "[어웨이]" in p_label else "")
                                         p_key = extract_pos_key(p_label)
                                         pure_pos = p_key.split("-")[-1].strip() if "-" in p_key else p_key
+                                        side_pos_key = f"{act_side}_{pure_pos}"
                                         
                                         existing_p_memo = (
                                             saved_player_memos.get(p_label) or 
                                             pos_to_saved_memo.get(p_label) or 
-                                            pos_to_saved_memo.get(p_key) or 
-                                            pos_to_saved_memo.get(pure_pos) or 
+                                            pos_to_saved_memo.get(side_pos_key) or 
                                             ""
                                         )
 
@@ -1023,7 +1028,6 @@ elif menu == "📂 경기 일지 조회":
                                         h_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_h_nums.items() if num]) if final_edit_h_nums else "없음"
                                         a_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_a_nums.items() if num]) if final_edit_a_nums else "없음"
 
-                                        # ✨ 기존 메모들을 베이스로 가져옴
                                         final_player_memos = dict(saved_player_memos)
 
                                         if selected_edit_memo_players:
@@ -1032,11 +1036,11 @@ elif menu == "📂 경기 일지 조회":
                                                 if inkey:
                                                     box_text = st.session_state.get(inkey, "").strip()
                                                     if box_text:
-                                                        # 기존에 해당 선수에게 저장되어 있던 메모 찾기 (키 매칭 유연화)
+                                                        act_side = "[홈]" if "[홈]" in p_lbl else ("[어웨이]" if "[어웨이]" in p_lbl else "")
+                                                        side_pos_key = f"{act_side}_{extract_pos_key(p_lbl)}"
                                                         old_memo_val = (
                                                             saved_player_memos.get(p_lbl) or 
-                                                            saved_player_memos.get(extract_pos_key(p_lbl)) or 
-                                                            saved_player_memos.get(extract_pos_key(p_lbl).split("-")[-1].strip()) or 
+                                                            saved_player_memos.get(side_pos_key) or 
                                                             ""
                                                         )
                                                         
@@ -1048,7 +1052,6 @@ elif menu == "📂 경기 일지 조회":
                                                                 else:
                                                                     final_player_memos[p_lbl] = old_memo_val
                                                             else:
-                                                                # 내용을 아예 새로 덮어쓰거나 수정한 경우
                                                                 final_player_memos[p_lbl] = box_text
                                                         else:
                                                             final_player_memos[p_lbl] = box_text
@@ -1093,7 +1096,7 @@ elif menu == "📂 경기 일지 조회":
                                         df.loc[target_memo_idx, "종합 평가"] = updated_overall_content
                                         
                                         if save_data_to_sheet(df):
-                                            st.success("🎉 등번호와 선수별 개개인 메모가 섞이지 않고 추가 기록과 함께 완벽하게 누적 저장되었습니다!")
+                                            st.success("🎉 홈/어웨이 팀별 선수가 섞이지 않고 선택한 선수만 정확히 매칭되어 저장되었습니다!")
                                             st.rerun()
 
                             with col_del_memo:
