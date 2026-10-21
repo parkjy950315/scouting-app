@@ -8,7 +8,6 @@ import base64
 import json
 from datetime import datetime
 
-# PDF 생성을 위한 reportlab 라이브러리 및 폰트 등록 모듈
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -17,12 +16,8 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# 페이지 기본 설정
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
-# ----------------------------------------------------
-# 🔤 PDF 한글 폰트 자동 등록 함수
-# ----------------------------------------------------
 def register_korean_font():
     font_path = "NanumGothic.ttf"
     if not os.path.exists(font_path):
@@ -40,9 +35,6 @@ def register_korean_font():
         return 'NanumGothic'
     return 'Helvetica'
 
-# ----------------------------------------------------
-# 📱 PC & 모바일 최적화 스타일 설정
-# ----------------------------------------------------
 st.markdown("""
     <style>
     .block-container {
@@ -209,22 +201,6 @@ def parse_team_info(team_str):
         past_teams = "(전:" + parts[1]
         return current_team, past_teams
     return team_str, ""
-
-def parse_numbers_from_text(text_block):
-    nums_map = {}
-    if not text_block:
-        return nums_map
-    if "포지션별 등번호:" in text_block:
-        line = text_block.split("포지션별 등번호:")[1].split("\n")[0].strip()
-        if line and line != "없음":
-            for part in line.split(","):
-                if ":" in part:
-                    pos_key, val_str = part.split(":", 1)
-                    clean_pos = pos_key.strip()
-                    clean_num = val_str.replace("#", "").strip()
-                    if clean_pos and clean_num:
-                        nums_map[clean_pos] = clean_num
-    return nums_map
 
 def generate_pdf_report(player_data):
     korean_font = register_korean_font()
@@ -557,6 +533,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     "away_form": away_formation, "away_nums": final_away_nums,
                     "player_memos": player_specific_memos
                 }
+                
+                # 🛡️ 데이터를 텍스트 파싱에 의존하지 않고 시트 컬럼에 직렬화하여 완벽 보존
                 meta_json_str = f"[SMC_JSON_DATA:{json.dumps(state_packet, ensure_ascii=False)}]"
                 player_notes_formatted = "".join([f"\n- {pl}:\n  {pt}\n" for pl, pt in player_specific_memos.items()])
                 if player_notes_formatted:
@@ -565,9 +543,16 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 memo_overall = f"📅 일자: {match_date} | 대회: {tournament_name}\n{meta_json_str}\n\n🏠 [홈팀: {home_team}] 포메이션: {home_formation}\n- 등번호: {final_home_nums}\n\n✈️ [어웨이팀: {away_team}] 포메이션: {away_formation}\n- 등번호: {final_away_nums}{player_notes_formatted}\n\n📝 [경기 전체 총평]\n{general_memo}"
                 
                 new_memo_data = {
-                    "선수명": f"[{tournament_name}] {home_team} vs {away_team}", "소속팀": f"{home_team} (홈) vs {away_team} (어웨이)",
-                    "등번호": "-", "포지션": "경기분석", "생년월일": "", "만 나이": "", "연 나이": "", "주발": "", "신장(cm)": "", "체중(kg)": "",
-                    "진행 상태": "현장 관찰 메모 (임시)", "장점/특기": f"대회: {tournament_name}", "보완점/단점": "", "종합 평가": memo_overall, "작성일자": str(match_date)
+                    "선수명": f"[{tournament_name}] {home_team} vs {away_team}", 
+                    "소속팀": f"{home_team} (홈) vs {away_team} (어웨이)",
+                    "등번호": meta_json_str, # 💡 등번호 컬럼에도 JSON 패킷을 백업 저장하여 절대 유실 방지
+                    "포지션": "경기분석", 
+                    "생년월일": "", "만 나이": "", "연 나이": "", "주발": "", "신장(cm)": "", "체중(kg)": "",
+                    "진행 상태": "현장 관찰 메모 (임시)", 
+                    "장점/특기": f"대회: {tournament_name} | 홈:{home_formation} | 어웨이:{away_formation}", 
+                    "보완점/단점": "", 
+                    "종합 평가": memo_overall, 
+                    "작성일자": str(match_date)
                 }
                 updated_df = pd.DataFrame([new_memo_data]) if df.empty else pd.concat([df, pd.DataFrame([new_memo_data])], ignore_index=True)
                 if save_data_to_sheet(updated_df):
@@ -605,13 +590,19 @@ elif menu == "📂 경기 일지 조회":
                     target_memo_idx = match_indices[0]
                     p_memo = df.loc[target_memo_idx]
                     raw_content = str(p_memo.get("종합 평가", ""))
+                    raw_num_col = str(p_memo.get("등번호", ""))
 
                     saved_packet = {}
-                    try:
-                        if "[SMC_JSON_DATA:" in raw_content:
-                            saved_packet = json.loads(raw_content.split("[SMC_JSON_DATA:")[1].split("]")[0])
-                    except Exception:
-                        pass
+                    # 💡 등번호 컬럼이나 종합 평가 텍스트 어디에든 JSON 데이터가 있으면 완벽 복원
+                    for source_str in [raw_num_col, raw_content]:
+                        try:
+                            if "[SMC_JSON_DATA:" in source_str:
+                                json_str = source_str.split("[SMC_JSON_DATA:")[1].split("]")[0]
+                                saved_packet = json.loads(json_str)
+                                if saved_packet:
+                                    break
+                        except Exception:
+                            pass
 
                     h_form_saved = saved_packet.get("home_form", "4-3-3")
                     h_nums_saved = saved_packet.get("home_nums", {})
@@ -622,16 +613,19 @@ elif menu == "📂 경기 일지 조회":
                     st.write("---")
                     st.markdown(f"### ⚽ {p_memo.get('선수명')}")
                     
-                    # 🛠️ 수정창 전용 고유 키 프리픽스 부여로 데이터 꼬임 원천 차단
                     prefix_id = f"edit_{target_memo_idx}"
                     
                     formation_list = ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"]
+                    
+                    default_ht = p_memo.get('소속팀', '').split(" (홈)")[0] if " (홈)" in p_memo.get('소속팀', '') else "홈팀"
+                    default_at = p_memo.get('소속팀', '').split(" vs ")[1].replace(" (어웨이)", "") if " vs " in p_memo.get('소속팀', '') else "어웨이팀"
+
                     ed_head1, ed_head2 = st.columns(2)
                     with ed_head1:
-                        edit_ht_name = st.text_input("홈팀 명", value=p_memo.get('소속팀', '').split(" (홈)")[0], key=f"{prefix_id}_ht")
+                        edit_ht_name = st.text_input("홈팀 명", value=default_ht, key=f"{prefix_id}_ht")
                         edit_hf_sel = st.selectbox("홈팀 포메이션", formation_list, index=formation_list.index(h_form_saved) if h_form_saved in formation_list else 0, key=f"{prefix_id}_hf")
                     with ed_head2:
-                        edit_at_name = st.text_input("어웨이팀 명", value=p_memo.get('소속팀', '').split(" vs ")[1].replace(" (어웨이)", "") if " vs " in p_memo.get('소속팀', '') else "", key=f"{prefix_id}_at")
+                        edit_at_name = st.text_input("어웨이팀 명", value=default_at, key=f"{prefix_id}_at")
                         edit_af_sel = st.selectbox("어웨이팀 포메이션", formation_list, index=formation_list.index(a_form_saved) if a_form_saved in formation_list else 0, key=f"{prefix_id}_af")
 
                     st.write("---")
@@ -666,7 +660,6 @@ elif menu == "📂 경기 일지 조회":
                     
                     active_players = [f"[홈] {edit_ht_name} - {pos} (#{num})" for pos, num in cur_h_nums.items()] + [f"[어웨이] {edit_at_name} - {pos} (#{num})" for pos, num in cur_a_nums.items()]
                     
-                    # 기존 저장된 메모 키 매칭
                     default_checked = [p for p in active_players if any(k in p for k in saved_player_memos.keys())]
                     selected_edit_players = st.multiselect("메모를 작성할 선수 선택", options=active_players, default=default_checked, key=f"{prefix_id}_mselect")
 
@@ -677,7 +670,6 @@ elif menu == "📂 경기 일지 조회":
                             st.markdown(f"**📌 {p_lbl} 세부 관찰 기록**")
                             memo_box_key = f"{prefix_id}_memo_box_{i}_{re.sub(r'[^a-zA-Z0-9가-힣]', '', p_lbl)}"
                             
-                            # 기존 메모 불러오기
                             existing_note = saved_player_memos.get(p_lbl, "")
                             if not existing_note:
                                 for sk, sv in saved_player_memos.items():
@@ -712,10 +704,11 @@ elif menu == "📂 경기 일지 조회":
                             if additional_general_note.strip():
                                 clean_base_general += f"\n\n[{datetime.today().strftime('%Y-%m-%d')} 추가]\n{additional_general_note.strip()}"
 
-                            final_overall = f"📅 일자: {p_memo.get('작성일자')} | 대회: {match_title}\n{new_meta_str}\n\n🏠 [홈팀: {edit_ht_name}] 포메이션: {edit_hf_sel}\n- 등번호: {cur_h_nums}\n\n✈️ [어웨이팀: {edit_at_name}] 포메이션: {edit_af_sel}\n- 등번호: {cur_a_nums}{player_notes_formatted}\n\n📝 [경기 전체 총평]\n{clean_base_general}"
+                            final_overall = f"📅 일자: {p_memo.get('작성일자')} | 대회: {p_memo.get('선수명')}\n{new_meta_str}\n\n🏠 [홈팀: {edit_ht_name}] 포메이션: {edit_hf_sel}\n- 등번호: {cur_h_nums}\n\n✈️ [어웨이팀: {edit_at_name}] 포메이션: {edit_af_sel}\n- 등번호: {cur_a_nums}{player_notes_formatted}\n\n📝 [경기 전체 총평]\n{clean_base_general}"
 
-                            df.loc[target_memo_idx, "선수명"] = f"[{match_title.split(']')[0].replace('[', '') if ']' in match_title else '대회'}] {edit_ht_name} vs {edit_at_name}"
+                            df.loc[target_memo_idx, "선수명"] = f"[{p_memo.get('선수명').split(']')[0].replace('[', '') if ']' in p_memo.get('선수명') else '대회'}] {edit_ht_name} vs {edit_at_name}"
                             df.loc[target_memo_idx, "소속팀"] = f"{edit_ht_name} (홈) vs {edit_at_name} (어웨이)"
+                            df.loc[target_memo_idx, "등번호"] = new_meta_str # 💡 등번호 컬럼에도 JSON 패킷 동기화 저장
                             df.loc[target_memo_idx, "종합 평가"] = final_overall
 
                             if save_data_to_sheet(df):
@@ -734,7 +727,7 @@ elif menu == "📂 경기 일지 조회":
                         st.rerun()
 
 # ----------------------------------------------------
-# 3. 선수 등록, 4. 검색, 5. 삭제 메뉴는 기존과 동일하게 유지
+# 3. 선수 등록, 4. 검색, 5. 삭제 메뉴
 # ----------------------------------------------------
 elif menu == "선수 등록":
     st.header("📋 신규 관찰 선수 등록")
