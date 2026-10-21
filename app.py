@@ -334,6 +334,32 @@ formation_layouts = {
     ]
 }
 
+def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
+    st.markdown(f"""
+    <div class="match-soccer-pitch">
+        <div style="text-align: center; color: #ffeb3b; font-weight: 900; font-size: 15px; letter-spacing: 2px; text-shadow: 2px 2px 4px #000; margin-bottom: 8px;">
+            🏟️ {team_name} ({formation_name})
+        </div>
+    """, unsafe_allow_html=True)
+    
+    layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
+    
+    for row in layout:
+        st.markdown(f"<div style='color:#a3e4d7; font-weight:bold; font-size:10px; margin-bottom:2px;'>📍 {row['line']}</div>", unsafe_allow_html=True)
+        cols = st.columns(len(row['positions']))
+        for idx, pos in enumerate(row['positions']):
+            assigned_num = num_dict.get(pos, "")
+            display_num = assigned_num if assigned_num else pos
+
+            with cols[idx]:
+                st.markdown(f"""
+                <div class="match-pitch-pin">
+                    <span style="font-size: 8px; color: #ffeb3b;">{pos}</span>
+                    <span style="font-size: 11px; line-height: 1.1;">{display_num}</span>
+                </div>
+                """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
 # 사이드바 로고 및 메뉴 구성
 display_logo()
 
@@ -479,8 +505,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다.")
         else:
             with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
-                home_num_str = ", ".join([f"{pos}: {num}번" for pos, num in home_numbers.items()]) if home_numbers else "입력 없음"
-                away_num_str = ", ".join([f"{pos}: {num}번" for pos, num in away_numbers.items()]) if away_numbers else "입력 없음"
+                # 메타데이터 저장을 위해 텍스트 내에 포메이션 명칭과 등번호 맵핑을 포함
+                home_num_str = ", ".join([f"{pos}:{num}" for pos, num in home_numbers.items()]) if home_numbers else "없음"
+                away_num_str = ", ".join([f"{pos}:{num}" for pos, num in away_numbers.items()]) if away_numbers else "없음"
 
                 player_notes_formatted = ""
                 if player_specific_memos:
@@ -490,12 +517,18 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
                 memo_player_name = f"[{tournament_name}] {home_team} vs {away_team}"
                 memo_team = f"{home_team} (홈) vs {away_team} (어웨이)"
+                
+                # 저장 텍스트 안에 포메이션 정보 및 등번호 데이터 포맷팅 삽입
                 memo_overall = (
-                    f"📅 일자: {match_date} | 대회: {tournament_name}\n\n"
+                    f"📅 일자: {match_date} | 대회: {tournament_name}\n"
+                    f"[META_HOME_FORM:{home_formation}]\n"
+                    f"[META_HOME_NUMS:{home_num_str}]\n"
+                    f"[META_AWAY_FORM:{away_formation}]\n"
+                    f"[META_AWAY_NUMS:{away_num_str}]\n\n"
                     f"🏠 [홈팀: {home_team}] 포메이션: {home_formation}\n"
-                    f"- 포지션별 등번호: {home_num_str}\n\n"
+                    f"- 포지션별 등번호: {home_num_str.replace(':', ': #')}\n\n"
                     f"✈️ [어웨이팀: {away_team}] 포메이션: {away_formation}\n"
-                    f"- 포지션별 등번호: {away_num_str}"
+                    f"- 포지션별 등번호: {away_num_str.replace(':', ': #')}"
                     f"{player_notes_formatted}\n\n"
                     f"📝 [경기 전체 총평]\n{general_memo}"
                 )
@@ -519,18 +552,17 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (앱 내부에 일자별로 쌓인 기록 확인)
+# 2. 📂 경기 일지 조회 (저장 당시의 포메이션 피치 시각화 포함)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
-    st.caption("지금까지 앱을 통해 작성하고 저장한 모든 경기 관찰 일지 기록을 일자별·대회별로 확인할 수 있습니다.")
+    st.caption("작성된 일지를 펼치면 당시의 홈/어웨이 포메이션 및 선수 등번호 피치 시각화가 그대로 재현됩니다.")
 
     memo_df = df[df["진행 상태"] == "현장 관찰 메모 (임시)"].copy()
 
     if memo_df.empty:
         st.info("아직 저장된 경기 관찰 일지가 없습니다. [🏟️ 현장 경기 관찰 메모] 메뉴에서 첫 일지를 작성해 보세요!")
     else:
-        # 최신 작성일자 순으로 정렬
         if "작성일자" in memo_df.columns:
             memo_df = memo_df.sort_values(by="작성일자", ascending=False).reset_index(drop=True)
 
@@ -541,14 +573,69 @@ elif menu == "📂 경기 일지 조회":
             match_title = row.get("선수명", "경기 기록")
             match_date_str = row.get("작성일자", "-")
             match_teams = row.get("소속팀", "-")
-            content_body = row.get("종합 평가", "내용이 없습니다.")
+            raw_content = row.get("종합 평가", "")
+
+            # 저장된 메타데이터(포메이션 및 등번호) 파싱 추출
+            home_form = "4-3-3"
+            away_form = "4-3-3"
+            home_nums = {}
+            away_nums = {}
+
+            try:
+                if "[META_HOME_FORM:" in raw_content:
+                    home_form = raw_content.split("[META_HOME_FORM:")[1].split("]")[0]
+                if "[META_HOME_NUMS:" in raw_content:
+                    h_nums_raw = raw_content.split("[META_HOME_NUMS:")[1].split("]")[0]
+                    if h_nums_raw and h_nums_raw != "없음":
+                        for item in h_nums_raw.split(","):
+                            if ":" in item:
+                                p_key, p_val = item.split(":")
+                                home_nums[p_key.strip()] = p_val.strip()
+
+                if "[META_AWAY_FORM:" in raw_content:
+                    away_form = raw_content.split("[META_AWAY_FORM:")[1].split("]")[0]
+                if "[META_AWAY_NUMS:" in raw_content:
+                    a_nums_raw = raw_content.split("[META_AWAY_NUMS:")[1].split("]")[0]
+                    if a_nums_raw and a_nums_raw != "없음":
+                        for item in a_nums_raw.split(","):
+                            if ":" in item:
+                                p_key, p_val = item.split(":")
+                                away_nums[p_key.strip()] = p_val.strip()
+            except Exception:
+                pass
+
+            # 화면에 보여줄 때는 META 태그 라인들을 깔끔하게 제거하고 표시
+            clean_content = raw_content
+            for tag in [f"[META_HOME_FORM:{home_form}]", f"[META_HOME_NUMS:", f"[META_AWAY_FORM:{away_form}]", f"[META_AWAY_NUMS:"]:
+                if tag in clean_content:
+                    lines = clean_content.split("\n")
+                    clean_content = "\n".join([l for l in lines if not tag in l])
 
             with st.expander(f"📅 [{match_date_str}]  {match_title}"):
                 st.markdown(f"**⚽ 대진 정보:** {match_teams}")
                 st.markdown(f"**🗓️ 관찰 일자:** {match_date_str}")
                 st.markdown("---")
+
+                # 🏟️ 당시 포메이션 및 등번호 잔디 피치 시각화 재현
+                st.markdown("### 🏟️ 당시 경기 그라운드 포메이션 & 등번호 시각화")
+                p_col1, p_col2 = st.columns(2)
+                
+                # 팀 이름 추출 (예: "홈팀 (홈) vs 어웨이팀 (어웨이)")
+                h_team_name = "홈팀"
+                a_team_name = "어웨이팀"
+                if " vs " in match_teams:
+                    parts = match_teams.split(" vs ")
+                    h_team_name = parts[0].replace(" (홈)", "").strip()
+                    a_team_name = parts[1].replace(" (어웨이)", "").strip()
+
+                with p_col1:
+                    render_pitch_graphic_from_saved(h_team_name, home_form, home_nums)
+                with p_col2:
+                    render_pitch_graphic_from_saved(a_team_name, away_form, away_nums)
+
+                st.markdown("---")
                 st.markdown("**📝 상세 관찰 기록 및 총평**")
-                st.info(content_body)
+                st.info(clean_content)
 
 # ----------------------------------------------------
 # 3. 선수 정식 등록
