@@ -100,7 +100,7 @@ GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1WSbVkwCr5Dv5hN3zU0Bw
 # 🔗 2. 구글 Apps Script 웹앱 URL
 GOOGLE_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxTTvgJqNnmBxwuCGvT3agMEo0_0Fon0JGWdREyR7usEIu4Mfw9M1lq66njtr8S_cbP/exec"
 
-STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완료", "계약 검토", "보류 / 제외"]
+STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완료", "계약 검토", "보류 / 제외", "현장 관찰 메모 (임시)"]
 POSITION_OPTIONS = ["GK", "CB", "LB", "RB", "MF", "LW", "RW", "CF"]
 
 # ----------------------------------------------------
@@ -139,7 +139,7 @@ def get_csv_export_url(sheet_url):
         return sheet_url.split("/edit")[0] + "/gviz/tq?tqx=out:csv"
     return sheet_url
 
-# 🛡️ 구글 시트 데이터 로드 및 컬럼 완벽 매핑 함수 (캐시 우회 포함)
+# 🛡️ 구글 시트 데이터 로드 및 컬럼 완벽 매핑 함수
 def load_data():
     expected_cols = [
         "선수명", "소속팀", "등번호", "포지션", "생년월일", "만 나이", "연 나이", "주발", "신장(cm)", "체중(kg)",
@@ -226,7 +226,6 @@ def safe_int(val, default_val):
     except:
         return default_val
 
-# 소속팀 텍스트 분리 함수 (현재 소속팀 / 과거 소속팀 이력 분리)
 def parse_team_info(team_str):
     if not team_str or pd.isna(team_str):
         return "-", ""
@@ -238,21 +237,11 @@ def parse_team_info(team_str):
         return current_team, past_teams
     return team_str, ""
 
-# ----------------------------------------------------
-# 📄 모던 카드 스타일 프리미엄 PDF 보고서 생성 함수
-# ----------------------------------------------------
+# PDF 보고서 생성 함수
 def generate_pdf_report(player_data):
     korean_font = register_korean_font()
-    
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer, 
-        pagesize=A4, 
-        rightMargin=36, 
-        leftMargin=36, 
-        topMargin=36, 
-        bottomMargin=36
-    )
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     story = []
     
     PRIMARY_COLOR = colors.HexColor('#0F172A')
@@ -262,21 +251,14 @@ def generate_pdf_report(player_data):
 
     title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=16, leading=20, alignment=0, textColor=PRIMARY_COLOR)
     header_date = ParagraphStyle('HeaderDate', fontName=korean_font, fontSize=8.5, leading=11, alignment=2, textColor=colors.HexColor('#64748B'))
-    
-    section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=10, leading=14, alignment=0, textColor=PRIMARY_COLOR, leftIndent=0, firstLineIndent=0)
-    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, alignment=0, textColor=TEXT_COLOR, leftIndent=0, firstLineIndent=0)
-    
-    table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=8.5, leading=11, alignment=0, textColor=colors.HexColor('#64748B'), leftIndent=0, firstLineIndent=0)
-    table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=PRIMARY_COLOR, leftIndent=0, firstLineIndent=0)
+    section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=10, leading=14, alignment=0, textColor=PRIMARY_COLOR)
+    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, alignment=0, textColor=TEXT_COLOR)
+    table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=8.5, leading=11, alignment=0, textColor=colors.HexColor('#64748B'))
+    table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=PRIMARY_COLOR)
 
-    header_data = [
-        [Paragraph("<b>SMC SCOUTING REPORT</b>", title_style), Paragraph(f"<b>발급일:</b> {datetime.today().strftime('%Y-%m-%d')}", header_date)]
-    ]
+    header_data = [[Paragraph("<b>SMC SCOUTING REPORT</b>", title_style), Paragraph(f"<b>발급일:</b> {datetime.today().strftime('%Y-%m-%d')}", header_date)]]
     header_table = Table(header_data, colWidths=[350, 170])
-    header_table.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-    ]))
+    header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('BOTTOMPADDING', (0,0), (-1,-1), 6)]))
     story.append(header_table)
     story.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY_COLOR, spaceAfter=12))
 
@@ -294,12 +276,8 @@ def generate_pdf_report(player_data):
     
     profile_table = Table(profile_data, colWidths=[90, 170, 90, 170])
     profile_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT),
-        ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('PADDING', (0,0), (-1,-1), 6),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT), ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 6), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
     ]))
     story.append(profile_table)
     story.append(Spacer(1, 14))
@@ -307,23 +285,12 @@ def generate_pdf_report(player_data):
     def add_modern_card(title, content, accent_hex):
         story.append(Spacer(1, 4))
         cleaned_content = str(content).replace('\n', '<br/>') if content and str(content).strip() else "작성된 관찰 내용이 없습니다."
-        
-        card_data = [
-            [Paragraph(f"<b>{title}</b>", section_title_style)],
-            [Paragraph(cleaned_content, body_style)]
-        ]
+        card_data = [[Paragraph(f"<b>{title}</b>", section_title_style)], [Paragraph(cleaned_content, body_style)]]
         card_table = Table(card_data, colWidths=[520])
         card_table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F1F5F9')),
-            ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#FFFFFF')),
-            ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR),
-            ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(accent_hex)),
-            ('TOPPADDING', (0,0), (-1,-1), 7),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 7),
-            ('LEFTPADDING', (0,0), (-1,-1), 12),
-            ('RIGHTPADDING', (0,0), (-1,-1), 12),
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F1F5F9')), ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#FFFFFF')),
+            ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR), ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(accent_hex)),
+            ('TOPPADDING', (0,0), (-1,-1), 7), ('BOTTOMPADDING', (0,0), (-1,-1), 7), ('LEFTPADDING', (0,0), (-1,-1), 12), ('RIGHTPADDING', (0,0), (-1,-1), 12)
         ]))
         story.append(card_table)
         story.append(Spacer(1, 8))
@@ -334,13 +301,14 @@ def generate_pdf_report(player_data):
 
     story.append(Spacer(1, 8))
     story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER_COLOR, spaceAfter=6))
-    footer_style = ParagraphStyle('FooterStyle', fontName=korean_font, fontSize=8, leading=10, alignment=1, textColor=colors.HexColor('#94A3B8'), leftIndent=0, firstLineIndent=0)
+    footer_style = ParagraphStyle('FooterStyle', fontName=korean_font, fontSize=8, leading=10, alignment=1, textColor=colors.HexColor('#94A3B8'))
     story.append(Paragraph("SUNGMUN COMPANY — Professional Player Scouting Database System", footer_style))
 
     doc.build(story)
     buffer.seek(0)
     return buffer
 
+# 데이터 데이터프레임 로드
 df = load_data()
 
 display_logo()
@@ -357,13 +325,106 @@ if st.sidebar.button("🔄 앱 새로고침 (실시간 동기화)", use_containe
 
 st.sidebar.markdown("---")
 
-menu = st.sidebar.radio("이동할 메뉴", ["선수 등록", "🔍 선수 검색 및 관찰일지 조회", "✏️ 선수 정보/일지 수정 및 추가", "🗑️ 데이터 삭제"])
+menu = st.sidebar.radio(
+    "이동할 메뉴",
+    ["📋 현장 실시간 메모 (터치형)", "선수 등록", "🔍 선수 검색 및 관찰일지 조회", "✏️ 선수 정보/일지 수정 및 추가"]
+)
 
 # ----------------------------------------------------
-# 1. 선수 등록
+# 1. 📋 현장 실시간 메모 (신규 추가: 빠른 태그형 독립 입력)
 # ----------------------------------------------------
-if menu == "선수 등록":
-    st.header("📋 신규 관찰 선수 등록")
+if menu == "📋 현장 실시간 메모 (터치형)":
+    st.header("📋 현장 실시간 스카우팅 노트")
+    st.caption("※ 경기 중 등번호와 태그로 신속히 기록하며, '현장 관찰 메모 (임시)' 상태로 구글 시트에 안전하게 저장됩니다.")
+
+    st.markdown("### 🏟️ 1. 경기 정보 설정")
+    col_t1, col_t2 = st.columns(2)
+    with col_t1:
+        team_a = st.text_input("A팀 이름", value="A팀")
+        form_a = st.selectbox(f"{team_a} 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2", "3-4-3", "기타"], key="fa")
+    with col_t2:
+        team_b = st.text_input("B팀 이름", value="B팀")
+        form_b = st.selectbox(f"{team_b} 포메이션", ["4-2-3-1", "4-3-3", "4-4-2", "3-5-2", "3-4-3", "기타"], key="fb")
+
+    st.divider()
+
+    st.markdown("### 👕 2. 관찰 선수 지정")
+    c1, c2, c3 = st.columns([1.2, 1, 1])
+    with c1:
+        target_team = st.radio("관찰 팀 선택", [team_a, team_b], horizontal=True)
+    with c2:
+        back_num_val = st.number_input("등번호", min_value=1, max_value=99, value=5, step=1)
+    with c3:
+        position = st.selectbox("포지션", POSITION_OPTIONS, index=1)
+
+    st.divider()
+
+    st.markdown("### 📊 3. 플레이 및 역량 평가 (터치 체크)")
+    col_p1, col_p2 = st.columns(2)
+    with col_p1:
+        height_tag = st.multiselect("📐 체형 및 신장", ["170대", "180초반", "180중반", "180후반", "190이상", "단단함", "비율좋음", "피지컬우수"], default=["180중반", "비율좋음"])
+    with col_p2:
+        speed_tag = st.select_slider("⚡ 스피드 / 활동량", options=["느림", "평범", "빠름", "매우빠름"], value="빠름")
+
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
+        def_tag = st.multiselect("🛡️ 수비 스타일", ["파이터형(강한압박)", "지능형(길목차단)", "커버링위주", "1v1차단우수", "헤딩경합승리"], default=["파이터형(강한압박)"])
+    with col_s2:
+        tech_tag = st.multiselect("⚽ 공격 / 테크닉", ["첫터치부드러움", "탈압박우수", "전환패스우수", "양발자유자재", "골결정력우수"])
+
+    with st.expander("🧠 [고급 평가] 전환, 스캐닝, 압박 대처, 멘탈 성향 세부 체크"):
+        ca1, ca2 = st.columns(2)
+        with ca1:
+            transition_tag = st.multiselect("🔄 공수 전환", ["수비전환 즉각적", "역습판단 빠름", "수비참여 부족", "템포 지연"])
+            scanning_tag = st.multiselect("👀 인지 및 판단 (스캐닝)", ["주변 확인(스캐닝) 우수", "터치 전 다음 플레이 결정", "볼을 오래 끌어 템포 죽임"])
+        with ca2:
+            pressure_tag = st.multiselect("🧗 압박 대처 & 멘탈", ["강압박 속 침착함 유지", "기복 없이 안정적", "콜사운드 명확/리더십", "흥분/파울 성향 있음"])
+
+    verdict = st.radio("🔥 현장 관찰 등급", ["🔥 A급 (즉시 관찰/계약 검토)", "👀 B급 (지속 관찰 필요)", "C급 (보통)", "미달"], horizontal=True)
+    detail_memo = st.text_input("📝 추가 한줄 자유 메모", placeholder="예: 전반 20분 상대 CF 공중볼 완벽 제압")
+
+    # 모든 태그 문자열 취합
+    all_tags = height_tag + [f"스피드:{speed_tag}"] + def_tag + tech_tag + transition_tag + scanning_tag + pressure_tag
+    target_form = form_a if target_team == team_a else form_b
+
+    st.divider()
+
+    if st.button("💾 구글 시트에 현장 메모 임시 저장", type="primary", use_container_width=True):
+        temp_player_name = f"[{target_team}] {back_num_val}번"
+        pros_summary = f"[체형/특징] {', '.join(all_tags)}"
+        overall_summary = f"대회/경기: {team_a} vs {team_b} | 포메이션: {target_form} | 관찰등급: {verdict}"
+        if detail_memo:
+            overall_summary += f" | 메모: {detail_memo}"
+
+        new_field_data = {
+            "선수명": temp_player_name,
+            "소속팀": target_team,
+            "등번호": str(back_num_val),
+            "포지션": position,
+            "생년월일": "",
+            "만 나이": "",
+            "연 나이": "",
+            "주발": "",
+            "신장(cm)": "",
+            "체중(kg)": "",
+            "진행 상태": "현장 관찰 메모 (임시)",
+            "장점/특기": pros_summary,
+            "보완점/단점": "",
+            "종합 평가": overall_summary,
+            "작성일자": datetime.today().strftime('%Y-%m-%d')
+        }
+
+        with st.spinner("구글 시트에 현장 메모를 기록하는 중..."):
+            updated_df = pd.DataFrame([new_field_data]) if df.empty else pd.concat([df, pd.DataFrame([new_field_data])], ignore_index=True)
+            if save_data_to_sheet(updated_df):
+                st.success(f"🎉 [{target_team} {back_num_val}번] 선수 메모가 구글 시트에 안전하게 임시 저장되었습니다!")
+                st.balloons()
+
+# ----------------------------------------------------
+# 2. 선수 등록
+# ----------------------------------------------------
+elif menu == "선수 등록":
+    st.header("📋 신규 관찰 선수 정식 등록")
     
     if "reg_success_msg" in st.session_state and st.session_state["reg_success_msg"]:
         st.success(st.session_state["reg_success_msg"])
@@ -376,7 +437,7 @@ if menu == "선수 등록":
             name = st.text_input("선수명*")
             team = st.text_input("현재 소속팀")
             position = st.selectbox("포지션", options=POSITION_OPTIONS)
-            status = st.selectbox("진행 상태", STATUS_OPTIONS)
+            status = st.selectbox("진행 상태", [s for s in STATUS_OPTIONS if s != "현장 관찰 메모 (임시)"])
             
             back_num_options = [""] + [str(i) for i in range(1, 100)]
             back_num_val = st.selectbox("등번호", options=back_num_options, index=0, placeholder="등번호 선택")
@@ -420,7 +481,7 @@ if menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 2. 선수 검색 및 상세 관찰일지 조회 & PDF 다운로드
+# 3. 선수 검색 및 상세 관찰일지 조회 & PDF 다운로드
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
     st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
@@ -428,13 +489,15 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
     if df.empty:
         st.info("등록된 선수 데이터가 없습니다.")
     else:
-        total_count = len(df)
-        watchlist_count = len(df[df["진행 상태"] == "관심 선수 (Watchlist)"])
-        observing_count = len(df[df["진행 상태"] == "집중 관찰 중"])
-        review_count = len(df[df["진행 상태"] == "계약 검토"])
+        # 공식 등록된 데이터만 카운트
+        official_df = df[df["진행 상태"] != "현장 관찰 메모 (임시)"]
+        total_count = len(official_df)
+        watchlist_count = len(official_df[official_df["진행 상태"] == "관심 선수 (Watchlist)"])
+        observing_count = len(official_df[official_df["진행 상태"] == "집중 관찰 중"])
+        review_count = len(official_df[official_df["진행 상태"] == "계약 검토"])
         
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("전체 등록 선수", f"{total_count}명")
+        m1.metric("공식 등록 선수", f"{total_count}명")
         m2.metric("관심 선수 (Watchlist)", f"{watchlist_count}명")
         m3.metric("집중 관찰 중", f"{observing_count}명")
         m4.metric("계약 검토", f"{review_count}명")
@@ -513,7 +576,6 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                 try:
                     pdf_bytes = generate_pdf_report(p)
                     filename = f"{p.get('선수명', '선수')}_스카우팅관찰일지.pdf"
-                    
                     b64 = base64.b64encode(pdf_bytes.getvalue()).decode()
                     dl_html = f"""
                     <div style="display: flex; flex-direction: column; width: 100%;">
@@ -523,9 +585,6 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                                   border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%;">
                             📄 관찰일지 PDF 다운로드
                         </a>
-                        <span style="font-size: 11px; color: #64748B; text-align: center; margin-top: 5px;">
-                            💡 모바일에서 새 창이 열리지 않고 안전하게 파일로 저장됩니다.
-                        </span>
                     </div>
                     """
                     st.markdown(dl_html, unsafe_allow_html=True)
@@ -548,7 +607,6 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
             st.markdown("---")
 
             st.subheader("📚 날짜별 관찰일지 및 누적 메모")
-            
             with st.container():
                 st.markdown("#### 🌟 [장점 및 주요 특기 메모]")
                 pros_text = p.get('장점/특기', '')
@@ -574,16 +632,15 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
             st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 관찰일지와 PDF 다운로드 버튼이 나타납니다.")
 
 # ----------------------------------------------------
-# 3. 선수 정보 수정 및 소속 이력 누적 (✨ 표 클릭 선택 방식으로 개편)
+# 4. ✏️ 현장 메모 복기 및 공식 DB 승인/수정
 # ----------------------------------------------------
 elif menu == "✏️ 선수 정보/일지 수정 및 추가":
-    st.header("✏️ 기존 선수 정보 수정 및 추가 관찰 일지 작성")
+    st.header("✏️ 기존 선수 정보 수정 및 현장 메모 공식 DB 승인")
     if df.empty:
         st.info("수정할 선수 데이터가 없습니다.")
     else:
-        st.subheader("📋 수정할 선수를 표에서 **클릭**하세요")
+        st.subheader("📋 수정할 선수(또는 현장 메모)를 표에서 **클릭**하세요")
         
-        # 검색 및 필터 박스 제공
         s_col1, s_col2 = st.columns([2, 1])
         with s_col1:
             edit_search = st.text_input("🔍 선수 검색 (선수명, 소속팀, 등번호)", key="edit_grid_search")
@@ -628,7 +685,12 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
             current_t, past_t = parse_team_info(target_row.get("소속팀", ""))
             
             st.write("---")
-            st.markdown(f"### ✏️ [{target_row.get('선수명', '')}] 정보 및 관찰일지 수정")
+            
+            # 현장 임시 메모 데이터인 경우 안내 메세지 표시
+            if target_row.get("진행 상태") == "현장 관찰 메모 (임시)":
+                st.warning("💡 선택하신 항목은 '현장 관찰 메모'입니다. 선수 이름 및 프로필을 정식 등록 후 진행 상태를 변경해 주세요.")
+
+            st.markdown(f"### ✏️ [{target_row.get('선수명', '')}] 정보 수정 및 공식 DB 이관")
             
             with st.expander(f"📖 [{target_row.get('선수명', '')}] 현재 기록 및 누적 일지 미리보기", expanded=False):
                 st.markdown(f"**[소속팀]** {current_t} {past_t}")
@@ -642,7 +704,7 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
             col1, col2 = st.columns(2)
             with col1:
                 edit_name = st.text_input("선수명", value=str(target_row.get("선수명", "")), key=f"edit_name_{target_idx}")
-                edit_team_input = st.text_input("소속팀 (팀이 바뀐 경우 새 팀명 입력)", value=current_t, key=f"edit_team_{target_idx}")
+                edit_team_input = st.text_input("소속팀", value=current_t, key=f"edit_team_{target_idx}")
                 
                 cur_pos = str(target_row.get("포지션", "MF"))
                 pos_idx = POSITION_OPTIONS.index(cur_pos) if cur_pos in POSITION_OPTIONS else 4
@@ -650,7 +712,7 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                 
                 default_status = str(target_row.get("진행 상태", STATUS_OPTIONS[0]))
                 status_index = STATUS_OPTIONS.index(default_status) if default_status in STATUS_OPTIONS else 0
-                edit_status = st.selectbox("진행 상태", STATUS_OPTIONS, index=status_index, key=f"edit_status_{target_idx}")
+                edit_status = st.selectbox("진행 상태 (공식 DB 등록 시 변경)", STATUS_OPTIONS, index=status_index, key=f"edit_status_{target_idx}")
                 
                 cur_num = str(target_row.get("등번호", "")).strip()
                 back_num_options = [""] + [str(i) for i in range(1, 100)]
@@ -689,7 +751,7 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                 if not edit_name.strip():
                     st.error("선수명은 필수입니다.")
                 else:
-                    with st.spinner("변경사항을 구글 시트에 업데이트하는 중..."):
+                    with st.spinner("구글 시트에 업데이트하는 중..."):
                         new_team_input = edit_team_input.strip()
                         raw_old_team = str(target_row.get("소속팀", "")).strip()
                         
@@ -705,81 +767,27 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
                         old_pros = str(target_row.get("장점/특기", ""))
                         old_cons = str(target_row.get("보완점/단점", ""))
                         old_overall = str(target_row.get("종합 평가", ""))
-                        
-                        today_str = str(edit_date)
-                        updated_pros = f"{old_pros}\n\n[{today_str} 관찰]\n{new_pros.strip()}".strip() if new_pros.strip() else old_pros
-                        updated_cons = f"{old_cons}\n\n[{today_str} 관찰]\n{new_cons.strip()}".strip() if new_cons.strip() else old_cons
-                        updated_overall = f"{old_overall}\n\n[{today_str} 관찰]\n{new_overall.strip()}".strip() if new_overall.strip() else old_overall
 
-                        records = df.to_dict('records')
-                        records[target_idx] = {
-                            "선수명": str(edit_name).strip(), "소속팀": str(final_team_str),
-                            "등번호": str(edit_back_num), "포지션": str(edit_position),
-                            "생년월일": str(edit_birth_date), "만 나이": str(age_full_str),
-                            "연 나이": str(age_year_str), "주발": str(edit_foot),
-                            "신장(cm)": str(edit_height), "체중(kg)": str(edit_weight),
-                            "진행 상태": str(edit_status), "장점/특기": str(updated_pros),
-                            "보완점/단점": str(updated_cons), "종합 평가": str(updated_overall),
-                            "작성일자": str(today_str)
-                        }
-                        updated_df = pd.DataFrame(records).astype(str)
-                        if save_data_to_sheet(updated_df):
-                            st.success("🎉 선수 정보와 소속 이력, 추가 관찰 일지가 성공적으로 수정·저장되었습니다!")
-        else:
-            st.info("💡 위 선수 목록 표에서 수정하고 싶은 **선수 행을 클릭**하시면 하단에 수정 폼이 나타납니다.")
+                        final_pros = f"{old_pros}\n[{edit_date}] {new_pros.strip()}".strip() if new_pros.strip() else old_pros
+                        final_cons = f"{old_cons}\n[{edit_date}] {new_cons.strip()}".strip() if new_cons.strip() else old_cons
+                        final_overall = f"{old_overall}\n[{edit_date}] {new_overall.strip()}".strip() if new_overall.strip() else old_overall
 
-# ----------------------------------------------------
-# 4. 데이터 삭제
-# ----------------------------------------------------
-elif menu == "🗑️ 데이터 삭제":
-    st.header("🗑️ 선수 데이터 삭제")
-    if df.empty:
-        st.info("삭제할 데이터가 없습니다.")
-    else:
-        st.subheader("📋 삭제할 선수를 표에서 **여러 명 다중 선택**하세요")
-        
-        del_selection = st.dataframe(
-            df,
-            use_container_width=True,
-            selection_mode="multi-row",
-            on_select="rerun"
-        )
-        
-        del_selected_rows = del_selection.selection.rows if hasattr(del_selection, "selection") else []
-        
-        if del_selected_rows:
-            selected_count = len(del_selected_rows)
-            st.write("---")
-            
-            selected_names = [df.loc[idx, '선수명'] for idx in del_selected_rows]
-            st.warning(f"⚠️ 선택된 선수 총 **{selected_count}명**: {', '.join(selected_names)}")
-            
-            confirm_key = "confirm_delete_mode"
-            if confirm_key not in st.session_state:
-                st.session_state[confirm_key] = False
-            
-            if not st.session_state[confirm_key]:
-                if st.button(f"🗑️ 선택한 {selected_count}명 데이터 영구 삭제하기", type="primary", use_container_width=True):
-                    st.session_state[confirm_key] = True
-                    st.rerun()
-            else:
-                st.error(f"🚨 **정말로 총 {selected_count}명의 데이터를 삭제하시겠습니까?** 이 작업은 되돌릴 수 없습니다!")
-                
-                c_yes, c_no = st.columns(2)
-                with c_yes:
-                    if st.button("✅ 예, 삭제합니다", type="primary", use_container_width=True):
-                        with st.spinner("구글 시트에서 선택된 데이터를 영구 삭제하는 중..."):
-                            updated_df = df.drop(del_selected_rows).reset_index(drop=True)
-                            if save_data_to_sheet(updated_df):
-                                st.session_state[confirm_key] = False
-                                st.success(f"총 {selected_count}명의 선수 데이터가 성공적으로 영구 삭제되었습니다!")
-                                st.rerun()
-                with c_no:
-                    if st.button("❌ 아니오 (취소)", use_container_width=True):
-                        st.session_state[confirm_key] = False
-                        st.rerun()
-        else:
-            if "confirm_delete_mode" in st.session_state:
-                st.session_state["confirm_delete_mode"] = False
-                
-            st.info("💡 위 목록 표에서 삭제하고 싶은 **선수 행들을 체크(다중 선택)** 하시면 삭제 버튼이 나타납니다.")
+                        df.loc[target_idx, "선수명"] = edit_name.strip()
+                        df.loc[target_idx, "소속팀"] = final_team_str
+                        df.loc[target_idx, "등번호"] = str(edit_back_num)
+                        df.loc[target_idx, "포지션"] = edit_position
+                        df.loc[target_idx, "진행 상태"] = edit_status
+                        df.loc[target_idx, "생년월일"] = str(edit_birth_date)
+                        df.loc[target_idx, "만 나이"] = age_full_str
+                        df.loc[target_idx, "연 나이"] = age_year_str
+                        df.loc[target_idx, "주발"] = edit_foot
+                        df.loc[target_idx, "신장(cm)"] = str(edit_height)
+                        df.loc[target_idx, "체중(kg)"] = str(edit_weight)
+                        df.loc[target_idx, "장점/특기"] = final_pros
+                        df.loc[target_idx, "보완점/단점"] = final_cons
+                        df.loc[target_idx, "종합 평가"] = final_overall
+                        df.loc[target_idx, "작성일자"] = str(edit_date)
+
+                        if save_data_to_sheet(df):
+                            st.success(f"🎉 '{edit_name.strip()}' 선수의 정보가 성공적으로 구글 시트에 업데이트되었습니다!")
+                            st.rerun()
