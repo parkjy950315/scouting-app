@@ -500,10 +500,10 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.text_input("🏠 홈팀 명*", value="홈팀")
+        home_team = st.text_input("🏠 홈팀 명*", value="홈팀", key="input_home_team_name")
         home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="home_form")
     with col_t2:
-        away_team = st.text_input("✈️ 어웨이팀 명*", value="어웨이팀")
+        away_team = st.text_input("✈️ 어웨이팀 명*", value="어웨이팀", key="input_away_team_name")
         away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="away_form")
 
     st.write("---")
@@ -513,7 +513,15 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         team_entered_numbers = {}
         
         all_positions = [pos for row in layout for pos in row['positions']]
-        nums_dict = {pos: st.session_state.get(f"{prefix}_{pos}", "") for pos in all_positions}
+        
+        # 💡 팀별 포메이션에 속하는 포지션의 값만 정확하게 추출 및 수집
+        nums_dict = {}
+        for pos in all_positions:
+            key_name = f"{prefix}_{pos}"
+            val = st.session_state.get(key_name, "")
+            nums_dict[pos] = val
+            if val.strip():
+                team_entered_numbers[pos] = val.strip()
 
         # 1. 시각화 그라운드 출력
         render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
@@ -547,7 +555,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    st.subheader("⭐ 눈에 띈 선수별 집중 메모")
+    st.subheader("⭐ 눈에 띤 선수별 집중 메모")
     st.caption("위에서 등번호가 기입된 선수들 중 메모를 남기고 싶은 선수를 선택하세요.")
 
     active_players = []
@@ -600,8 +608,15 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다.")
         else:
             with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
-                home_num_str = ", ".join([f"{pos}:{num}" for pos, num in home_numbers.items() if num]) if home_numbers else "없음"
-                away_num_str = ", ".join([f"{pos}:{num}" for pos, num in away_numbers.items() if num]) if away_numbers else "없음"
+                # 💡 현재 선택된 포메이션의 실제 입력된 번호만 명확히 필터링하여 문자열 생성
+                home_valid_positions = [pos for row in formation_layouts[home_formation] for pos in row['positions']]
+                away_valid_positions = [pos for row in formation_layouts[away_formation] for pos in row['positions']]
+
+                final_home_nums = {pos: home_numbers[pos] for pos in home_valid_positions if pos in home_numbers and home_numbers[pos]}
+                final_away_nums = {pos: away_numbers[pos] for pos in away_valid_positions if pos in away_numbers and away_numbers[pos]}
+
+                home_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_home_nums.items()]) if final_home_nums else "없음"
+                away_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_away_nums.items()]) if final_away_nums else "없음"
 
                 player_notes_formatted = ""
                 if player_specific_memos:
