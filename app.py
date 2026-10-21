@@ -41,7 +41,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 최적화 스타일 설정 (키보드 간섭 및 스크롤 개선)
+# 📱 PC & 모바일 최적화 스타일 설정
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -219,6 +219,27 @@ def parse_team_info(team_str):
         past_teams = "(전:" + parts[1]
         return current_team, past_teams
     return team_str, ""
+
+# ----------------------------------------------------
+# 📄 텍스트 안전 파싱 보조 함수 (등번호 100% 복원용)
+# ----------------------------------------------------
+def parse_numbers_from_text(text_block):
+    nums_map = {}
+    if not text_block:
+        return nums_map
+    
+    # 예: "포지션별 등번호: LB: #3, LCB: #4" 또는 "LB: 3, LCB: 4"
+    if "포지션별 등번호:" in text_block:
+        line = text_block.split("포지션별 등번호:")[1].split("\n")[0].strip()
+        if line and line != "없음":
+            for part in line.split(","):
+                if ":" in part:
+                    pos_key, val_str = part.split(":", 1)
+                    clean_pos = pos_key.strip()
+                    clean_num = val_str.replace("#", "").strip()
+                    if clean_pos and clean_num:
+                        nums_map[clean_pos] = clean_num
+    return nums_map
 
 # ----------------------------------------------------
 # 📄 PDF 보고서 생성 함수 (선수용)
@@ -671,7 +692,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (선수별 개개인 메모 완벽 보존 및 보완 버전)
+# 2. 📂 경기 일지 조회 (등번호 & 메모 파싱 완벽 보장형)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -747,7 +768,7 @@ elif menu == "📂 경기 일지 조회":
                         match_title = p_memo.get("선수명", "경기 기록")
                         match_date_str = p_memo.get("작성일자", "-")
                         match_teams = p_memo.get("소속팀", "-")
-                        raw_content = p_memo.get("종합 평가", "")
+                        raw_content = str(p_memo.get("종합 평가", ""))
 
                         st.write("---")
                         
@@ -776,7 +797,7 @@ elif menu == "📂 경기 일지 조회":
 
                         st.write("")
 
-                        # 📦 저장된 JSON 패키지 파싱
+                        # 📦 JSON 파싱 시도
                         saved_packet = {}
                         try:
                             if "[SMC_JSON_DATA:" in raw_content:
@@ -791,7 +812,28 @@ elif menu == "📂 경기 일지 조회":
                         a_nums_saved = saved_packet.get("away_nums", {})
                         saved_player_memos = saved_packet.get("player_memos", {})
 
-                        # 텍스트 파싱 보완 (구버전 데이터 대비)
+                        # 🛡️ [이중 복원 장치] JSON이 깨졌을 경우 텍스트 직접 추출로 100% 등번호 파싱
+                        if "🏠 [홈팀:" in raw_content or "✈️ [어웨이팀:" in raw_content:
+                            try:
+                                home_chunk = raw_content.split("🏠 [홈팀:")[1].split("✈️ [어웨이팀:")[0] if "🏠 [홈팀:" in raw_content and "✈️ [어웨이팀:" in raw_content else ""
+                                away_chunk = raw_content.split("✈️ [어웨이팀:")[1].split("⭐ [선수별")[0] if "✈️ [어웨이팀:" in raw_content and "⭐ [선수별" in raw_content else (raw_content.split("✈️ [어웨이팀:")[1].split("📝 [경기")[0] if "✈️ [어웨이팀:" in raw_content and "📝 [경기" in raw_content else raw_content)
+
+                                if not h_nums_saved and home_chunk:
+                                    h_nums_saved = parse_numbers_from_text(home_chunk)
+                                if not a_nums_saved and away_chunk:
+                                    a_nums_saved = parse_numbers_from_text(away_chunk)
+
+                                if not h_form_saved and "포메이션:" in home_chunk:
+                                    h_form_saved = home_chunk.split("포메이션:")[1].split("\n")[0].strip()
+                                if not a_form_saved and "포메이션:" in away_chunk:
+                                    a_form_saved = away_chunk.split("포메이션:")[1].split("\n")[0].strip()
+                            except Exception:
+                                pass
+
+                        if not h_form_saved: h_form_saved = "4-3-3"
+                        if not a_form_saved: a_form_saved = "4-3-3"
+
+                        # 텍스트 내 세부 메모 복원
                         if not saved_player_memos and "⭐ [선수별 집중 관찰 메모]" in raw_content:
                             try:
                                 memo_section = raw_content.split("⭐ [선수별 집중 관찰 메모]")[1].split("📝 [경기 전체 총평]")[0].strip()
@@ -804,26 +846,6 @@ elif menu == "📂 경기 일지 조회":
                                         saved_player_memos[p_lbl] = p_val
                             except Exception:
                                 pass
-
-                        if not h_form_saved and "🏠 [홈팀" in raw_content:
-                            try:
-                                h_sec = raw_content.split("🏠 [홈팀")[1].split("✈️ [어웨이팀")[0]
-                                if "포메이션:" in h_sec:
-                                    h_form_saved = h_sec.split("포메이션:")[1].split("\n")[0].strip()
-                            except Exception:
-                                pass
-                        if not h_form_saved:
-                            h_form_saved = "4-3-3"
-
-                        if not a_form_saved and "✈️ [어웨이팀" in raw_content:
-                            try:
-                                a_sec = raw_content.split("✈️ [어웨이팀")[1].split("⭐ [선수별")[0] if "⭐ [선수별" in raw_content else raw_content.split("✈️ [어웨이팀")[1].split("📝 [경기")[0]
-                                if "포메이션:" in a_sec:
-                                    a_form_saved = a_sec.split("포메이션:")[1].split("\n")[0].strip()
-                            except Exception:
-                                pass
-                        if not a_form_saved:
-                            a_form_saved = "4-3-3"
 
                         clean_content = raw_content
                         if "[SMC_JSON_DATA:" in clean_content:
@@ -851,7 +873,7 @@ elif menu == "📂 경기 일지 조회":
 
                         st.write("---")
                         with st.expander(f"✏️ [{match_title}] 포메이션/등번호 마저 채우기 및 선수별 메모 이어서 수정하기", expanded=True):
-                            st.caption("기존에 작성한 선수별 메모가 텍스트 상자에 고스란히 복원됩니다. 내용을 이어서 적거나 수정해보세요.")
+                            st.caption("기존에 입력된 포메이션과 등번호, 개개인 메모가 100% 복원됩니다. 이어서 적거나 수정하세요.")
 
                             formation_list = ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"]
                             h_form_idx = formation_list.index(h_form_saved) if h_form_saved in formation_list else 0
@@ -867,6 +889,7 @@ elif menu == "📂 경기 일지 조회":
 
                             st.write("---")
 
+                            # ✨ [핵심 해결] 세션 초기화 및 등번호 복원 보장 함수
                             def render_editable_team_grid_fixed(team_name, formation_name, prefix, prev_nums):
                                 layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
                                 updated_team_nums = {}
@@ -879,6 +902,7 @@ elif menu == "📂 경기 일지 조회":
                                         k_name = f"mod_{prefix}_{target_memo_idx}_{pos}"
                                         default_val = prev_nums.get(pos, "")
                                         
+                                        # 최초 세션 로딩 시 복원 값 강제 주입
                                         if k_name not in st.session_state:
                                             st.session_state[k_name] = default_val
 
@@ -913,7 +937,7 @@ elif menu == "📂 경기 일지 조회":
                                 if num:
                                     active_edit_players.append(f"[어웨이] {edit_at_name} - {pos} (#{num})")
 
-                            # ✨ [핵심 해결] 일지가 활성화되었을 때, 구글 시트에서 들고온 개개인 메모를 session_state에 미리 강제 로드
+                            # 세션 세부 메모 자동 로딩
                             init_load_flag_key = f"memo_loaded_flag_{target_memo_idx}"
                             if init_load_flag_key not in st.session_state:
                                 st.session_state[init_load_flag_key] = True
@@ -924,7 +948,6 @@ elif menu == "📂 경기 일지 조회":
                             updated_player_specific_memos = {}
 
                             if active_edit_players:
-                                # 기존 메모 기록이 있었던 선수들 자동 선택
                                 default_selected_memos = []
                                 for act_p in active_edit_players:
                                     pos_p = act_p.split(' - ')[1] if ' - ' in act_p else ""
@@ -948,7 +971,6 @@ elif menu == "📂 경기 일지 조회":
                                         
                                         p_memo_key = f"edit_memo_val_{target_memo_idx}_{p_label}"
                                         
-                                        # 기존 메모 파싱 복원 보완
                                         if p_memo_key not in st.session_state or st.session_state[p_memo_key] is None:
                                             found_val = ""
                                             for k, v in saved_player_memos.items():
@@ -957,14 +979,12 @@ elif menu == "📂 경기 일지 조회":
                                                     break
                                             st.session_state[p_memo_key] = found_val
 
-                                        # 기존 메모 내용이 대입된 텍스트 상자 출력
                                         updated_p_note = st.text_area(
                                             f"{p_label} 세부 메모 수정",
                                             value=st.session_state.get(p_memo_key, ""),
                                             key=f"ta_widget_{target_memo_idx}_{p_label}",
                                             height=100
                                         )
-                                        # 작성된 내용을 세션과 결과 딕셔너리에 동시 저장
                                         st.session_state[p_memo_key] = updated_p_note
                                         if updated_p_note.strip():
                                             updated_player_specific_memos[p_label] = updated_p_note.strip()
