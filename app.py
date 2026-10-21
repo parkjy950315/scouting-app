@@ -683,7 +683,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (메모 누락 해결 완벽 패치)
+# 2. 📂 경기 일지 조회 (선수별 메모 이어서 누적 저장 완벽 해결)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -930,20 +930,17 @@ elif menu == "📂 경기 일지 조회":
                                 if num:
                                     active_edit_players.append(f"[어웨이] {edit_at_name} - {pos} (#{num})")
 
-                            # 💡 기존 메모 맵핑 완벽 개선 (포지션 키나 라벨 키 양쪽 모두 호환)
                             pos_to_saved_memo = {}
                             for orig_lbl, orig_note in saved_player_memos.items():
                                 pos_to_saved_memo[orig_lbl] = orig_note
                                 p_key = extract_pos_key(orig_lbl)
                                 pos_to_saved_memo[p_key] = orig_note
-                                # 키워드 검색용 정제
                                 clean_pos_only = p_key.split("-")[-1].strip() if "-" in p_key else p_key
                                 pos_to_saved_memo[clean_pos_only] = orig_note
 
                             if active_edit_players:
                                 default_selected_memos = []
                                 for act_p in active_edit_players:
-                                    # 활성화된 선수 라벨과 기존 메모 키 일치 여부 유연하게 검사
                                     act_p_key = extract_pos_key(act_p)
                                     pure_pos = act_p_key.split("-")[-1].strip() if "-" in act_p_key else act_p_key
                                     
@@ -965,7 +962,7 @@ elif menu == "📂 경기 일지 조회":
                                         p_key = extract_pos_key(p_label)
                                         pure_pos = p_key.split("-")[-1].strip() if "-" in p_key else p_key
                                         
-                                        # 기존 메모 내용 찾아오기 (정확한 라벨 -> 포지션 키 -> 포지션 순)
+                                        # ✨ 수정창에 처음 불러올 때는 기존 메모를 그대로 띄워줌
                                         existing_p_memo = (
                                             saved_player_memos.get(p_label) or 
                                             pos_to_saved_memo.get(p_label) or 
@@ -1027,17 +1024,31 @@ elif menu == "📂 경기 일지 조회":
                                         h_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_h_nums.items() if num]) if final_edit_h_nums else "없음"
                                         a_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_a_nums.items() if num]) if final_edit_a_nums else "없음"
 
-                                        # ✨ [핵심 해결] 기존에 저장되어 있던 선수별 메모 딕셔너리를 절대 누락하지 않고 그대로 복사해서 가져옴
+                                        # ✨ [핵심 해결] 기존 선수별 메모를 기반으로 시작하되, 새로 적은 내용이 있으면 기존 내용 뒤에 덧붙여서(누적) 저장!
                                         final_player_memos = dict(saved_player_memos)
 
-                                        # 수정창에 노출되어 사용자가 입력/수정한 내용으로 갱신
                                         if selected_edit_memo_players:
                                             for p_lbl in selected_edit_memo_players:
                                                 inkey = edit_input_keys_map.get(p_lbl)
                                                 if inkey:
-                                                    current_text_in_box = st.session_state.get(inkey, "").strip()
-                                                    if current_text_in_box:
-                                                        final_player_memos[p_lbl] = current_text_in_box
+                                                    box_text = st.session_state.get(inkey, "").strip()
+                                                    if box_text:
+                                                        old_memo_val = saved_player_memos.get(p_lbl, "")
+                                                        
+                                                        # 사용자가 기존 텍스트에 새 내용을 추가로 적었을 때의 누적 처리
+                                                        if old_memo_val and box_text != old_memo_val:
+                                                            # 만약 기존 내용이 box_text의 앞부분에 포함되어 있다면, 새로 추가된 부분만 발췌해서 누적
+                                                            if box_text.startswith(old_memo_val):
+                                                                newly_added = box_text[len(old_memo_val):].strip()
+                                                                if newly_added:
+                                                                    final_player_memos[p_lbl] = f"{old_memo_val}\n[추가 기록 ({today_str})]\n{newly_added}"
+                                                                else:
+                                                                    final_player_memos[p_lbl] = old_memo_val
+                                                            else:
+                                                                # 아예 내용을 새로 수정/작성한 경우
+                                                                final_player_memos[p_lbl] = box_text
+                                                        else:
+                                                            final_player_memos[p_lbl] = box_text
 
                                         new_packet = {
                                             "home_form": edit_hf_sel,
@@ -1079,7 +1090,7 @@ elif menu == "📂 경기 일지 조회":
                                         df.loc[target_memo_idx, "종합 평가"] = updated_overall_content
                                         
                                         if save_data_to_sheet(df):
-                                            st.success("🎉 기존 메모가 보존된 상태에서 추가/수정된 내용이 완벽하게 누적 저장되었습니다!")
+                                            st.success("🎉 선수별 개개인 메모가 지워지지 않고 추가 기록과 함께 완벽하게 누적 저장되었습니다!")
                                             st.rerun()
 
                             with col_del_memo:
