@@ -331,11 +331,11 @@ menu = st.sidebar.radio(
 )
 
 # ----------------------------------------------------
-# 1. 📋 현장 전술판 및 터치형 스카우팅 메모 (포메이션 및 핀 연동형)
+# 1. 📋 잔디밭 작전판 그라운드 핀 터치 노트
 # ----------------------------------------------------
 if menu == "📋 실시간 전술판 & 터치 노트":
-    st.header("🏟️ 실시간 그라운드 전술판 & 터치 스카우트 노트")
-    st.caption("※ 홈팀/어웨이팀 포메이션 구조가 반영된 축구장 그라운드 위에서 선수를 선택해 기록하세요.")
+    st.header("🏟️ SMC 실시간 작전판 & 터치 스카우트 노트")
+    st.caption("※ 잔디밭 작전판 위에 배치된 포지션별 핀을 선택해 신속히 기록하세요.")
 
     st.markdown("### 🏟️ 1. 경기 정보 및 포메이션 설정")
     col_t1, col_t2 = st.columns(2)
@@ -349,17 +349,36 @@ if menu == "📋 실시간 전술판 & 터치 노트":
     st.divider()
 
     # 조회할 팀 선택
-    selected_view_team = st.radio("전술판 조회 팀 선택", [home_team, away_team], horizontal=True)
+    selected_view_team = st.radio("작전판 조회 팀 선택", [home_team, away_team], horizontal=True)
     current_formation = form_home if selected_view_team == home_team else form_away
 
     # ====================================================
-    # ⚽ [시각적 축구장 그라운드 & 포지션 핀 레이아웃]
+    # ⚽ [실제 잔디밭 작전판 시각화 UI]
     # ====================================================
     st.markdown(f"""
-    <div style="background-color: #1b4d3e; border: 3px solid #ffffff; padding: 20px; border-radius: 16px; text-align: center; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;">
-        <div style="border: 2px dashed rgba(255,255,255,0.4); border-radius: 10px; padding: 15px;">
-            <h3 style="margin: 0 0 10px 0; color: #ffeb3b; font-weight: 800;">⚽ {selected_view_team} 그라운드 전술판 ({current_formation})</h3>
-            <p style="font-size: 13px; color: #d1e7dd; margin: 0 0 15px 0;">아래 각 포지션 위치에 실제 선수의 <b>등번호</b>를 입력하고, 관찰할 포지션을 선택하세요.</p>
+    <div style="
+        background: linear-gradient(180deg, #1b4d3e 0%, #11382c 100%);
+        border: 4px solid #ffffff;
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+        color: white;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        margin-bottom: 20px;
+        position: relative;
+    ">
+        <div style="
+            border: 2px dashed rgba(255,255,255,0.5);
+            border-radius: 12px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.15);
+        ">
+            <h2 style="margin: 0 0 5px 0; color: #ffeb3b; font-weight: 900; letter-spacing: 2px;">
+                TACTICAL BOARD — {selected_view_team} ({current_formation})
+            </h2>
+            <p style="font-size: 13px; color: #a3e4d7; margin: 0 0 15px 0;">
+                🟢 잔디밭 작전판 라인별 포지션에 선수의 등번호를 입력하세요.
+            </p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -376,50 +395,54 @@ if menu == "📋 실시간 전술판 & 터치 노트":
     player_mapping = {}
 
     with st.container():
-        st.markdown("##### ⚡ [FW] 공격 라인")
+        st.markdown("##### ⚡ [FW] 공격진 (Attack)")
         fw_cols = st.columns(len(active_slots["FW"]))
         for i, pos_name in enumerate(active_slots["FW"]):
             with fw_cols[i]:
-                num = st.number_input(pos_name, min_value=1, max_value=99, value=9+i, key=f"{selected_view_team}_fw_{i}")
+                st.markdown(f"<div style='text-align:center; background:#ff5722; color:white; border-radius:50px; padding:4px; font-weight:bold; font-size:12px; margin-bottom:4px;'>{pos_name}</div>", unsafe_allow_html=True)
+                num = st.number_input(f"{pos_name} 등번호", min_value=1, max_value=99, value=9+i, key=f"{selected_view_team}_fw_{i}", label_visibility="collapsed")
                 player_mapping[f"FW - {pos_name}"] = num
 
-        st.markdown("##### ⚙️ [MF] 미드필더 라인")
+        st.markdown("##### ⚙️ [MF] 미드필더진 (Midfield)")
         mf_cols = st.columns(len(active_slots["MF"]))
         for i, pos_name in enumerate(active_slots["MF"]):
             with mf_cols[i]:
-                num = st.number_input(pos_name, min_value=1, max_value=99, value=6+i, key=f"{selected_view_team}_mf_{i}")
+                st.markdown(f"<div style='text-align:center; background:#ff9800; color:white; border-radius:50px; padding:4px; font-weight:bold; font-size:12px; margin-bottom:4px;'>{pos_name}</div>", unsafe_allow_html=True)
+                num = st.number_input(f"{pos_name} 등번호", min_value=1, max_value=99, value=6+i, key=f"{selected_view_team}_mf_{i}", label_visibility="collapsed")
                 player_mapping[f"MF - {pos_name}"] = num
 
-        st.markdown("##### 🛡️ [DF] 수비 라인")
+        st.markdown("##### 🛡️ [DF] 수비진 (Defense)")
         df_cols = st.columns(len(active_slots["DF"]))
         for i, pos_name in enumerate(active_slots["DF"]):
             with df_cols[i]:
-                num = st.number_input(pos_name, min_value=1, max_value=99, value=2+i, key=f"{selected_view_team}_df_{i}")
+                st.markdown(f"<div style='text-align:center; background:#2196f3; color:white; border-radius:50px; padding:4px; font-weight:bold; font-size:12px; margin-bottom:4px;'>{pos_name}</div>", unsafe_allow_html=True)
+                num = st.number_input(f"{pos_name} 등번호", min_value=1, max_value=99, value=2+i, key=f"{selected_view_team}_df_{i}", label_visibility="collapsed")
                 player_mapping[f"DF - {pos_name}"] = num
 
-        st.markdown("##### 🧤 [GK] 골키퍼")
+        st.markdown("##### 🧤 [GK] 골키퍼 (Goalkeeper)")
         gk_cols = st.columns(1)
         with gk_cols[0]:
-            num = st.number_input(active_slots["GK"][0], min_value=1, max_value=99, value=1, key=f"{selected_view_team}_gk_0")
+            st.markdown(f"<div style='text-align:center; background:#9c27b0; color:white; border-radius:50px; padding:4px; font-weight:bold; font-size:12px; margin-bottom:4px;'>GK</div>", unsafe_allow_html=True)
+            num = st.number_input("GK 등번호", min_value=1, max_value=99, value=1, key=f"{selected_view_team}_gk_0", label_visibility="collapsed")
             player_mapping[f"GK - {active_slots['GK'][0]}"] = num
 
     st.divider()
 
     # ====================================================
-    # 🎯 2. 그라운드 핀 선택형 관찰 대상 지정
+    # 🎯 2. 작전판 핀(선수) 선택 및 역량 평가 연동
     # ====================================================
-    st.markdown("### 🎯 2. 관찰할 포지션(선수 핀) 선택")
+    st.markdown("### 🎯 2. 기록할 작전판 핀(선수) 선택")
     
     selected_position_slot = st.selectbox(
-        "기록할 그라운드 위치(포지션) 선택",
+        "작전판에서 메모할 포지션/선수 선택",
         options=list(player_mapping.keys()),
-        format_func=lambda x: f"📍 [{x}] — 등번호 {player_mapping[x]}번"
+        format_func=lambda x: f"⚽ 작전판 핀 [{x}] — 등번호 {player_mapping[x]}번"
     )
 
     selected_back_num = player_mapping[selected_position_slot]
     position_short = selected_position_slot.split(" - ")[0]
 
-    st.info(f"📍 현재 집중 관찰 중인 선수: **[{selected_view_team}] {selected_position_slot} (등번호: {selected_back_num}번)**")
+    st.info(f"📍 현재 작전판에서 선택된 집중 관찰 대상: **[{selected_view_team}] {selected_position_slot} (등번호: {selected_back_num}번)**")
 
     # 역량 태그 선택 영역
     col_p1, col_p2 = st.columns(2)
@@ -449,7 +472,7 @@ if menu == "📋 실시간 전술판 & 터치 노트":
 
     st.divider()
 
-    if st.button("💾 구글 시트에 현장 메모 임시 저장", type="primary", use_container_width=True):
+    if st.button("💾 구글 시트에 현장 작전판 메모 임시 저장", type="primary", use_container_width=True):
         temp_player_name = f"[{selected_view_team}] {selected_back_num}번"
         pros_summary = f"[체형/특징] {', '.join(all_tags)}"
         overall_summary = f"대회/경기: {home_team} vs {away_team} | 포메이션({selected_view_team}): {current_formation} ({selected_position_slot}) | 관찰등급: {verdict}"
@@ -474,10 +497,10 @@ if menu == "📋 실시간 전술판 & 터치 노트":
             "작성일자": datetime.today().strftime('%Y-%m-%d')
         }
 
-        with st.spinner("구글 시트에 현장 메모를 기록하는 중..."):
+        with st.spinner("구글 시트에 작전판 메모를 기록하는 중..."):
             updated_df = pd.DataFrame([new_field_data]) if df.empty else pd.concat([df, pd.DataFrame([new_field_data])], ignore_index=True)
             if save_data_to_sheet(updated_df):
-                st.success(f"🎉 [{selected_view_team} {selected_back_num}번] 선수 메모가 구글 시트에 안전하게 임시 저장되었습니다!")
+                st.success(f"🎉 [{selected_view_team} {selected_back_num}번] 작전판 메모가 구글 시트에 안전하게 임시 저장되었습니다!")
                 st.balloons()
 
 # ----------------------------------------------------
