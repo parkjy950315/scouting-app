@@ -685,7 +685,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (개개인 메모 완전 누적/합체 보장형)
+# 2. 📂 경기 일지 조회 (기존 메모 직접 보존/수정 완벽 보장형)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -946,6 +946,8 @@ elif menu == "📂 경기 일지 조회":
                                     key=f"edit_memo_multiselect_{target_memo_idx}"
                                 )
 
+                                edit_input_keys_map = {}
+
                                 if selected_edit_memo_players:
                                     st.markdown("---")
                                     for p_label in selected_edit_memo_players:
@@ -953,15 +955,17 @@ elif menu == "📂 경기 일지 조회":
                                         existing_p_memo = pos_to_saved_memo.get(p_key, "")
 
                                         st.markdown(f"**📌 {p_label} 개개인 관찰 기록**")
-                                        if existing_p_memo:
-                                            st.caption(f"📜 기존 메모: {existing_p_memo}")
 
-                                        input_key = f"new_input_memo_{target_memo_idx}_{p_key}"
+                                        # ✨ [핵심 수정] value에 기존 메모를 그대로 넣어서 사용자가 박스 안에서 직접 이어 쓰거나 수정하게 함!
+                                        input_key = f"direct_edit_area_{target_memo_idx}_{p_key}"
+                                        edit_input_keys_map[p_label] = input_key
+
                                         st.text_area(
-                                            f"{p_label} 세부 메모 추가/수정",
-                                            placeholder="기존 메모 뒤에 추가할 새로운 관찰 내용을 적어주세요...",
+                                            f"{p_label} 세부 메모 수정",
+                                            value=existing_p_memo,
+                                            placeholder="기존 메모를 수정하거나 뒤에 내용을 이어서 적어주세요...",
                                             key=input_key,
-                                            height=90
+                                            height=110
                                         )
                             else:
                                 st.info("💡 등번호를 기입하면 해당 선수별 개개인 메모 상자가 나타납니다.")
@@ -1001,27 +1005,15 @@ elif menu == "📂 경기 일지 조회":
                                         h_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_h_nums.items() if num]) if final_edit_h_nums else "없음"
                                         a_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_a_nums.items() if num]) if final_edit_a_nums else "없음"
 
-                                        # 🔥 [100% 보장 누적 로직] 기존 메모와 신규 입력을 무조건 덧붙여서 합체!
+                                        # 🔥 [핵심 저장 로직] 박스 안에 있는 내용 전체(기존+수정/추가)를 100% 온전히 보존 저장!
                                         final_player_memos = {}
-                                        if active_edit_players:
+                                        if active_edit_players and selected_edit_memo_players:
                                             for p_lbl in selected_edit_memo_players:
-                                                pk = extract_pos_key(p_lbl)
-                                                old_m = pos_to_saved_memo.get(pk, "").strip()
-                                                
-                                                input_k = f"new_input_memo_{target_memo_idx}_{pk}"
-                                                new_m = st.session_state.get(input_k, "").strip()
-
-                                                if old_m and new_m:
-                                                    combined_m = f"{old_m}\n[{today_str} 추가 관찰]: {new_m}"
-                                                elif old_m:
-                                                    combined_m = old_m
-                                                elif new_m:
-                                                    combined_m = new_m
-                                                else:
-                                                    combined_m = ""
-
-                                                if combined_m:
-                                                    final_player_memos[p_lbl] = combined_m
+                                                inkey = edit_input_keys_map.get(p_lbl)
+                                                if inkey:
+                                                    current_text_in_box = st.session_state.get(inkey, "").strip()
+                                                    if current_text_in_box:
+                                                        final_player_memos[p_lbl] = current_text_in_box
 
                                         new_packet = {
                                             "home_form": edit_hf_sel,
@@ -1063,7 +1055,7 @@ elif menu == "📂 경기 일지 조회":
                                         df.loc[target_memo_idx, "종합 평가"] = updated_overall_content
                                         
                                         if save_data_to_sheet(df):
-                                            st.success("🎉 포메이션과 개개인 관찰 메모가 누적 보존되어 성공적으로 저장되었습니다!")
+                                            st.success("🎉 포메이션과 개개인 관찰 메모가 손실 없이 완벽히 저장되었습니다!")
                                             st.rerun()
 
                             with col_del_memo:
