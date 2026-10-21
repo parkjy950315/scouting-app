@@ -383,11 +383,11 @@ menu = st.sidebar.radio(
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모
+# 1. 🏟️ 현장 경기 관찰 메모 (작성 중 메모 내용 유지 세션 처리)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("포지션별 등번호를 기입하면, 해당 선수들만 선택하여 개별 관찰 메모를 남길 수 있습니다.")
+    st.caption("경기를 보며 등번호나 메모를 중간중간 추가해도 작성 중인 내용이 날아가지 않고 유지됩니다.")
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
@@ -472,7 +472,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         selected_players_to_memo = st.multiselect(
             "관찰 메모를 작성할 선수 선택",
             options=active_players,
-            placeholder="메모할 선수를 체크하세요 (복수 선택 가능)"
+            placeholder="메모할 선수를 체크하세요 (복수 선택 가능)",
+            key="selected_memo_players_multiselect"
         )
 
         if selected_players_to_memo:
@@ -480,8 +481,10 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             for player_label in selected_players_to_memo:
                 st.markdown(f"**📌 {player_label} 관찰 기록**")
                 memo_key = f"memo_desc_{player_label}"
+                # 작성 중인 메모가 세션에 유지되도록 관리
                 player_note = st.text_area(
                     f"{player_label}에 대한 세부 메모",
+                    value=st.session_state.get(memo_key, ""),
                     placeholder="장점, 플레이 스타일, 특이사항 등을 적어주세요...",
                     key=memo_key,
                     height=100
@@ -496,6 +499,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     general_memo = st.text_area(
         "경기 전체 흐름 및 총평", 
         placeholder="[예시]\n- 전반전 탐색전 이후 후반 난타전 양상\n- 양팀 전술적 움직임 및 세트피스 분석 등",
+        key="general_match_memo_input",
         height=140
     )
 
@@ -505,7 +509,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다.")
         else:
             with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
-                # 메타데이터 저장을 위해 텍스트 내에 포메이션 명칭과 등번호 맵핑을 포함
                 home_num_str = ", ".join([f"{pos}:{num}" for pos, num in home_numbers.items()]) if home_numbers else "없음"
                 away_num_str = ", ".join([f"{pos}:{num}" for pos, num in away_numbers.items()]) if away_numbers else "없음"
 
@@ -518,7 +521,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 memo_player_name = f"[{tournament_name}] {home_team} vs {away_team}"
                 memo_team = f"{home_team} (홈) vs {away_team} (어웨이)"
                 
-                # 저장 텍스트 안에 포메이션 정보 및 등번호 데이터 포맷팅 삽입
                 memo_overall = (
                     f"📅 일자: {match_date} | 대회: {tournament_name}\n"
                     f"[META_HOME_FORM:{home_formation}]\n"
@@ -552,7 +554,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (저장 당시의 포메이션 피치 시각화 포함)
+# 2. 📂 경기 일지 조회
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -575,7 +577,6 @@ elif menu == "📂 경기 일지 조회":
             match_teams = row.get("소속팀", "-")
             raw_content = row.get("종합 평가", "")
 
-            # 저장된 메타데이터(포메이션 및 등번호) 파싱 추출
             home_form = "4-3-3"
             away_form = "4-3-3"
             home_nums = {}
@@ -604,7 +605,6 @@ elif menu == "📂 경기 일지 조회":
             except Exception:
                 pass
 
-            # 화면에 보여줄 때는 META 태그 라인들을 깔끔하게 제거하고 표시
             clean_content = raw_content
             for tag in [f"[META_HOME_FORM:{home_form}]", f"[META_HOME_NUMS:", f"[META_AWAY_FORM:{away_form}]", f"[META_AWAY_NUMS:"]:
                 if tag in clean_content:
@@ -616,11 +616,9 @@ elif menu == "📂 경기 일지 조회":
                 st.markdown(f"**🗓️ 관찰 일자:** {match_date_str}")
                 st.markdown("---")
 
-                # 🏟️ 당시 포메이션 및 등번호 잔디 피치 시각화 재현
                 st.markdown("### 🏟️ 당시 경기 그라운드 포메이션 & 등번호 시각화")
                 p_col1, p_col2 = st.columns(2)
                 
-                # 팀 이름 추출 (예: "홈팀 (홈) vs 어웨이팀 (어웨이)")
                 h_team_name = "홈팀"
                 a_team_name = "어웨이팀"
                 if " vs " in match_teams:
