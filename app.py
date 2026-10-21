@@ -38,7 +38,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 프리미엄 잔디 피치 및 원형 핀 스타일 CSS
+# 📱 화사하고 세련된 밝은 잔디 피치 스타일 CSS
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -57,13 +57,13 @@ st.markdown("""
         cursor: pointer;
     }
     
-    /* ⚽ 프리미엄 경기장 작전판 (다크 모던 그라운드) */
+    /* ⚽ 화사하고 세련된 밝은 잔디 피치 그라운드 */
     .match-soccer-pitch {
-        background: linear-gradient(135deg, #0f2b1d 0%, #184e34 50%, #0d2418 100%);
-        border: 2px solid rgba(255, 255, 255, 0.15);
+        background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%);
+        border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 16px;
         padding: 22px 14px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.35), inset 0 0 30px rgba(0,0,0,0.5);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1);
         margin-bottom: 15px;
     }
     
@@ -71,7 +71,7 @@ st.markdown("""
     .match-pitch-pin {
         background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%);
         color: white;
-        border: 2px solid rgba(255, 255, 255, 0.8);
+        border: 2px solid rgba(255, 255, 255, 0.9);
         border-radius: 50%;
         width: 52px;
         height: 52px;
@@ -80,7 +80,7 @@ st.markdown("""
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -402,15 +402,15 @@ formation_layouts = {
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     st.markdown(f"""
     <div class="match-soccer-pitch">
-        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px;">
-            🏟️ {team_name} <span style="color: #94a3b8; font-size: 12px; font-weight: normal;">({formation_name})</span>
+        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px;">
+            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 12px; font-weight: normal;">({formation_name})</span>
         </div>
     """, unsafe_allow_html=True)
     
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     
     for row in layout:
-        st.markdown(f"<div style='color:#cbd5e1; font-weight:600; font-size:10px; letter-spacing: 1px; margin-bottom:4px; text-transform: uppercase;'>📍 {row['line']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='color:#e2e8f0; font-weight:600; font-size:10px; letter-spacing: 1px; margin-bottom:4px; text-transform: uppercase;'>📍 {row['line']}</div>", unsafe_allow_html=True)
         cols = st.columns(len(row['positions']))
         for idx, pos in enumerate(row['positions']):
             assigned_num = num_dict.get(pos, "")
@@ -473,20 +473,19 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     st.write("---")
 
     def render_team_pitch_with_inputs(team_name, formation_name, prefix):
-        st.markdown(f"### 🛡️ [{team_name}] 포메이션 및 등번호 입력 ({formation_name})")
         layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
         
         team_entered_numbers = {}
 
         st.markdown(f"""
         <div class="match-soccer-pitch">
-            <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px;">
-                🏟️ {team_name} <span style="color: #94a3b8; font-size: 12px; font-weight: normal;">({formation_name})</span>
+            <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px;">
+                🏟️ {team_name} <span style="color: #cbd5e1; font-size: 12px; font-weight: normal;">({formation_name})</span>
             </div>
         """, unsafe_allow_html=True)
         
         for row in layout:
-            st.markdown(f"<div style='color:#cbd5e1; font-weight:600; font-size:10px; letter-spacing: 1px; margin-bottom:4px; text-transform: uppercase;'>📍 {row['line']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color:#e2e8f0; font-weight:600; font-size:10px; letter-spacing: 1px; margin-bottom:4px; text-transform: uppercase;'>📍 {row['line']}</div>", unsafe_allow_html=True)
             cols = st.columns(len(row['positions']))
             for idx, pos in enumerate(row['positions']):
                 key_name = f"{prefix}_{pos}"
