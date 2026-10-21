@@ -351,11 +351,11 @@ menu = st.sidebar.radio(
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (# 기호 제거 및 깔끔한 표시)
+# 1. 🏟️ 현장 경기 관찰 메모 (선택한 선수별 집중 메모 기능 추가)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("대회명, 팀명, 포메이션을 선택하고 포지션별 등번호를 입력하면 피치 그래픽에 즉시 반영됩니다.")
+    st.caption("포지션별 등번호를 기입하면, 해당 선수들만 선택하여 개별 관찰 메모를 남길 수 있습니다.")
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
@@ -394,7 +394,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             for idx, pos in enumerate(row['positions']):
                 key_name = f"{prefix}_{pos}"
                 current_num = st.session_state.get(key_name, "")
-                # # 기호 제거: 등번호가 입력되어 있으면 등번호만 표시, 아니면 포지션 이름 표시
                 display_num = current_num if current_num else pos
 
                 with cols[idx]:
@@ -425,11 +424,49 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         away_numbers = render_team_pitch_with_inputs(away_team if away_team else "어웨이팀", away_formation, "away")
 
     st.write("---")
-    st.subheader("⭐ 눈에 띈 선수 & 경기 핵심 메모")
-    outstanding_memo = st.text_area(
-        "눈에 띈 선수 및 경기 메모", 
-        placeholder="[예시]\n- 홈팀 10번: 탈압박 능력 탁월, 전진 패스 예리함\n- 어웨이팀 7번: 스피드 매우 빠름, 후반전 체력 저하 체크 필요",
-        height=180
+
+    # 🎯 등록된 등번호 기반 [선택한 선수별 집중 메모] 생성 영역
+    st.subheader("⭐ 눈에 띈 선수별 집중 메모")
+    st.caption("위에서 등번호가 기입된 선수들 중 메모를 남기고 싶은 선수를 선택하세요.")
+
+    # 홈팀, 어웨이팀에서 등번호가 입력된 선수 목록 합치기
+    active_players = []
+    for pos, num in home_numbers.items():
+        active_players.append(f"[홈] {home_team} - {pos} (#{num})")
+    for pos, num in away_numbers.items():
+        active_players.append(f"[어웨이] {away_team} - {pos} (#{num})")
+
+    player_specific_memos = {}
+
+    if active_players:
+        selected_players_to_memo = st.multiselect(
+            "관찰 메모를 작성할 선수 선택",
+            options=active_players,
+            placeholder="메모할 선수를 체크하세요 (복수 선택 가능)"
+        )
+
+        if selected_players_to_memo:
+            st.markdown("---")
+            for player_label in selected_players_to_memo:
+                st.markdown(f"**📌 {player_label} 관찰 기록**")
+                memo_key = f"memo_desc_{player_label}"
+                player_note = st.text_area(
+                    f"{player_label}에 대한 세부 메모",
+                    placeholder="장점, 플레이 스타일, 특이사항 등을 적어주세요...",
+                    key=memo_key,
+                    height=100
+                )
+                if player_note.strip():
+                    player_specific_memos[player_label] = player_note.strip()
+    else:
+        st.info("💡 위 포메이션 입력창에 선수 등번호를 기입하면, 여기에 선수별 메모장 활성화 체크박스가 나타납니다.")
+
+    st.write("---")
+    st.subheader("📋 경기 전체 총평 및 핵심 메모")
+    general_memo = st.text_area(
+        "경기 전체 흐름 및 총평", 
+        placeholder="[예시]\n- 전반전 탐색전 이후 후반 난타전 양상\n- 양팀 전술적 움직임 및 세트피스 분석 등",
+        height=140
     )
 
     st.write("")
@@ -441,6 +478,13 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 home_num_str = ", ".join([f"{pos}: {num}번" for pos, num in home_numbers.items()]) if home_numbers else "입력 없음"
                 away_num_str = ", ".join([f"{pos}: {num}번" for pos, num in away_numbers.items()]) if away_numbers else "입력 없음"
 
+                # 선수별 메모 포맷팅 정리
+                player_notes_formatted = ""
+                if player_specific_memos:
+                    player_notes_formatted = "\n\n⭐ [선수별 집중 관찰 메모]\n"
+                    for p_label, p_note in player_specific_memos.items():
+                        player_notes_formatted += f"- {p_label}:\n  {p_note}\n"
+
                 memo_player_name = f"[{tournament_name}] {home_team} vs {away_team}"
                 memo_team = f"{home_team} (홈) vs {away_team} (어웨이)"
                 memo_overall = (
@@ -448,8 +492,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     f"🏠 [홈팀: {home_team}] 포메이션: {home_formation}\n"
                     f"- 포지션별 등번호: {home_num_str}\n\n"
                     f"✈️ [어웨이팀: {away_team}] 포메이션: {away_formation}\n"
-                    f"- 포지션별 등번호: {away_num_str}\n\n"
-                    f"⭐ [눈에 띈 선수 및 현장 메모]\n{outstanding_memo}"
+                    f"- 포지션별 등번호: {away_num_str}"
+                    f"{player_notes_formatted}\n\n"
+                    f"📝 [경기 전체 총평]\n{general_memo}"
                 )
 
                 new_memo_data = {
