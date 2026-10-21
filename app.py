@@ -671,7 +671,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (선수별 기존 메모 완벽 복원 및 보존)
+# 2. 📂 경기 일지 조회 (선수별 기존 메모 완벽 보존 처리)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -939,10 +939,23 @@ elif menu == "📂 경기 일지 조회":
                                 if num:
                                     active_edit_players.append(f"[어웨이] {edit_at_name} - {pos} (#{num})")
 
+                            # ✨ [핵심 해결 1] 기존 저장되어 있던 메모 내용을 session_state에 강제로 동기화하여 날아가지 않도록 보완
+                            for p_k, p_v in saved_player_memos.items():
+                                matching_label = None
+                                for act_p in active_edit_players:
+                                    if p_k == act_p or ((' - ' in act_p) and (act_p.split(' - ')[1] in p_k)):
+                                        matching_label = act_p
+                                        break
+                                if not matching_label:
+                                    matching_label = p_k
+
+                                target_state_key = f"edit_memo_desc_{target_memo_idx}_{matching_label}"
+                                if target_state_key not in st.session_state:
+                                    st.session_state[target_state_key] = p_v
+
                             updated_player_specific_memos = {}
 
                             if active_edit_players:
-                                # 기존 메모가 있는 선수 라벨들 자동 체크
                                 default_selected_memos = []
                                 for act_p in active_edit_players:
                                     pos_part = act_p.split(' - ')[1] if ' - ' in act_p else ""
@@ -964,22 +977,20 @@ elif menu == "📂 경기 일지 조회":
                                     for p_label in selected_edit_memo_players:
                                         st.markdown(f"**📌 {p_label} 개개인 관찰 기록**")
                                         
-                                        # 기존에 저장된 해당 선수의 메모 찾기
-                                        existing_note = ""
-                                        for k, v in saved_player_memos.items():
-                                            if p_label in k or ((' - ' in p_label) and (p_label.split(' - ')[1] in k)):
-                                                existing_note = v
-                                                break
-                                        
                                         p_memo_key = f"edit_memo_desc_{target_memo_idx}_{p_label}"
                                         
-                                        # ✨ session_state에 기존 메모 값을 확실하게 동기화 (기존 내용 유지 핵심)
+                                        # ✨ [핵심 해결 2] session_state에 값이 없다면 파싱된 기존 메모 대입
                                         if p_memo_key not in st.session_state:
-                                            st.session_state[p_memo_key] = existing_note
+                                            existing_v = ""
+                                            for k, v in saved_player_memos.items():
+                                                if p_label in k or ((' - ' in p_label) and (p_label.split(' - ')[1] in k)):
+                                                    existing_v = v
+                                                    break
+                                            st.session_state[p_memo_key] = existing_v
 
+                                        # 기존 메모 내용이 살아있는 상태로 텍스트 영역에 렌더링
                                         updated_p_note = st.text_area(
                                             f"{p_label} 세부 메모 수정",
-                                            value=st.session_state[p_memo_key],
                                             key=p_memo_key,
                                             height=100
                                         )
