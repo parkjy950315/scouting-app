@@ -512,7 +512,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             if k_name not in st.session_state and pos in existing_nums:
                 st.session_state[k_name] = existing_nums[pos]
             
-            # 입력된 값이 있으면 딕셔너리에 담기
             current_val = st.session_state.get(k_name, "")
             nums_dict[pos] = current_val
             if current_val.strip():
@@ -603,7 +602,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다.")
         else:
             with st.spinner("구글 시트에 현장 메모를 임시 저장하는 중..."):
-                # ✨ 저장 직전 세션 상태에서 최신 홈팀/어웨이팀 등번호를 강제로 다시 한번 확실하게 긁어모읍니다.
                 final_home_nums = {}
                 h_layout = formation_layouts.get(home_formation, formation_layouts["4-3-3"])
                 for row in h_layout:
@@ -778,6 +776,7 @@ elif menu == "📂 경기 일지 조회":
 
                         st.write("")
 
+                        # 📦 저장된 JSON 패키지 파싱
                         saved_packet = {}
                         try:
                             if "[SMC_JSON_DATA:" in raw_content:
@@ -791,6 +790,34 @@ elif menu == "📂 경기 일지 조회":
                         a_form_saved = saved_packet.get("away_form", "4-3-3")
                         a_nums_saved = saved_packet.get("away_nums", {})
                         saved_player_memos = saved_packet.get("player_memos", {})
+
+                        # ✨ [핵심 수정] 만약 JSON 내부에 포메이션이나 포지션 번호가 누락되었거나 구버전 데이터일 경우,
+                        # 아래 상세 관찰 기록 텍스트에서 등번호 내용을 정규식으로 안전하게 복원합니다.
+                        if not h_nums_saved and "🏠 [홈팀" in raw_content:
+                            try:
+                                home_section = raw_content.split("🏠 [홈팀")[1].split("✈️ [어웨이팀")[0]
+                                if "포지션별 등번호:" in home_section:
+                                    num_line = home_section.split("포지션별 등번호:")[1].split("\n")[0].strip()
+                                    if num_line and num_line != "없음":
+                                        for item in num_line.split(","):
+                                            if ":" in item:
+                                                p_key, p_val = item.split(":")
+                                                h_nums_saved[p_key.strip()] = p_val.replace("#", "").strip()
+                            except Exception:
+                                pass
+
+                        if not a_nums_saved and "✈️ [어웨이팀" in raw_content:
+                            try:
+                                away_section = raw_content.split("✈️ [어웨이팀")[1].split("⭐ [선수별")[0] if "⭐ [선수별" in raw_content else raw_content.split("✈️ [어웨이팀")[1].split("📝 [경기")[0]
+                                if "포지션별 등번호:" in away_section:
+                                    num_line = away_section.split("포지션별 등번호:")[1].split("\n")[0].strip()
+                                    if num_line and num_line != "없음":
+                                        for item in num_line.split(","):
+                                            if ":" in item:
+                                                p_key, p_val = item.split(":")
+                                                a_nums_saved[p_key.strip()] = p_val.replace("#", "").strip()
+                            except Exception:
+                                pass
 
                         clean_content = raw_content
                         if "[SMC_JSON_DATA:" in clean_content:
@@ -929,7 +956,6 @@ elif menu == "📂 경기 일지 조회":
                                     with st.spinner("구글 시트에 일지를 업데이트하는 중..."):
                                         today_str = datetime.today().strftime('%Y-%m-%d')
                                         
-                                        # ✨ 수정 저장 시점에도 최신 등번호 값을 확실히 다시 한번 긁어모읍니다.
                                         final_edit_h_nums = {}
                                         ed_h_layout = formation_layouts.get(edit_hf_sel, formation_layouts["4-3-3"])
                                         for row in ed_h_layout:
