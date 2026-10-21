@@ -336,7 +336,6 @@ def render_pitch_graphic(team_name, formation_name):
         </div>
     """, unsafe_allow_html=True)
     
-    # 선택된 포메이션 이름에 맞는 레이아웃을 확실하게 가져오도록 수정
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     
     for row in layout:
@@ -370,84 +369,82 @@ menu = st.sidebar.radio(
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (포메이션 변경 시 그라운드 실시간 반영)
+# 1. 🏟️ 현장 경기 관찰 메모 (폼 제거로 실시간 연동)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("대회 이름, 홈/어웨이 팀, 포메이션을 선택하면 피치 그래픽이 실시간으로 변경됩니다.")
+    st.caption("포메이션이나 팀명을 바꾸면 즉시 잔디 피치 그래픽에 반영됩니다.")
 
-    with st.form("match_memo_form", clear_on_submit=True):
-        col_m1, col_m2 = st.columns(2)
-        with col_m1:
-            match_date = st.date_input("경기 일자", value=datetime.today())
-        with col_m2:
-            tournament_name = st.text_input("대회 이름", placeholder="예: 금석배 U18, 대통령배 등")
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        match_date = st.date_input("경기 일자", value=datetime.today())
+    with col_m2:
+        tournament_name = st.text_input("대회 이름", placeholder="예: 금석배 U18, 대통령배 등")
 
-        st.write("---")
+    st.write("---")
 
-        col_t1, col_t2 = st.columns(2)
-        with col_t1:
-            home_team = st.text_input("🏠 홈팀 명*", value="홈팀")
-            home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2"], key="home_form")
-            home_lineup = st.text_area("홈팀 주요 라인업 / 등번호", placeholder="예: GK 1번 홍길동, DF 4번 김철수...")
-        with col_t2:
-            away_team = st.text_input("✈️ 어웨이팀 명*", value="어웨이팀")
-            away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2"], key="away_form")
-            away_lineup = st.text_area("어웨이팀 주요 라인업 / 등번호", placeholder="예: FW 9번 이영호, MF 8번 박지성...")
+    col_t1, col_t2 = st.columns(2)
+    with col_t1:
+        home_team = st.text_input("🏠 홈팀 명*", value="홈팀")
+        home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2"], key="home_form")
+        home_lineup = st.text_area("홈팀 주요 라인업 / 등번호", placeholder="예: GK 1번 홍길동, DF 4번 김철수...")
+    with col_t2:
+        away_team = st.text_input("✈️ 어웨이팀 명*", value="어웨이팀")
+        away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2"], key="away_form")
+        away_lineup = st.text_area("어웨이팀 주요 라인업 / 등번호", placeholder="예: FW 9번 이영호, MF 8번 박지성...")
 
-        st.write("---")
+    st.write("---")
 
-        # 🏟️ 실시간 포메이션 연동 잔디 피치 미리보기
-        st.subheader("🏟️ 선택한 포메이션별 그라운드 피치 실시간 미리보기")
-        pitch_col1, pitch_col2 = st.columns(2)
-        with pitch_col1:
-            render_pitch_graphic(home_team if home_team else "홈팀", home_formation)
-        with pitch_col2:
-            render_pitch_graphic(away_team if away_team else "어웨이팀", away_formation)
+    # 🏟️ 실시간 포메이션 연동 잔디 피치 미리보기 (폼 밖이라 즉시 변경됨)
+    st.subheader("🏟️ 선택한 포메이션별 그라운드 피치 실시간 미리보기")
+    pitch_col1, pitch_col2 = st.columns(2)
+    with pitch_col1:
+        render_pitch_graphic(home_team if home_team else "홈팀", home_formation)
+    with pitch_col2:
+        render_pitch_graphic(away_team if away_team else "어웨이팀", away_formation)
 
-        st.write("---")
-        st.subheader("⭐ 눈에 띈 선수 & 경기 핵심 메모")
-        outstanding_memo = st.text_area(
-            "눈에 띈 선수 및 경기 메모", 
-            placeholder="[예시]\n- 홈팀 10번: 탈압박 능력 탁월, 전진 패스 예리함\n- 어웨이팀 7번: 스피드 매우 빠름, 후반전 체력 저하 체크 필요\n- 경기 흐름: 전반전 탐색전 이후 후반 난타전 양상",
-            height=200
-        )
+    st.write("---")
+    st.subheader("⭐ 눈에 띈 선수 & 경기 핵심 메모")
+    outstanding_memo = st.text_area(
+        "눈에 띈 선수 및 경기 메모", 
+        placeholder="[예시]\n- 홈팀 10번: 탈압박 능력 탁월, 전진 패스 예리함\n- 어웨이팀 7번: 스피드 매우 빠름, 후반전 체력 저하 체크 필요\n- 경기 흐름: 전반전 탐색전 이후 후반 난타전 양상",
+        height=200
+    )
 
-        submitted_memo = st.form_submit_button("💾 현장 메모 저장하기", type="primary", use_container_width=True)
+    st.write("")
+    if st.button("💾 현장 메모 저장하기", type="primary", use_container_width=True):
+        if not home_team.strip() or not away_team.strip():
+            st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다.")
+        else:
+            with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
+                memo_player_name = f"[{tournament_name}] {home_team} vs {away_team}"
+                memo_team = f"{home_team} (홈) vs {away_team} (어웨이)"
+                memo_overall = (
+                    f"📅 일자: {match_date} | 대회: {tournament_name}\n\n"
+                    f"🏠 [홈팀: {home_team}] 포메이션: {home_formation}\n"
+                    f"- 라인업 요약: {home_lineup}\n\n"
+                    f"✈️ [어웨이팀: {away_team}] 포메이션: {away_formation}\n"
+                    f"- 라인업 요약: {away_lineup}\n\n"
+                    f"⭐ [눈에 띈 선수 및 현장 메모]\n{outstanding_memo}"
+                )
 
-        if submitted_memo:
-            if not home_team.strip() or not away_team.strip():
-                st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다.")
-            else:
-                with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
-                    memo_player_name = f"[{tournament_name}] {home_team} vs {away_team}"
-                    memo_team = f"{home_team} (홈) vs {away_team} (어웨이)"
-                    memo_overall = (
-                        f"📅 일자: {match_date} | 대회: {tournament_name}\n\n"
-                        f"🏠 [홈팀: {home_team}] 포메이션: {home_formation}\n"
-                        f"- 라인업 요약: {home_lineup}\n\n"
-                        f"✈️ [어웨이팀: {away_team}] 포메이션: {away_formation}\n"
-                        f"- 라인업 요약: {away_lineup}\n\n"
-                        f"⭐ [눈에 띈 선수 및 현장 메모]\n{outstanding_memo}"
-                    )
+                new_memo_data = {
+                    "선수명": memo_player_name,
+                    "소속팀": memo_team,
+                    "등번호": "-",
+                    "포지션": "경기분석",
+                    "생년월일": "", "만 나이": "", "연 나이": "", "주발": "", "신장(cm)": "", "체중(kg)": "",
+                    "진행 상태": "현장 관찰 메모 (임시)",
+                    "장점/특기": f"대회: {tournament_name} / 홈: {home_formation} vs 어웨이: {away_formation}",
+                    "보완점/단점": "",
+                    "종합 평가": memo_overall,
+                    "작성일자": str(match_date)
+                }
 
-                    new_memo_data = {
-                        "선수명": memo_player_name,
-                        "소속팀": memo_team,
-                        "등번호": "-",
-                        "포지션": "경기분석",
-                        "생년월일": "", "만 나이": "", "연 나이": "", "주발": "", "신장(cm)": "", "체중(kg)": "",
-                        "진행 상태": "현장 관찰 메모 (임시)",
-                        "장점/특기": f"대회: {tournament_name} / 홈: {home_formation} vs 어웨이: {away_formation}",
-                        "보완점/단점": "",
-                        "종합 평가": memo_overall,
-                        "작성일자": str(match_date)
-                    }
-
-                    updated_df = pd.DataFrame([new_memo_data]) if df.empty else pd.concat([df, pd.DataFrame([new_memo_data])], ignore_index=True)
-                    if save_data_to_sheet(updated_df):
-                        st.success("🎉 현장 경기 관찰 메모가 구글 시트에 성공적으로 저장되었습니다!")
-                        st.balloons()
+                updated_df = pd.DataFrame([new_memo_data]) if df.empty else pd.concat([df, pd.DataFrame([new_memo_data])], ignore_index=True)
+                if save_data_to_sheet(updated_df):
+                    st.success("🎉 현장 경기 관찰 메모가 구글 시트에 성공적으로 저장되었습니다!")
+                    st.balloons()
 
 # ----------------------------------------------------
 # 2. 선수 정식 등록
