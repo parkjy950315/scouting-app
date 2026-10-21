@@ -432,6 +432,7 @@ formation_layouts = {
 
 # ⚽ 포메이션별 라인 피치 렌더러 (LCB, RCB 적용)
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
+    display_team_name = team_name if team_name else "팀명 미입력"
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     
     rows_html = ""
@@ -452,7 +453,7 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     complete_html = f"""
     <div style="background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 10px 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1); margin-bottom: 15px; width: 100%; box-sizing: border-box; font-family: sans-serif;">
         <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 11.5px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 3px;">
-            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 9.5px; font-weight: normal;">({formation_name})</span>
+            🏟️ {display_team_name} <span style="color: #cbd5e1; font-size: 9.5px; font-weight: normal;">({formation_name})</span>
         </div>
         {rows_html}
     </div>
@@ -500,10 +501,12 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.text_input("🏠 홈팀 명*", value="홈팀", key="input_home_team_name")
+        # 💡 홈팀 이름을 기본값 없이 빈칸으로 두어 직접 입력하게 설정
+        home_team = st.text_input("🏠 홈팀 명*", value="", placeholder="홈팀명을 입력하세요", key="input_home_team_name")
         home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="home_form")
     with col_t2:
-        away_team = st.text_input("✈️ 어웨이팀 명*", value="어웨이팀", key="input_away_team_name")
+        # 💡 어웨이팀 이름을 기본값 없이 빈칸으로 두어 직접 입력하게 설정
+        away_team = st.text_input("✈️ 어웨이팀 명*", value="", placeholder="어웨이팀명을 입력하세요", key="input_away_team_name")
         away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="away_form")
 
     st.write("---")
@@ -512,11 +515,15 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
         team_entered_numbers = {}
         
-        all_positions = [pos for row in layout for pos in row['positions']]
-        
-        # 💡 팀별 포메이션에 속하는 포지션의 값만 정확하게 추출 및 수집
+        valid_positions = [pos for row in layout for pos in row['positions']]
+        all_possible_positions = ["LW", "CF", "RW", "ST1", "ST2", "ST", "LM", "LCM", "CM", "RCM", "RM", "LAM", "CAM", "RAM", "LDM", "RDM", "CDM", "LB", "LCB", "CB", "RCB", "RB", "LWB", "RWB", "GK"]
+        for p in all_possible_positions:
+            k = f"{prefix}_{p}"
+            if p not in valid_positions and k in st.session_state:
+                del st.session_state[k]
+
         nums_dict = {}
-        for pos in all_positions:
+        for pos in valid_positions:
             key_name = f"{prefix}_{pos}"
             val = st.session_state.get(key_name, "")
             nums_dict[pos] = val
@@ -527,7 +534,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
 
         # 2. 포메이션 형태 맞춤형 직접 입력 그리드
-        st.markdown(f"**⚡ {team_name} 포메이션 진형별 등번호 직접 입력**")
+        display_t_name = team_name if team_name else "입력 대기중인 팀"
+        st.markdown(f"**⚡ {display_t_name} 포메이션 진형별 등번호 직접 입력**")
         
         for row in layout:
             st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 4px;'>{row['line']}</div>", unsafe_allow_html=True)
@@ -549,22 +557,25 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
-        home_numbers = render_team_interactive_grid(home_team if home_team else "홈팀", home_formation, "home")
+        home_numbers = render_team_interactive_grid(home_team, home_formation, "home")
     with pitch_col2:
-        away_numbers = render_team_interactive_grid(away_team if away_team else "어웨이팀", away_formation, "away")
+        away_numbers = render_team_interactive_grid(away_team, away_formation, "away")
 
     st.write("---")
 
-    st.subheader("⭐ 눈에 띤 선수별 집중 메모")
+    st.subheader("⭐ 눈에 띈 선수별 집중 메모")
     st.caption("위에서 등번호가 기입된 선수들 중 메모를 남기고 싶은 선수를 선택하세요.")
 
     active_players = []
+    h_display_label = home_team if home_team else "홈팀"
+    a_display_label = away_team if away_team else "어웨이팀"
+    
     for pos, num in home_numbers.items():
         if num:
-            active_players.append(f"[홈] {home_team} - {pos} (#{num})")
+            active_players.append(f"[홈] {h_display_label} - {pos} (#{num})")
     for pos, num in away_numbers.items():
         if num:
-            active_players.append(f"[어웨이] {away_team} - {pos} (#{num})")
+            active_players.append(f"[어웨이] {a_display_label} - {pos} (#{num})")
 
     player_specific_memos = {}
 
@@ -605,10 +616,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     st.write("")
     if st.button("💾 현장 메모 저장하기", type="primary", use_container_width=True):
         if not home_team.strip() or not away_team.strip():
-            st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다.")
+            st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다. 팀 이름을 입력해 주세요.")
         else:
             with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
-                # 💡 현재 선택된 포메이션의 실제 입력된 번호만 명확히 필터링하여 문자열 생성
                 home_valid_positions = [pos for row in formation_layouts[home_formation] for pos in row['positions']]
                 away_valid_positions = [pos for row in formation_layouts[away_formation] for pos in row['positions']]
 
@@ -624,8 +634,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     for p_label, p_note in player_specific_memos.items():
                         player_notes_formatted += f"- {p_label}:\n  {p_note}\n"
 
-                memo_player_name = f"[{tournament_name}] {home_team} vs {away_team}"
-                memo_team = f"{home_team} (홈) vs {away_team} (어웨이)"
+                t_name_prefix = f"[{tournament_name}] " if tournament_name.strip() else ""
+                memo_player_name = f"{t_name_prefix}{home_team.strip()} vs {away_team.strip()}"
+                memo_team = f"{home_team.strip()} (홈) vs {away_team.strip()} (어웨이)"
                 
                 memo_overall = (
                     f"📅 일자: {match_date} | 대회: {tournament_name}\n"
@@ -633,9 +644,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     f"[META_HOME_NUMS:{home_num_str}]\n"
                     f"[META_AWAY_FORM:{away_formation}]\n"
                     f"[META_AWAY_NUMS:{away_num_str}]\n\n"
-                    f"🏠 [홈팀: {home_team}] 포메이션: {home_formation}\n"
+                    f"🏠 [홈팀: {home_team.strip()}] 포메이션: {home_formation}\n"
                     f"- 포지션별 등번호: {home_num_str.replace(':', ': #')}\n\n"
-                    f"✈️ [어웨이팀: {away_team}] 포메이션: {away_formation}\n"
+                    f"✈️ [어웨이팀: {away_team.strip()}] 포메이션: {away_formation}\n"
                     f"- 포지션별 등번호: {away_num_str.replace(':', ': #')}"
                     f"{player_notes_formatted}\n\n"
                     f"📝 [경기 전체 총평]\n{general_memo}"
@@ -656,6 +667,12 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
                 updated_df = pd.DataFrame([new_memo_data]) if df.empty else pd.concat([df, pd.DataFrame([new_memo_data])], ignore_index=True)
                 if save_data_to_sheet(updated_df):
+                    for p in ["LW", "CF", "RW", "ST1", "ST2", "ST", "LM", "LCM", "CM", "RCM", "RM", "LAM", "CAM", "RAM", "LDM", "RDM", "CDM", "LB", "LCB", "CB", "RCB", "RB", "LWB", "RWB", "GK"]:
+                        if f"home_{p}" in st.session_state:
+                            del st.session_state[f"home_{p}"]
+                        if f"away_{p}" in st.session_state:
+                            del st.session_state[f"away_{p}"]
+                    
                     st.success("🎉 현장 경기 관찰 메모가 구글 시트에 성공적으로 저장되었습니다!")
                     st.balloons()
 
