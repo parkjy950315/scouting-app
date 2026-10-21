@@ -440,6 +440,7 @@ menu = st.sidebar.radio(
     [
         "🏟️ 현장 경기 관찰 메모", 
         "📂 경기 일지 조회", 
+        "🗑️ 경기 일지 일괄 삭제", 
         "선수 등록", 
         "🔍 선수 검색 및 관찰일지 조회", 
         "✏️ 선수 정보/일지 수정 및 삭제"
@@ -619,13 +620,12 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (인덱스 격리 수정 완료)
+# 2. 📂 경기 일지 조회
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
-    st.caption("팀명, 날짜, 대회명으로 검색하고 리스트에서 행을 선택하여 당시 포메이션 피치 시각화, PDF 다운로드, 데이터 삭제를 수행하세요.")
+    st.caption("팀명, 날짜, 대회명으로 검색하고 리스트에서 행을 선택하여 당시 포메이션 피치 시각화 및 PDF 다운로드를 수행하세요.")
 
-    # 1단계: 메모 데이터만 추출 후 인덱스를 완전히 리셋 (0번부터 새로 매김)
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
     if memo_df.empty:
@@ -678,9 +678,7 @@ elif menu == "📂 경기 일지 조회":
             selected_memo_rows = memo_selection.selection.rows if hasattr(memo_selection, "selection") else []
 
             if selected_memo_rows:
-                # 2단계: 선택된 행의 실제 원본 데이터프레임(df) 인덱스를 정확히 매핑
                 selected_row_filtered = filtered_memo_df.iloc[selected_memo_rows[0]]
-                # 원본 df에서 해당 행과 일치하는 인덱스 찾기
                 match_indices = df[(df["선수명"] == selected_row_filtered["선수명"]) & 
                                    (df["소속팀"] == selected_row_filtered["소속팀"]) & 
                                    (df["작성일자"] == selected_row_filtered["작성일자"]) &
@@ -774,19 +772,62 @@ elif menu == "📂 경기 일지 조회":
                     st.markdown("---")
                     st.markdown("**📝 상세 관찰 기록 및 총평**")
                     st.info(clean_content)
-
-                    st.write("")
-                    if st.button("⚠️ 이 경기 일지 영구 삭제하기", type="secondary", use_container_width=True, key=f"btn_del_memo_{target_memo_idx}"):
-                        with st.spinner("구글 시트에서 일지를 삭제하는 중..."):
-                            df = df.drop(target_memo_idx).reset_index(drop=True)
-                            if save_data_to_sheet(df):
-                                st.success("🗑️ 경기 일지가 성공적으로 삭제되었습니다! 페이지를 갱신합니다.")
-                                st.rerun()
             else:
                 st.info("💡 위 목록 표에서 조회할 **경기 일지 행을 클릭**하시면 하단에 상세 내용과 시각화 화면이 나타납니다.")
 
 # ----------------------------------------------------
-# 3. 선수 정식 등록
+# 3. 🗑️ 경기 일지 일괄 삭제 탭
+# ----------------------------------------------------
+elif menu == "🗑️ 경기 일지 일괄 삭제":
+    st.header("🗑️ 현장 경기 관찰 일지 일괄 삭제")
+    st.caption("삭제할 경기 일지들을 체크박스로 여러 개 선택한 뒤, 하단의 일괄 삭제 버튼을 눌러 한 번에 정리하세요.")
+
+    memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
+
+    if memo_df.empty:
+        st.info("삭제할 경기 관찰 일지가 없습니다.")
+    else:
+        if "작성일자" in memo_df.columns:
+            memo_df = memo_df.sort_values(by="작성일자", ascending=False).reset_index(drop=True)
+
+        st.markdown("### 📋 삭제 대상 일지 선택")
+        
+        selected_indices_to_delete = []
+        
+        # 전체 선택/해제용 토글 또는 개별 체크박스 리스트 생성
+        select_all = st.checkbox("☑️ 전체 일지 선택", value=False)
+        
+        st.write("---")
+
+        for idx, row in memo_df.iterrows():
+            orig_indices = df[(df["선수명"] == row["선수명"]) & 
+                              (df["소속팀"] == row["소속팀"]) & 
+                              (df["작성일자"] == row["작성일자"]) &
+                              (df["진행 상태"] == "현장 관찰 메모 (임시)")].index
+            
+            if len(orig_indices) > 0:
+                orig_idx = orig_indices[0]
+                match_label = f"[{row.get('작성일자', '-')}] {row.get('선수명', '')} ({row.get('소속팀', '')})"
+                
+                is_checked = st.checkbox(match_label, value=select_all, key=f"chk_del_{orig_idx}")
+                if is_checked:
+                    selected_indices_to_delete.append(orig_idx)
+
+        st.write("---")
+        
+        if selected_indices_to_delete:
+            st.warning(f"⚠️ 총 {len(selected_indices_to_delete)}개의 경기 일지가 선택되었습니다. 삭제 버튼을 누르면 영구적으로 삭제됩니다.")
+            if st.button("🗑️ 선택한 경기 일지 일괄 삭제하기", type="primary", use_container_width=True):
+                with st.spinner("구글 시트에서 선택된 일지들을 삭제하는 중..."):
+                    df = df.drop(selected_indices_to_delete).reset_index(drop=True)
+                    if save_data_to_sheet(df):
+                        st.success("🎉 선택한 경기 일지들이 성공적으로 일괄 삭제되었습니다! 페이지를 갱신합니다.")
+                        st.rerun()
+        else:
+            st.info("💡 삭제할 경기 일지 체크박스를 선택해 주세요.")
+
+# ----------------------------------------------------
+# 4. 선수 정식 등록
 # ----------------------------------------------------
 elif menu == "선수 등록":
     st.header("📋 신규 관찰 선수 정식 등록")
@@ -846,7 +887,7 @@ elif menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 4. 선수 검색 및 상세 관찰일지 조회 & PDF 다운로드
+# 5. 선수 검색 및 상세 관찰일지 조회 & PDF 다운로드
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
     st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
@@ -977,7 +1018,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
             st.info("💡 목록 표에서 조회하고 싶은 **행을 클릭**하시면 상세 내용이 하단에 나타납니다.")
 
 # ----------------------------------------------------
-# 5. 선수 정보 수정 및 삭제
+# 6. 선수 정보 수정 및 삭제
 # ----------------------------------------------------
 elif menu == "✏️ 선수 정보/일지 수정 및 삭제":
     st.header("✏️ 기존 정보 수정 및 데이터 삭제")
