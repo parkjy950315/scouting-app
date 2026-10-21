@@ -619,7 +619,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (내부 탭 구조: [조회 및 PDF] / [일괄 삭제])
+# 2. 📂 경기 일지 조회 (내부 탭 구조: 목록/조회 | 일괄 삭제)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -630,7 +630,7 @@ elif menu == "📂 경기 일지 조회":
     if memo_df.empty:
         st.info("아직 저장된 경기 관찰 일지가 없습니다. [🏟️ 현장 경기 관찰 메모] 메뉴에서 첫 일지를 작성해 보세요!")
     else:
-        # 탭 구성 (조회 및 PDF 다운로드 / 일괄 삭제)
+        # 내부 탭 구성
         tab_view, tab_delete = st.tabs(["📋 일지 목록 및 조회", "🗑️ 일지 일괄 삭제"])
 
         with tab_view:
@@ -671,7 +671,7 @@ elif menu == "📂 경기 일지 조회":
                 st.warning("🔍 검색 조건에 일치하는 경기 일지가 없습니다.")
             else:
                 display_memo_df = filtered_memo_df[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
-                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
+                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 오웨이", "대회 정보"]
 
                 memo_selection = st.dataframe(
                     display_memo_df,
