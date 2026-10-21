@@ -501,11 +501,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        # 💡 홈팀 이름을 기본값 없이 빈칸으로 두어 직접 입력하게 설정
         home_team = st.text_input("🏠 홈팀 명*", value="", placeholder="홈팀명을 입력하세요", key="input_home_team_name")
         home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="home_form")
     with col_t2:
-        # 💡 어웨이팀 이름을 기본값 없이 빈칸으로 두어 직접 입력하게 설정
         away_team = st.text_input("✈️ 어웨이팀 명*", value="", placeholder="어웨이팀명을 입력하세요", key="input_away_team_name")
         away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="away_form")
 
@@ -635,7 +633,10 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                         player_notes_formatted += f"- {p_label}:\n  {p_note}\n"
 
                 t_name_prefix = f"[{tournament_name}] " if tournament_name.strip() else ""
-                memo_player_name = f"{t_name_prefix}{home_team.strip()} vs {away_team.strip()}"
+                
+                # 💡 핵심 수정: 같은 팀 간의 경기라도 날짜(작성일자)를 함께 조합하여 고유한 식별이 되도록 변경
+                timestamp_id = datetime.now().strftime('%H%M%S')
+                memo_player_name = f"{t_name_prefix}{home_team.strip()} vs {away_team.strip()} ({str(match_date)} 타임:{timestamp_id})"
                 memo_team = f"{home_team.strip()} (홈) vs {away_team.strip()} (어웨이)"
                 
                 memo_overall = (
@@ -728,6 +729,9 @@ elif menu == "📂 경기 일지 조회":
                 st.warning("🔍 검색 조건에 일치하는 경기 일지가 없습니다.")
             else:
                 display_memo_df = filtered_memo_df[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
+                
+                # 💡 화면에 표시할 때는 내부 고유 식별 타임스탬프 문구를 깔끔하게 지워서 보여줌
+                display_memo_df["선수명"] = display_memo_df["선수명"].apply(lambda x: re.sub(r' \(타임:\d+\)', '', str(x)))
                 display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
 
                 memo_selection = st.dataframe(
@@ -741,16 +745,15 @@ elif menu == "📂 경기 일지 조회":
 
                 if selected_memo_rows:
                     selected_row_filtered = filtered_memo_df.iloc[selected_memo_rows[0]]
+                    # 💡 정확한 고유 식별자(선수명 전체 값)를 기준으로 정확한 행 탐색
                     match_indices = df[(df["선수명"] == selected_row_filtered["선수명"]) & 
-                                       (df["소속팀"] == selected_row_filtered["소속팀"]) & 
-                                       (df["작성일자"] == selected_row_filtered["작성일자"]) &
                                        (df["진행 상태"] == "현장 관찰 메모 (임시)")].index
 
                     if len(match_indices) > 0:
                         target_memo_idx = match_indices[0]
                         p_memo = df.loc[target_memo_idx]
 
-                        match_title = p_memo.get("선수명", "경기 기록")
+                        match_title = re.sub(r' \(타임:\d+\)', '', p_memo.get("선수명", "경기 기록"))
                         match_date_str = p_memo.get("작성일자", "-")
                         match_teams = p_memo.get("소속팀", "-")
                         raw_content = p_memo.get("종합 평가", "")
@@ -844,6 +847,7 @@ elif menu == "📂 경기 일지 조회":
             memo_df_del = memo_df.sort_values(by="작성일자", ascending=False).reset_index(drop=True) if "작성일자" in memo_df.columns else memo_df.copy()
             
             display_del_df = memo_df_del[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
+            display_del_df["선수명"] = display_del_df["선수명"].apply(lambda x: re.sub(r' \(타임:\d+\)', '', str(x)))
             display_del_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
 
             del_selection = st.dataframe(
@@ -866,9 +870,7 @@ elif menu == "📂 경기 일지 조회":
                         for r_idx in selected_del_rows:
                             if r_idx < len(memo_df_del):
                                 selected_row_data = memo_df_del.iloc[r_idx]
-                                orig_indices = df[(df["선수명"] == selected_row_data["선수명"]) & 
-                                                  (df["소속팀"] == selected_row_data["소속팀"]) & 
-                                                  (df["작성일자"] == selected_row_data["작성일자"]) &
+                                orig_indices = df[(df["선수명"] == memo_df_del.iloc[r_idx]["선수명"]) & 
                                                   (df["진행 상태"] == "현장 관찰 메모 (임시)")].index
                                 if len(orig_indices) > 0:
                                     indices_to_drop.append(orig_indices[0])
