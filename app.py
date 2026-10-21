@@ -383,7 +383,7 @@ menu = st.sidebar.radio(
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (작성 중 메모 내용 유지 세션 처리)
+# 1. 🏟️ 현장 경기 관찰 메모
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -481,7 +481,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             for player_label in selected_players_to_memo:
                 st.markdown(f"**📌 {player_label} 관찰 기록**")
                 memo_key = f"memo_desc_{player_label}"
-                # 작성 중인 메모가 세션에 유지되도록 관리
                 player_note = st.text_area(
                     f"{player_label}에 대한 세부 메모",
                     value=st.session_state.get(memo_key, ""),
@@ -554,86 +553,128 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회
+# 2. 📂 경기 일지 조회 (팀명/날짜/대회명 검색 및 연도-월별 정리)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
-    st.caption("작성된 일지를 펼치면 당시의 홈/어웨이 포메이션 및 선수 등번호 피치 시각화가 그대로 재현됩니다.")
+    st.caption("팀명, 날짜, 대회명으로 검색할 수 있으며, 연도-월별로 일지들이 깔끔하게 정리되어 표시됩니다.")
 
     memo_df = df[df["진행 상태"] == "현장 관찰 메모 (임시)"].copy()
 
     if memo_df.empty:
         st.info("아직 저장된 경기 관찰 일지가 없습니다. [🏟️ 현장 경기 관찰 메모] 메뉴에서 첫 일지를 작성해 보세요!")
     else:
+        # 최신 작성일자 순으로 정렬
         if "작성일자" in memo_df.columns:
             memo_df = memo_df.sort_values(by="작성일자", ascending=False).reset_index(drop=True)
 
-        st.metric("총 누적 경기 일지", f"{len(memo_df)}건")
+        # 🔍 검색 및 필터 입력 바
+        sc_col1, sc_col2 = st.columns([3, 1])
+        with sc_col1:
+            search_query = st.text_input("🔍 검색어 입력 (팀명, 대회명, 날짜 키워드 등)", placeholder="예: 안산, 금석배, 2026-03 등", key="memo_search_box")
+        with sc_col2:
+            # 작성된 일지들에서 존재하는 연도-월 목록 추출
+            available_months = ["전체"]
+            if "작성일자" in memo_df.columns:
+                months_extracted = memo_df["작성일자"].apply(lambda x: str(x)[:7] if pd.notna(x) and len(str(x)) >= 7 else "").unique()
+                months_extracted = sorted([m for m in months_extracted if m and m != "nat"], reverse=True)
+                available_months.extend(months_extracted)
+            
+            selected_month_filter = st.selectbox("📅 월별 필터", options=available_months, key="memo_month_filter")
+
+        # 필터링 적용
+        filtered_memo_df = memo_df.copy()
+        if search_query.strip():
+            q = search_query.strip().lower()
+            filtered_memo_df = filtered_memo_df[
+                filtered_memo_df["선수명"].str.lower().str.contains(q, na=False) |
+                filtered_memo_df["소속팀"].str.lower().str.contains(q, na=False) |
+                filtered_memo_df["작성일자"].str.lower().str.contains(q, na=False) |
+                filtered_memo_df["장점/특기"].str.lower().str.contains(q, na=False) |
+                filtered_memo_df["종합 평가"].str.lower().str.contains(q, na=False)
+            ]
+
+        if selected_month_filter != "전체":
+            filtered_memo_df = filtered_memo_df[filtered_memo_df["작성일자"].str.startswith(selected_month_filter)]
+
+        st.metric("검색된 경기 일지", f"{len(filtered_memo_df)}건")
         st.write("---")
 
-        for idx, row in memo_df.iterrows():
-            match_title = row.get("선수명", "경기 기록")
-            match_date_str = row.get("작성일자", "-")
-            match_teams = row.get("소속팀", "-")
-            raw_content = row.get("종합 평가", "")
+        if filtered_memo_df.empty:
+            st.warning("🔍 검색 조건에 일치하는 경기 일지가 없습니다.")
+        else:
+            # 연도-월(YYYY-MM) 기준으로 그룹화하여 아코디언(Expander) 또는 섹션별로 분리
+            filtered_memo_df["YearMonth"] = filtered_memo_df["작성일자"].apply(lambda x: str(x)[:7] if pd.notna(x) and len(str(x)) >= 7 else "기타 날짜")
+            grouped = filtered_memo_df.groupby("YearMonth", sort=False)
 
-            home_form = "4-3-3"
-            away_form = "4-3-3"
-            home_nums = {}
-            away_nums = {}
-
-            try:
-                if "[META_HOME_FORM:" in raw_content:
-                    home_form = raw_content.split("[META_HOME_FORM:")[1].split("]")[0]
-                if "[META_HOME_NUMS:" in raw_content:
-                    h_nums_raw = raw_content.split("[META_HOME_NUMS:")[1].split("]")[0]
-                    if h_nums_raw and h_nums_raw != "없음":
-                        for item in h_nums_raw.split(","):
-                            if ":" in item:
-                                p_key, p_val = item.split(":")
-                                home_nums[p_key.strip()] = p_val.strip()
-
-                if "[META_AWAY_FORM:" in raw_content:
-                    away_form = raw_content.split("[META_AWAY_FORM:")[1].split("]")[0]
-                if "[META_AWAY_NUMS:" in raw_content:
-                    a_nums_raw = raw_content.split("[META_AWAY_NUMS:")[1].split("]")[0]
-                    if a_nums_raw and a_nums_raw != "없음":
-                        for item in a_nums_raw.split(","):
-                            if ":" in item:
-                                p_key, p_val = item.split(":")
-                                away_nums[p_key.strip()] = p_val.strip()
-            except Exception:
-                pass
-
-            clean_content = raw_content
-            for tag in [f"[META_HOME_FORM:{home_form}]", f"[META_HOME_NUMS:", f"[META_AWAY_FORM:{away_form}]", f"[META_AWAY_NUMS:"]:
-                if tag in clean_content:
-                    lines = clean_content.split("\n")
-                    clean_content = "\n".join([l for l in lines if not tag in l])
-
-            with st.expander(f"📅 [{match_date_str}]  {match_title}"):
-                st.markdown(f"**⚽ 대진 정보:** {match_teams}")
-                st.markdown(f"**🗓️ 관찰 일자:** {match_date_str}")
-                st.markdown("---")
-
-                st.markdown("### 🏟️ 당시 경기 그라운드 포메이션 & 등번호 시각화")
-                p_col1, p_col2 = st.columns(2)
+            for ym, group in grouped:
+                st.markdown(f"### 🗓️ {ym} ({len(group)}건)")
                 
-                h_team_name = "홈팀"
-                a_team_name = "어웨이팀"
-                if " vs " in match_teams:
-                    parts = match_teams.split(" vs ")
-                    h_team_name = parts[0].replace(" (홈)", "").strip()
-                    a_team_name = parts[1].replace(" (어웨이)", "").strip()
+                for idx, row in group.iterrows():
+                    match_title = row.get("선수명", "경기 기록")
+                    match_date_str = row.get("작성일자", "-")
+                    match_teams = row.get("소속팀", "-")
+                    raw_content = row.get("종합 평가", "")
 
-                with p_col1:
-                    render_pitch_graphic_from_saved(h_team_name, home_form, home_nums)
-                with p_col2:
-                    render_pitch_graphic_from_saved(a_team_name, away_form, away_nums)
+                    home_form = "4-3-3"
+                    away_form = "4-3-3"
+                    home_nums = {}
+                    away_nums = {}
 
-                st.markdown("---")
-                st.markdown("**📝 상세 관찰 기록 및 총평**")
-                st.info(clean_content)
+                    try:
+                        if "[META_HOME_FORM:" in raw_content:
+                            home_form = raw_content.split("[META_HOME_FORM:")[1].split("]")[0]
+                        if "[META_HOME_NUMS:" in raw_content:
+                            h_nums_raw = raw_content.split("[META_HOME_NUMS:")[1].split("]")[0]
+                            if h_nums_raw and h_nums_raw != "없음":
+                                for item in h_nums_raw.split(","):
+                                    if ":" in item:
+                                        p_key, p_val = item.split(":")
+                                        home_nums[p_key.strip()] = p_val.strip()
+
+                        if "[META_AWAY_FORM:" in raw_content:
+                            away_form = raw_content.split("[META_AWAY_FORM:")[1].split("]")[0]
+                        if "[META_AWAY_NUMS:" in raw_content:
+                            a_nums_raw = raw_content.split("[META_AWAY_NUMS:")[1].split("]")[0]
+                            if a_nums_raw and a_nums_raw != "없음":
+                                for item in a_nums_raw.split(","):
+                                    if ":" in item:
+                                        p_key, p_val = item.split(":")
+                                        away_nums[p_key.strip()] = p_val.strip()
+                    except Exception:
+                        pass
+
+                    clean_content = raw_content
+                    for tag in [f"[META_HOME_FORM:{home_form}]", f"[META_HOME_NUMS:", f"[META_AWAY_FORM:{away_form}]", f"[META_AWAY_NUMS:"]:
+                        if tag in clean_content:
+                            lines = clean_content.split("\n")
+                            clean_content = "\n".join([l for l in lines if not tag in l])
+
+                    with st.expander(f"📌 [{match_date_str}]  {match_title}"):
+                        st.markdown(f"**⚽ 대진 정보:** {match_teams}")
+                        st.markdown(f"**🗓️ 관찰 일자:** {match_date_str}")
+                        st.markdown("---")
+
+                        st.markdown("### 🏟️ 당시 경기 그라운드 포메이션 & 등번호 시각화")
+                        p_col1, p_col2 = st.columns(2)
+                        
+                        h_team_name = "홈팀"
+                        a_team_name = "어웨이팀"
+                        if " vs " in match_teams:
+                            parts = match_teams.split(" vs ")
+                            h_team_name = parts[0].replace(" (홈)", "").strip()
+                            a_team_name = parts[1].replace(" (어웨이)", "").strip()
+
+                        with p_col1:
+                            render_pitch_graphic_from_saved(h_team_name, home_form, home_nums)
+                        with p_col2:
+                            render_pitch_graphic_from_saved(a_team_name, away_form, away_nums)
+
+                        st.markdown("---")
+                        st.markdown("**📝 상세 관찰 기록 및 총평**")
+                        st.info(clean_content)
+                
+                st.write("")
 
 # ----------------------------------------------------
 # 3. 선수 정식 등록
