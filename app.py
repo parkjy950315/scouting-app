@@ -418,37 +418,37 @@ formation_layouts = {
     ]
 }
 
-# ⚽ HTML 태그 노출 방지 및 완벽 정렬 피치 렌더러 (st.components.v1.html 사용)
+# ⚽ 높이 확장 및 레이아웃 최적화로 짤림 현상 방지 피치 렌더러
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     
     rows_html = ""
     for row in layout:
-        rows_html += f"<div style='color:#e2e8f0; font-weight:600; font-size:10px; letter-spacing: 1px; margin-bottom:6px; text-transform: uppercase;'>📍 {row['line']}</div>"
-        rows_html += "<div style='display: flex; justify-content: center; gap: 10px; margin-bottom: 12px; flex-wrap: nowrap; width: 100%;'>"
+        rows_html += f"<div style='color:#e2e8f0; font-weight:600; font-size:9px; letter-spacing: 1px; margin-bottom:3px; text-transform: uppercase; text-align: center;'>📍 {row['line']}</div>"
+        rows_html += "<div style='display: flex; justify-content: center; gap: 8px; margin-bottom: 8px; flex-wrap: nowrap; width: 100%;'>"
         for pos in row['positions']:
             assigned_num = num_dict.get(pos, "")
             display_num = assigned_num if assigned_num else "-"
             rows_html += f"""
-            <div style="background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%); color: white; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; width: 46px; height: 46px; min-width: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-                <span style="font-size: 8px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
-                <span style="font-size: 12px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
+            <div style="background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%); color: white; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; width: 40px; height: 40px; min-width: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                <span style="font-size: 7px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
+                <span style="font-size: 11px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
             </div>
             """
         rows_html += "</div>"
 
     complete_html = f"""
-    <div style="background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 18px 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1); margin-bottom: 15px; width: 100%; box-sizing: border-box; font-family: sans-serif;">
-        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px;">
-            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 11px; font-weight: normal;">({formation_name})</span>
+    <div style="background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 14px 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1); margin-bottom: 15px; width: 100%; box-sizing: border-box; font-family: sans-serif;">
+        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 5px;">
+            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 10px; font-weight: normal;">({formation_name})</span>
         </div>
         {rows_html}
     </div>
     """
     
-    # st.components.v1.html을 사용하여 HTML 코드가 텍스트로 노출되지 않고 안전하게 독립 렌더링되도록 처리
     import streamlit.components.v1 as components
-    components.html(complete_html, height=270, scrolling=False)
+    # 높이를 넉넉하게 380px로 설정하여 절대 잘리지 않도록 함
+    components.html(complete_html, height=380, scrolling=False)
 
 display_logo()
 
