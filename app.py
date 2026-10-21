@@ -240,9 +240,8 @@ def parse_numbers_from_text(text_block):
 def extract_pos_key(label):
     if " - " in label:
         parts = label.split(" - ")
-        prefix_team = parts[0].strip()
         pos_part = parts[1].split("(")[0].strip()
-        return f"{prefix_team} - {pos_part}"
+        return pos_part
     return label
 
 # ----------------------------------------------------
@@ -684,7 +683,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (기존 메모 누적 보존 완벽 수정형)
+# 2. 📂 경기 일지 조회 (메모 누락 해결 완벽 패치)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -931,16 +930,24 @@ elif menu == "📂 경기 일지 조회":
                                 if num:
                                     active_edit_players.append(f"[어웨이] {edit_at_name} - {pos} (#{num})")
 
+                            # 💡 기존 메모 맵핑 완벽 개선 (포지션 키나 라벨 키 양쪽 모두 호환)
                             pos_to_saved_memo = {}
                             for orig_lbl, orig_note in saved_player_memos.items():
+                                pos_to_saved_memo[orig_lbl] = orig_note
                                 p_key = extract_pos_key(orig_lbl)
                                 pos_to_saved_memo[p_key] = orig_note
+                                # 키워드 검색용 정제
+                                clean_pos_only = p_key.split("-")[-1].strip() if "-" in p_key else p_key
+                                pos_to_saved_memo[clean_pos_only] = orig_note
 
                             if active_edit_players:
                                 default_selected_memos = []
                                 for act_p in active_edit_players:
+                                    # 활성화된 선수 라벨과 기존 메모 키 일치 여부 유연하게 검사
                                     act_p_key = extract_pos_key(act_p)
-                                    if act_p_key in pos_to_saved_memo:
+                                    pure_pos = act_p_key.split("-")[-1].strip() if "-" in act_p_key else act_p_key
+                                    
+                                    if act_p in saved_player_memos or act_p_key in pos_to_saved_memo or pure_pos in pos_to_saved_memo:
                                         default_selected_memos.append(act_p)
 
                                 selected_edit_memo_players = st.multiselect(
@@ -956,7 +963,16 @@ elif menu == "📂 경기 일지 조회":
                                     st.markdown("---")
                                     for p_label in selected_edit_memo_players:
                                         p_key = extract_pos_key(p_label)
-                                        existing_p_memo = pos_to_saved_memo.get(p_key, "")
+                                        pure_pos = p_key.split("-")[-1].strip() if "-" in p_key else p_key
+                                        
+                                        # 기존 메모 내용 찾아오기 (정확한 라벨 -> 포지션 키 -> 포지션 순)
+                                        existing_p_memo = (
+                                            saved_player_memos.get(p_label) or 
+                                            pos_to_saved_memo.get(p_label) or 
+                                            pos_to_saved_memo.get(p_key) or 
+                                            pos_to_saved_memo.get(pure_pos) or 
+                                            ""
+                                        )
 
                                         st.markdown(f"**📌 {p_label} 개개인 관찰 기록**")
 
@@ -1011,10 +1027,10 @@ elif menu == "📂 경기 일지 조회":
                                         h_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_h_nums.items() if num]) if final_edit_h_nums else "없음"
                                         a_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_a_nums.items() if num]) if final_edit_a_nums else "없음"
 
-                                        # ✨ [핵심 해결] 기존에 저장되어 있던 선수별 메모 딕셔너리(`saved_player_memos`)를 기반으로 시작!
+                                        # ✨ [핵심 해결] 기존에 저장되어 있던 선수별 메모 딕셔너리를 절대 누락하지 않고 그대로 복사해서 가져옴
                                         final_player_memos = dict(saved_player_memos)
 
-                                        # 선택되어 수정창에 노출된 선수들의 입력값으로 업데이트 또는 새로 추가
+                                        # 수정창에 노출되어 사용자가 입력/수정한 내용으로 갱신
                                         if selected_edit_memo_players:
                                             for p_lbl in selected_edit_memo_players:
                                                 inkey = edit_input_keys_map.get(p_lbl)
