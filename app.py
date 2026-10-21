@@ -957,7 +957,7 @@ elif menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 4. 🔍 선수 검색 및 관찰일지 조회 (내부에서 바로 수정 및 추가 가능하도록 통합 개선)
+# 4. 🔍 선수 검색 및 관찰일지 조회 (수정, 추가, 삭제까지 한번에 처리 가능하도록 통합)
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
     st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
@@ -1009,7 +1009,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
         if status_filter != "전체":
             filtered_df = filtered_df[filtered_df["진행 상태"] == status_filter]
         
-        st.subheader(f"📋 선수 목록 (클릭 시 하단에 관찰일지 및 수정 폼 표출)")
+        st.subheader(f"📋 선수 목록 (클릭 시 하단에 관찰일지 및 수정/삭제 폼 표출)")
         
         display_cols = [c for c in filtered_df.columns if c != "연 나이"]
         display_df = filtered_df[display_cols].copy()
@@ -1119,7 +1119,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                         st.write("등록된 내용이 없습니다.")
 
                 # ====================================================
-                # ✨ [추가된 기능] 상세 조회 화면 하단에서 바로 수정 및 추가 가능
+                # ✨ [추가된 기능] 상세 조회 화면 하단에서 수정, 추가 및 삭제 가능
                 # ====================================================
                 st.write("---")
                 with st.expander(f"✏️ [{p.get('선수명', '')}] 선수 정보 수정 및 추가 관찰 일지 작성 폼 열기", expanded=False):
@@ -1169,49 +1169,61 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                     new_cons = st.text_area("새로 관찰한 보완점", key=f"inline_new_cons_{target_idx}")
                     new_overall = st.text_area("새로 관찰한 종합 평가", key=f"inline_new_overall_{target_idx}")
                     
-                    if st.button("🔄 변경사항 및 추가 일지 저장하기", type="primary", use_container_width=True, key=f"inline_btn_save_{target_idx}"):
-                        if not edit_name.strip():
-                            st.error("선수명은 필수입니다.")
-                        else:
-                            with st.spinner("변경사항을 구글 시트에 업데이트하는 중..."):
-                                new_team_input = edit_team_input.strip()
-                                raw_old_team = str(p.get("소속팀", "")).strip()
-                                
-                                if current_team_name and new_team_input and current_team_name != new_team_input:
-                                    if "(전:" not in raw_old_team:
-                                        final_team_str = f"{new_team_input} (전: {current_team_name})"
+                    col_btn_save, col_btn_del = st.columns([1, 1])
+                    with col_btn_save:
+                        if st.button("🔄 변경사항 및 추가 일지 저장하기", type="primary", use_container_width=True, key=f"inline_btn_save_{target_idx}"):
+                            if not edit_name.strip():
+                                st.error("선수명은 필수입니다.")
+                            else:
+                                with st.spinner("변경사항을 구글 시트에 업데이트하는 중..."):
+                                    new_team_input = edit_team_input.strip()
+                                    raw_old_team = str(p.get("소속팀", "")).strip()
+                                    
+                                    if current_team_name and new_team_input and current_team_name != new_team_input:
+                                        if "(전:" not in raw_old_team:
+                                            final_team_str = f"{new_team_input} (전: {current_team_name})"
+                                        else:
+                                            history_part = raw_old_team.split("(전:")[1]
+                                            final_team_str = f"{new_team_input} (전: {current_team_name}, {history_part}"
                                     else:
-                                        history_part = raw_old_team.split("(전:")[1]
-                                        final_team_str = f"{new_team_input} (전: {current_team_name}, {history_part}"
-                                else:
-                                    final_team_str = raw_old_team if raw_old_team else new_team_input
+                                        final_team_str = raw_old_team if raw_old_team else new_team_input
 
-                                old_pros = str(p.get("장점/특기", ""))
-                                old_cons = str(p.get("보완점/단점", ""))
-                                old_overall = str(p.get("종합 평가", ""))
-                                
-                                today_str = str(edit_date)
-                                updated_pros = f"{old_pros}\n\n[{today_str} 관찰]\n{new_pros.strip()}".strip() if new_pros.strip() else old_pros
-                                updated_cons = f"{old_cons}\n\n[{today_str} 관찰]\n{new_cons.strip()}".strip() if new_cons.strip() else old_cons
-                                updated_overall = f"{old_overall}\n\n[{today_str} 관찰]\n{new_overall.strip()}".strip() if new_overall.strip() else old_overall
+                                    old_pros = str(p.get("장점/특기", ""))
+                                    old_cons = str(p.get("보완점/단점", ""))
+                                    old_overall = str(p.get("종합 평가", ""))
+                                    
+                                    today_str = str(edit_date)
+                                    updated_pros = f"{old_pros}\n\n[{today_str} 관찰]\n{new_pros.strip()}".strip() if new_pros.strip() else old_pros
+                                    updated_cons = f"{old_cons}\n\n[{today_str} 관찰]\n{new_cons.strip()}".strip() if new_cons.strip() else old_cons
+                                    updated_overall = f"{old_overall}\n\n[{today_str} 관찰]\n{new_overall.strip()}".strip() if new_overall.strip() else old_overall
 
-                                records = df.to_dict('records')
-                                records[target_idx] = {
-                                    "선수명": str(edit_name).strip(), "소속팀": str(final_team_str),
-                                    "등번호": str(edit_back_num), "포지션": str(edit_position),
-                                    "생년월일": str(edit_birth_date), "만 나이": str(age_full_str),
-                                    "연 나이": str(age_year_str), "주발": str(edit_foot),
-                                    "신장(cm)": str(edit_height), "체중(kg)": str(edit_weight),
-                                    "진행 상태": str(edit_status), "장점/특기": str(updated_pros),
-                                    "보완점/단점": str(updated_cons), "종합 평가": str(updated_overall),
-                                    "작성일자": str(today_str)
-                                }
-                                updated_df = pd.DataFrame(records).astype(str)
-                                if save_data_to_sheet(updated_df):
-                                    st.success("🎉 선수 정보와 소속 이력, 추가 관찰 일지가 성공적으로 수정·저장되었습니다!")
-                                    st.rerun()
+                                    records = df.to_dict('records')
+                                    records[target_idx] = {
+                                        "선수명": str(edit_name).strip(), "소속팀": str(final_team_str),
+                                        "등번호": str(edit_back_num), "포지션": str(edit_position),
+                                        "생년월일": str(edit_birth_date), "만 나이": str(age_full_str),
+                                        "연 나이": str(age_year_str), "주발": str(edit_foot),
+                                        "신장(cm)": str(edit_height), "체중(kg)": str(edit_weight),
+                                        "진행 상태": str(edit_status), "장점/특기": str(updated_pros),
+                                        "보완점/단점": str(updated_cons), "종합 평가": str(updated_overall),
+                                        "작성일자": str(today_str)
+                                    }
+                                    updated_df = pd.DataFrame(records).astype(str)
+                                    if save_data_to_sheet(updated_df):
+                                        st.success("🎉 선수 정보와 소속 이력, 추가 관찰 일지가 성공적으로 수정·저장되었습니다!")
+                                        st.rerun()
+
+                    with col_btn_del:
+                        confirm_inline_del = st.checkbox("⚠️ 이 선수 데이터 삭제 확인", key=f"inline_chk_del_{target_idx}")
+                        if confirm_inline_del:
+                            if st.button("🗑️ 해당 선수 데이터 영구 삭제", type="secondary", use_container_width=True, key=f"inline_btn_del_{target_idx}"):
+                                with st.spinner("구글 시트에서 선수 데이터를 영구 삭제하는 중..."):
+                                    updated_df = df.drop([target_idx]).reset_index(drop=True)
+                                    if save_data_to_sheet(updated_df):
+                                        st.success("🎉 해당 선수 데이터가 성공적으로 영구 삭제되었습니다!")
+                                        st.rerun()
         else:
-            st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 관찰일지와 PDF 다운로드 버튼, 수정 폼이 나타납니다.")
+            st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 관찰일지와 PDF 다운로드 버튼, 수정/삭제 폼이 나타납니다.")
 
 # ----------------------------------------------------
 # 5. 선수 정보 수정 및 소속 이력 누적 (원본 단독 메뉴 유지)
