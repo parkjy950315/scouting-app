@@ -683,7 +683,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (선수별 메모 이어서 누적 저장 완벽 해결)
+# 2. 📂 경기 일지 조회 (중복 키 에러 및 메모 누적 완벽 해결)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -958,11 +958,11 @@ elif menu == "📂 경기 일지 조회":
 
                                 if selected_edit_memo_players:
                                     st.markdown("---")
-                                    for p_label in selected_edit_memo_players:
+                                    # ✨ [중복 키 에러 방지 패치] 각 선수별 인덱스(i)를 고유 key에 강제로 조합하여 완전 독립된 key 생성
+                                    for i, p_label in enumerate(selected_edit_memo_players):
                                         p_key = extract_pos_key(p_label)
                                         pure_pos = p_key.split("-")[-1].strip() if "-" in p_key else p_key
                                         
-                                        # ✨ 수정창에 처음 불러올 때는 기존 메모를 그대로 띄워줌
                                         existing_p_memo = (
                                             saved_player_memos.get(p_label) or 
                                             pos_to_saved_memo.get(p_label) or 
@@ -973,7 +973,8 @@ elif menu == "📂 경기 일지 조회":
 
                                         st.markdown(f"**📌 {p_label} 개개인 관찰 기록**")
 
-                                        input_key = f"stable_edit_area_{target_memo_idx}_{p_key}"
+                                        # 고유 인덱스 i를 포함시켜 절대 중복될 수 없는 키 생성
+                                        input_key = f"stable_edit_area_{target_memo_idx}_{i}_{re.sub(r'[^a-zA-Z0-9가-힣]', '', p_label)}"
                                         edit_input_keys_map[p_label] = input_key
 
                                         if input_key not in st.session_state:
@@ -1024,7 +1025,6 @@ elif menu == "📂 경기 일지 조회":
                                         h_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_h_nums.items() if num]) if final_edit_h_nums else "없음"
                                         a_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_a_nums.items() if num]) if final_edit_a_nums else "없음"
 
-                                        # ✨ [핵심 해결] 기존 선수별 메모를 기반으로 시작하되, 새로 적은 내용이 있으면 기존 내용 뒤에 덧붙여서(누적) 저장!
                                         final_player_memos = dict(saved_player_memos)
 
                                         if selected_edit_memo_players:
@@ -1035,9 +1035,7 @@ elif menu == "📂 경기 일지 조회":
                                                     if box_text:
                                                         old_memo_val = saved_player_memos.get(p_lbl, "")
                                                         
-                                                        # 사용자가 기존 텍스트에 새 내용을 추가로 적었을 때의 누적 처리
                                                         if old_memo_val and box_text != old_memo_val:
-                                                            # 만약 기존 내용이 box_text의 앞부분에 포함되어 있다면, 새로 추가된 부분만 발췌해서 누적
                                                             if box_text.startswith(old_memo_val):
                                                                 newly_added = box_text[len(old_memo_val):].strip()
                                                                 if newly_added:
@@ -1045,7 +1043,6 @@ elif menu == "📂 경기 일지 조회":
                                                                 else:
                                                                     final_player_memos[p_lbl] = old_memo_val
                                                             else:
-                                                                # 아예 내용을 새로 수정/작성한 경우
                                                                 final_player_memos[p_lbl] = box_text
                                                         else:
                                                             final_player_memos[p_lbl] = box_text
