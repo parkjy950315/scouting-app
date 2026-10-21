@@ -299,7 +299,7 @@ def generate_pdf_report(player_data):
 
 df = load_data()
 
-# 포메이션별 라인업 구조 데이터 정의 (포메이션 선택 시 동적으로 변경되도록 설정)
+# 포메이션별 라인업 구조 데이터 명확하게 정의
 formation_layouts = {
     "4-3-3": [
         {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
@@ -336,7 +336,9 @@ def render_pitch_graphic(team_name, formation_name):
         </div>
     """, unsafe_allow_html=True)
     
+    # 선택된 포메이션 이름에 맞는 레이아웃을 확실하게 가져오도록 수정
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
+    
     for row in layout:
         st.markdown(f"<div style='color:#a3e4d7; font-weight:bold; font-size:10px; margin-bottom:3px;'>📍 {row['line']}</div>", unsafe_allow_html=True)
         cols = st.columns(len(row['positions']))
@@ -368,7 +370,7 @@ menu = st.sidebar.radio(
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (포메이션 동적 변경 연동)
+# 1. 🏟️ 현장 경기 관찰 메모 (포메이션 변경 시 그라운드 실시간 반영)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -395,7 +397,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
         st.write("---")
 
-        # 실시간 포메이션 선택에 따른 그라운드 피치 동적 시각화
+        # 🏟️ 실시간 포메이션 연동 잔디 피치 미리보기
         st.subheader("🏟️ 선택한 포메이션별 그라운드 피치 실시간 미리보기")
         pitch_col1, pitch_col2 = st.columns(2)
         with pitch_col1:
