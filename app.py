@@ -73,8 +73,8 @@ st.markdown("""
         color: white;
         border: 2.5px solid #ffffff;
         border-radius: 50%;
-        width: 56px;
-        height: 56px;
+        width: 52px;
+        height: 52px;
         margin: 0 auto 4px auto;
         display: flex;
         flex-direction: column;
@@ -299,7 +299,7 @@ def generate_pdf_report(player_data):
 
 df = load_data()
 
-# 포메이션별 라인업 구조 데이터 정의
+# 포메이션별 라인업 구조 데이터 정의 (포메이션 선택 시 동적으로 변경되도록 설정)
 formation_layouts = {
     "4-3-3": [
         {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
@@ -331,21 +331,21 @@ formation_layouts = {
 def render_pitch_graphic(team_name, formation_name):
     st.markdown(f"""
     <div class="match-soccer-pitch">
-        <div style="text-align: center; color: #ffeb3b; font-weight: 900; font-size: 18px; letter-spacing: 2px; text-shadow: 2px 2px 4px #000; margin-bottom: 12px;">
-            🏟️ {team_name} FIELD PITCH ({formation_name})
+        <div style="text-align: center; color: #ffeb3b; font-weight: 900; font-size: 16px; letter-spacing: 2px; text-shadow: 2px 2px 4px #000; margin-bottom: 10px;">
+            🏟️ {team_name} ({formation_name})
         </div>
     """, unsafe_allow_html=True)
     
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     for row in layout:
-        st.markdown(f"<div style='color:#a3e4d7; font-weight:bold; font-size:11px; margin-bottom:4px;'>📍 {row['line']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='color:#a3e4d7; font-weight:bold; font-size:10px; margin-bottom:3px;'>📍 {row['line']}</div>", unsafe_allow_html=True)
         cols = st.columns(len(row['positions']))
         for idx, pos in enumerate(row['positions']):
             with cols[idx]:
                 st.markdown(f"""
                 <div class="match-pitch-pin">
-                    <span style="font-size: 10px; color: #ffeb3b;">POS</span>
-                    <span style="font-size: 13px; line-height: 1.1;">{pos}</span>
+                    <span style="font-size: 9px; color: #ffeb3b;">POS</span>
+                    <span style="font-size: 12px; line-height: 1.1;">{pos}</span>
                 </div>
                 """, unsafe_allow_html=True)
     
@@ -368,11 +368,11 @@ menu = st.sidebar.radio(
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (포메이션 선택 시 그라운드 그래픽 연동)
+# 1. 🏟️ 현장 경기 관찰 메모 (포메이션 동적 변경 연동)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("대회 이름, 홈/어웨이 팀, 포메이션 및 라인업, 눈에 띈 선수 메모를 간편하게 기록하세요.")
+    st.caption("대회 이름, 홈/어웨이 팀, 포메이션을 선택하면 피치 그래픽이 실시간으로 변경됩니다.")
 
     with st.form("match_memo_form", clear_on_submit=True):
         col_m1, col_m2 = st.columns(2)
@@ -395,8 +395,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
         st.write("---")
 
-        # 실시간 포메이션 그라운드 그래픽 미리보기 시각화
-        st.subheader("🏟️ 팀별 그라운드 포메이션 피치 미리보기")
+        # 실시간 포메이션 선택에 따른 그라운드 피치 동적 시각화
+        st.subheader("🏟️ 선택한 포메이션별 그라운드 피치 실시간 미리보기")
         pitch_col1, pitch_col2 = st.columns(2)
         with pitch_col1:
             render_pitch_graphic(home_team if home_team else "홈팀", home_formation)
