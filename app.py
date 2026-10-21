@@ -38,7 +38,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 고급스러운 프리미엄 잔디 피치 스타일 CSS
+# 📱 프리미엄 잔디 피치 및 원형 핀 스타일 CSS
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -67,21 +67,20 @@ st.markdown("""
         margin-bottom: 15px;
     }
     
-    /* 🔴 고급스러운 글래스모피즘 포지션 핀 */
+    /* ⚽ 세련된 원형(Circle) 포지션 핀 스타일 */
     .match-pitch-pin {
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(185, 28, 28, 0.95));
+        background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%);
         color: white;
-        border: 1.5px solid rgba(255, 255, 255, 0.6);
-        border-radius: 12px;
-        width: 100%;
+        border: 2px solid rgba(255, 255, 255, 0.8);
+        border-radius: 50%;
+        width: 52px;
         height: 52px;
         margin: 0 auto 4px auto;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        backdrop-filter: blur(4px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.4);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -420,8 +419,8 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
             with cols[idx]:
                 st.markdown(f"""
                 <div class="match-pitch-pin">
-                    <span style="font-size: 8.5px; color: #e2e8f0; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 2px;">{pos}</span>
-                    <span style="font-size: 13px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
+                    <span style="font-size: 8px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
+                    <span style="font-size: 12px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
                 </div>
                 """, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
@@ -497,8 +496,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 with cols[idx]:
                     st.markdown(f"""
                     <div class="match-pitch-pin">
-                        <span style="font-size: 8.5px; color: #e2e8f0; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 2px;">{pos}</span>
-                        <span style="font-size: 13px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
+                        <span style="font-size: 8px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
+                        <span style="font-size: 12px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
                     </div>
                     """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
