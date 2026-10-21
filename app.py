@@ -896,7 +896,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 선수 등록 (깔끔하게 정돈된 신장/체중 선택 폼 적용)
+# 3. 선수 등록 (신장/체중 입력 칸을 깔끔한 텍스트 입력창으로 개선)
 # ----------------------------------------------------
 elif menu == "선수 등록":
     st.header("📋 신규 관찰 선수 등록")
@@ -923,12 +923,9 @@ elif menu == "선수 등록":
             date = st.date_input("관찰/작성일자", value=datetime.today())
             
             st.write("---")
-            # ✨ 빈 줄(공백) 없이 깔끔하게 값이 선택되도록 리스트 정리
-            height_options = [str(h) for h in range(150, 205)]
-            height_val = st.selectbox("신장 (cm)", options=height_options, index=25)
-            
-            weight_options = [str(w) for w in range(50, 105)]
-            weight_val = st.selectbox("체중 (kg)", options=weight_options, index=20)
+            # ✨ 빈 줄이나 셀렉트박스 구분선 없이 깔끔한 입력창 형태 적용
+            height_val = st.text_input("신장 (cm)", value="175", placeholder="예: 182")
+            weight_val = st.text_input("체중 (kg)", value="70", placeholder="예: 75")
 
         st.subheader("📝 관찰 리포트 / 첫 메모")
         pros = st.text_area("장점 및 주요 특기")
@@ -947,7 +944,7 @@ elif menu == "선수 등록":
                         "선수명": name.strip(), "소속팀": team.strip(), "등번호": str(back_num_val),
                         "포지션": position, "생년월일": str(birth_date),
                         "만 나이": age_full_str, "연 나이": age_year_str, "주발": foot,
-                        "신장(cm)": str(height_val), "체중(kg)": str(weight_val),
+                        "신장(cm)": str(height_val).strip(), "체중(kg)": str(weight_val).strip(),
                         "진행 상태": status, "장점/특기": pros.strip(), "보완점/단점": cons.strip(),
                         "종합 평가": overall.strip(), "작성일자": str(date)
                     }
@@ -957,12 +954,11 @@ elif menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 4. 🔍 선수 검색 및 관찰일지 조회 (수정, 추가, 삭제까지 한번에 처리 가능하도록 통합)
+# 4. 🔍 선수 검색 및 관찰일지 조회
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
     st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
     
-    # 현장 관찰 메모(임시)를 제외한 정식 선수 데이터만 필터링
     official_df = df[df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
     
     if official_df.empty:
@@ -1118,9 +1114,6 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                     else:
                         st.write("등록된 내용이 없습니다.")
 
-                # ====================================================
-                # ✨ 상세 조회 화면 하단에서 수정, 추가 및 삭제 가능
-                # ====================================================
                 st.write("---")
                 with st.expander(f"✏️ [{p.get('선수명', '')}] 선수 정보 수정 및 추가 관찰 일지 작성 폼 열기", expanded=False):
                     col_e1, col_e2 = st.columns(2)
@@ -1153,16 +1146,8 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                         
                         edit_date = st.date_input("관찰 작성일자", value=datetime.today(), key=f"inline_edit_date_{target_idx}")
                         
-                        cur_h = safe_int(p.get("신장(cm)", ""), 175)
-                        cur_w = safe_int(p.get("체중(kg)", ""), 70)
-                        
-                        h_options = [str(h) for h in range(150, 205)]
-                        h_idx = h_options.index(str(cur_h)) if str(cur_h) in h_options else 25
-                        edit_height = st.selectbox("신장 (cm)", options=h_options, index=h_idx, key=f"inline_edit_h_{target_idx}")
-                        
-                        w_options = [str(w) for w in range(50, 105)]
-                        w_idx = w_options.index(str(cur_w)) if str(cur_w) in w_options else 20
-                        edit_weight = st.selectbox("체중 (kg)", options=w_options, index=w_idx, key=f"inline_edit_w_{target_idx}")
+                        edit_height = st.text_input("신장 (cm)", value=str(p.get("신장(cm)", "175")), key=f"inline_edit_h_{target_idx}")
+                        edit_weight = st.text_input("체중 (kg)", value=str(p.get("체중(kg)", "70")), key=f"inline_edit_w_{target_idx}")
 
                     st.subheader("➕ 오늘 관찰한 내용 추가 입력 (누적 기록)")
                     new_pros = st.text_area("새 관찰 장점", key=f"inline_new_pros_{target_idx}")
@@ -1203,7 +1188,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                                         "등번호": str(edit_back_num), "포지션": str(edit_position),
                                         "생년월일": str(edit_birth_date), "만 나이": str(age_full_str),
                                         "연 나이": str(age_year_str), "주발": str(edit_foot),
-                                        "신장(cm)": str(edit_height), "체중(kg)": str(edit_weight),
+                                        "신장(cm)": str(edit_height).strip(), "체중(kg)": str(edit_weight).strip(),
                                         "진행 상태": str(edit_status), "장점/특기": str(updated_pros),
                                         "보완점/단점": str(updated_cons), "종합 평가": str(updated_overall),
                                         "작성일자": str(today_str)
@@ -1226,7 +1211,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
             st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 관찰일지와 PDF 다운로드 버튼, 수정/삭제 폼이 나타납니다.")
 
 # ----------------------------------------------------
-# 5. 데이터 삭제 (전체 다중 선택 삭제 메뉴 유지)
+# 5. 데이터 삭제
 # ----------------------------------------------------
 elif menu == "🗑️ 데이터 삭제":
     st.header("🗑️ 선수 데이터 삭제")
