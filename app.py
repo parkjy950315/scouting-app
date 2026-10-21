@@ -418,33 +418,37 @@ formation_layouts = {
     ]
 }
 
-# ⚽ 모바일/PC 모두에서 뭉그러짐 없이 완벽하게 정렬되는 피치 렌더러
+# ⚽ HTML 태그 노출 방지 및 완벽 정렬 피치 렌더러 (st.components.v1.html 사용)
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     
-    html_content = f"""
-    <div style="background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 18px 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1); margin-bottom: 15px; width: 100%; box-sizing: border-box;">
-        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px;">
-            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 11px; font-weight: normal;">({formation_name})</span>
-        </div>
-    """
-    
+    rows_html = ""
     for row in layout:
-        html_content += f"<div style='color:#e2e8f0; font-weight:600; font-size:9px; letter-spacing: 1px; margin-bottom:4px; text-transform: uppercase;'>📍 {row['line']}</div>"
-        html_content += "<div style='display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; flex-wrap: nowrap; width: 100%;'>"
+        rows_html += f"<div style='color:#e2e8f0; font-weight:600; font-size:10px; letter-spacing: 1px; margin-bottom:6px; text-transform: uppercase;'>📍 {row['line']}</div>"
+        rows_html += "<div style='display: flex; justify-content: center; gap: 10px; margin-bottom: 12px; flex-wrap: nowrap; width: 100%;'>"
         for pos in row['positions']:
             assigned_num = num_dict.get(pos, "")
             display_num = assigned_num if assigned_num else "-"
-            html_content += f"""
-            <div style="background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%); color: white; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; width: 44px; height: 44px; min-width: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-                <span style="font-size: 7px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
-                <span style="font-size: 11px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
+            rows_html += f"""
+            <div style="background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%); color: white; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; width: 46px; height: 46px; min-width: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                <span style="font-size: 8px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
+                <span style="font-size: 12px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
             </div>
             """
-        html_content += "</div>"
-        
-    html_content += "</div>"
-    st.markdown(html_content, unsafe_allow_html=True)
+        rows_html += "</div>"
+
+    complete_html = f"""
+    <div style="background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 18px 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1); margin-bottom: 15px; width: 100%; box-sizing: border-box; font-family: sans-serif;">
+        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px;">
+            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 11px; font-weight: normal;">({formation_name})</span>
+        </div>
+        {rows_html}
+    </div>
+    """
+    
+    # st.components.v1.html을 사용하여 HTML 코드가 텍스트로 노출되지 않고 안전하게 독립 렌더링되도록 처리
+    import streamlit.components.v1 as components
+    components.html(complete_html, height=270, scrolling=False)
 
 display_logo()
 
