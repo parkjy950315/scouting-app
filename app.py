@@ -511,7 +511,12 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             k_name = f"{prefix}_{pos}"
             if k_name not in st.session_state and pos in existing_nums:
                 st.session_state[k_name] = existing_nums[pos]
-            nums_dict[pos] = st.session_state.get(k_name, "")
+            
+            # 입력된 값이 있으면 딕셔너리에 담기
+            current_val = st.session_state.get(k_name, "")
+            nums_dict[pos] = current_val
+            if current_val.strip():
+                team_entered_numbers[pos] = current_val.strip()
 
         render_pitch_graphic_with_numbers(team_name if team_name else "팀", formation_name, nums_dict)
 
@@ -598,14 +603,33 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다.")
         else:
             with st.spinner("구글 시트에 현장 메모를 임시 저장하는 중..."):
-                home_num_str = ", ".join([f"{pos}:{num}" for pos, num in home_numbers.items() if num]) if home_numbers else "없음"
-                away_num_str = ", ".join([f"{pos}:{num}" for pos, num in away_numbers.items() if num]) if away_numbers else "없음"
+                # ✨ 저장 직전 세션 상태에서 최신 홈팀/어웨이팀 등번호를 강제로 다시 한번 확실하게 긁어모읍니다.
+                final_home_nums = {}
+                h_layout = formation_layouts.get(home_formation, formation_layouts["4-3-3"])
+                for row in h_layout:
+                    for pos in row['positions']:
+                        k = f"home_{pos}"
+                        val = st.session_state.get(k, "")
+                        if val.strip():
+                            final_home_nums[pos] = val.strip()
+
+                final_away_nums = {}
+                a_layout = formation_layouts.get(away_formation, formation_layouts["4-3-3"])
+                for row in a_layout:
+                    for pos in row['positions']:
+                        k = f"away_{pos}"
+                        val = st.session_state.get(k, "")
+                        if val.strip():
+                            final_away_nums[pos] = val.strip()
+
+                home_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_home_nums.items() if num]) if final_home_nums else "없음"
+                away_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_away_nums.items() if num]) if final_away_nums else "없음"
 
                 state_packet = {
                     "home_form": home_formation,
-                    "home_nums": home_numbers,
+                    "home_nums": final_home_nums,
                     "away_form": away_formation,
-                    "away_nums": away_numbers,
+                    "away_nums": final_away_nums,
                     "player_memos": player_specific_memos
                 }
                 meta_json_str = f"[SMC_JSON_DATA:{json.dumps(state_packet, ensure_ascii=False)}]"
@@ -754,7 +778,6 @@ elif menu == "📂 경기 일지 조회":
 
                         st.write("")
 
-                        # 📦 저장된 JSON 패키지 파싱 (등번호 및 선수별 메모 상태 복원용)
                         saved_packet = {}
                         try:
                             if "[SMC_JSON_DATA:" in raw_content:
@@ -811,7 +834,6 @@ elif menu == "📂 경기 일지 조회":
 
                             st.write("---")
 
-                            # ✨ [핵심 수정] 수정 폼을 열 때 세션 상태에 기존 저장된 등번호 값을 주입하여 초기화 현상 방지
                             def render_editable_team_grid_fixed(team_name, formation_name, prefix, prev_nums):
                                 layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
                                 updated_team_nums = {}
@@ -824,7 +846,6 @@ elif menu == "📂 경기 일지 조회":
                                         k_name = f"mod_{prefix}_{target_memo_idx}_{pos}"
                                         default_val = prev_nums.get(pos, "")
                                         
-                                        # 세션 상태가 없거나 비어있으면 기존 저장된 번호로 세팅
                                         if k_name not in st.session_state or not st.session_state[k_name]:
                                             st.session_state[k_name] = default_val
 
@@ -908,14 +929,33 @@ elif menu == "📂 경기 일지 조회":
                                     with st.spinner("구글 시트에 일지를 업데이트하는 중..."):
                                         today_str = datetime.today().strftime('%Y-%m-%d')
                                         
-                                        h_num_str = ", ".join([f"{pos}:{num}" for pos, num in new_h_nums.items() if num]) if new_h_nums else "없음"
-                                        a_num_str = ", ".join([f"{pos}:{num}" for pos, num in new_a_nums.items() if num]) if new_a_nums else "없음"
+                                        # ✨ 수정 저장 시점에도 최신 등번호 값을 확실히 다시 한번 긁어모읍니다.
+                                        final_edit_h_nums = {}
+                                        ed_h_layout = formation_layouts.get(edit_hf_sel, formation_layouts["4-3-3"])
+                                        for row in ed_h_layout:
+                                            for pos in row['positions']:
+                                                k = f"mod_h_edit_{target_memo_idx}_{pos}"
+                                                val = st.session_state.get(k, "")
+                                                if val.strip():
+                                                    final_edit_h_nums[pos] = val.strip()
+
+                                        final_edit_a_nums = {}
+                                        ed_a_layout = formation_layouts.get(edit_af_sel, formation_layouts["4-3-3"])
+                                        for row in ed_a_layout:
+                                            for pos in row['positions']:
+                                                k = f"mod_a_edit_{target_memo_idx}_{pos}"
+                                                val = st.session_state.get(k, "")
+                                                if val.strip():
+                                                    final_edit_a_nums[pos] = val.strip()
+
+                                        h_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_h_nums.items() if num]) if final_edit_h_nums else "없음"
+                                        a_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_a_nums.items() if num]) if final_edit_a_nums else "없음"
 
                                         new_packet = {
                                             "home_form": edit_hf_sel,
-                                            "home_nums": new_h_nums,
+                                            "home_nums": final_edit_h_nums,
                                             "away_form": edit_af_sel,
-                                            "away_nums": new_a_nums,
+                                            "away_nums": final_edit_a_nums,
                                             "player_memos": updated_player_specific_memos
                                         }
                                         new_meta_json_str = f"[SMC_JSON_DATA:{json.dumps(new_packet, ensure_ascii=False)}]"
