@@ -662,7 +662,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     "장점/특기": f"대회: {tournament_name} / 홈: {home_formation} vs 어웨이: {away_formation}",
                     "보완점/단점": "",
                     "종합 평가": memo_overall,
-                    "작성일자": str(match_date)
+                    "작성일자": str(date_input_val := str(match_date))
                 }
 
                 updated_df = pd.DataFrame([new_memo_data]) if df.empty else pd.concat([df, pd.DataFrame([new_memo_data])], ignore_index=True)
@@ -677,11 +677,11 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (선수별 체크박스 메모 추가·수정 폼 구현)
+# 2. 📂 경기 일지 조회 (기존 메모 연동 및 이어쓰기 기능)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음 및 추가 수정")
-    st.caption("작성된 현장 경기 일지를 조회하고, 하단에서 포지션 체크박스를 통해 선수별 메모를 이어서 작성하거나 수정할 수 있습니다.")
+    st.caption("작성된 현장 경기 일지를 조회하고, 하단에서 기존 메모를 불러와 이어서 작성하거나 수정할 수 있습니다.")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
@@ -834,25 +834,33 @@ elif menu == "📂 경기 일지 조회":
                         st.markdown("**📝 현재 저장된 상세 관찰 기록 및 선수별 메모**")
                         st.info(clean_content)
 
-                        # 💡 저장할 때와 완벽히 동일한 체크박스 기반 선수별 메모 추가·수정 폼
-                        st.markdown("---")
-                        with st.expander("✏️ 포메이션별 선수 체크 및 추가 메모 / 총평 수정하기", expanded=True):
-                            st.caption("등번호가 기입된 포지션별 체크박스를 통해 집중 관찰 메모를 이어서 작성하거나 수정할 수 있습니다.")
+                        # 💡 기존 작성된 선수별 메모를 파싱하여 각 포지션별 텍스트 박스에 기본값(value)으로 채워 넣음
+                        existing_player_notes = ""
+                        existing_general_memo = ""
 
-                            # 기존 선수별 메모 및 총평 추출
-                            existing_player_notes = ""
-                            existing_general_memo = ""
-
-                            if "⭐ [선수별 집중 관찰 메모]" in raw_content:
-                                parts = raw_content.split("⭐ [선수별 집중 관찰 메모]")
-                                rest_parts = parts[1].split("📝 [경기 전체 총평]\n")
-                                existing_player_notes = rest_parts[0].strip()
-                                existing_general_memo = rest_parts[1].strip() if len(rest_parts) > 1 else ""
+                        if "⭐ [선수별 집중 관찰 메모]" in raw_content:
+                            parts = raw_content.split("⭐ [선수별 집중 관찰 메모]")
+                            rest_parts = parts[1].split("📝 [경기 전체 총평]\n")
+                            existing_player_notes = rest_parts[0].strip()
+                            existing_general_memo = rest_parts[1].strip() if len(rest_parts) > 1 else ""
+                        else:
+                            if "📝 [경기 전체 총평]\n" in raw_content:
+                                existing_general_memo = raw_content.split("📝 [경기 전체 총평]\n")[-1]
                             else:
-                                if "📝 [경기 전체 총평]\n" in raw_content:
-                                    existing_general_memo = raw_content.split("📝 [경기 전체 총평]\n")[-1]
-                                else:
-                                    existing_general_memo = raw_content
+                                existing_general_memo = raw_content
+
+                        # 각 포지션별 기존 메모 텍스트 추출용 사전 파싱
+                        parsed_pos_memos = {}
+                        if existing_player_notes:
+                            note_lines = existing_player_notes.split("\n- ")
+                            for line in note_lines:
+                                if ":" in line:
+                                    header_part, content_part = line.split(":", 1)
+                                    parsed_pos_memos[header_part.strip()] = content_part.strip()
+
+                        st.markdown("---")
+                        with st.expander("✏️ 포메이션별 선수 체크 및 기존 메모 이어서 수정·추가하기", expanded=True):
+                            st.caption("등번호가 기입된 포지션별 체크박스를 켜면, **기존에 적어둔 메모가 그대로 입력창에 유지되어 이어서 작성**할 수 있습니다.")
 
                             edit_player_specific_memos = {}
                             edit_memo_col_h, edit_memo_col_a = st.columns(2)
@@ -862,12 +870,25 @@ elif menu == "📂 경기 일지 조회":
                                 if home_nums:
                                     for pos, num in home_nums.items():
                                         chk_key = f"edit_chk_home_{target_memo_idx}_{pos}"
-                                        is_checked = st.checkbox(f"📌 [{pos}]번 (등번호 #{num}) 집중 메모", key=chk_key)
+                                        p_label_key = f"[홈] {h_team_name} - {pos} (#{num})"
+                                        
+                                        # 기존 메모가 있다면 자동으로 체크박스를 켜거나 사용자가 선택 가능하도록 처리
+                                        has_old_note = p_label_key in existing_player_notes or any(p_label_key in l for l in existing_player_notes.split("\n"))
+                                        
+                                        is_checked = st.checkbox(f"📌 [{pos}]번 (등번호 #{num}) 집중 메모", value=has_old_note, key=chk_key)
+                                        
+                                        # 기존에 해당 포지션에 작성된 텍스트 추출
+                                        default_note_val = ""
+                                        for key_str, val_str in parsed_pos_memos.items():
+                                            if pos in key_str and num in key_str and "홈" in key_str:
+                                                default_note_val = val_str
+                                                break
+
                                         if is_checked:
                                             text_key = f"edit_text_home_{target_memo_idx}_{pos}"
-                                            note_val = st.text_area(f"{pos} (# {num}) 세부 관찰 기록", placeholder=f"{pos} (# {num}) 선수 메모 입력...", key=text_key, height=90)
+                                            note_val = st.text_area(f"{pos} (# {num}) 세부 관찰 기록", value=default_note_val, placeholder=f"{pos} (# {num}) 선수 메모 입력...", key=text_key, height=90)
                                             if note_val.strip():
-                                                edit_player_specific_memos[f"[홈] {h_team_name} - {pos} (#{num})"] = note_val.strip()
+                                                edit_player_specific_memos[p_label_key] = note_val.strip()
                                 else:
                                     st.info("등록된 홈팀 등번호가 없습니다.")
 
@@ -876,12 +897,23 @@ elif menu == "📂 경기 일지 조회":
                                 if away_nums:
                                     for pos, num in away_nums.items():
                                         chk_key = f"edit_chk_away_{target_memo_idx}_{pos}"
-                                        is_checked = st.checkbox(f"📌 [{pos}]번 (등번호 #{num}) 집중 메모", key=chk_key)
+                                        p_label_key = f"[어웨이] {a_team_name} - {pos} (#{num})"
+                                        
+                                        has_old_note = p_label_key in existing_player_notes or any(p_label_key in l for l in existing_player_notes.split("\n"))
+                                        
+                                        is_checked = st.checkbox(f"📌 [{pos}]번 (등번호 #{num}) 집중 메모", value=has_old_note, key=chk_key)
+                                        
+                                        default_note_val = ""
+                                        for key_str, val_str in parsed_pos_memos.items():
+                                            if pos in key_str and num in key_str and "어웨이" in key_str:
+                                                default_note_val = val_str
+                                                break
+
                                         if is_checked:
                                             text_key = f"edit_text_away_{target_memo_idx}_{pos}"
-                                            note_val = st.text_area(f"{pos} (# {num}) 세부 관찰 기록", placeholder=f"{pos} (# {num}) 선수 메모 입력...", key=text_key, height=90)
+                                            note_val = st.text_area(f"{pos} (# {num}) 세부 관찰 기록", value=default_note_val, placeholder=f"{pos} (# {num}) 선수 메모 입력...", key=text_key, height=90)
                                             if note_val.strip():
-                                                edit_player_specific_memos[f"[어웨이] {a_team_name} - {pos} (#{num})"] = note_val.strip()
+                                                edit_player_specific_memos[p_label_key] = note_val.strip()
                                 else:
                                     st.info("등록된 어웨이팀 등번호가 없습니다.")
 
@@ -897,18 +929,11 @@ elif menu == "📂 경기 일지 조회":
                                 with st.spinner("구글 시트의 일지 내용을 업데이트하는 중..."):
                                     meta_part = raw_content.split("⭐ [선수별 집중 관찰 메모]")[0] if "⭐ [선수별 집중 관찰 메모]" in raw_content else raw_content.split("📝 [경기 전체 총평]")[0]
 
-                                    # 기존 선수별 메모와 새로 입력한 메모 조합
-                                    combined_player_notes = existing_player_notes
-                                    if edit_player_specific_memos:
-                                        new_notes_str = ""
-                                        for p_label, p_note in edit_player_specific_memos.items():
-                                            new_notes_str += f"- {p_label}:\n  {p_note}\n"
-                                        if combined_player_notes:
-                                            combined_player_notes += f"\n{new_notes_str}"
-                                        else:
-                                            combined_player_notes = new_notes_str
+                                    new_notes_str = ""
+                                    for p_label, p_note in edit_player_specific_memos.items():
+                                        new_notes_str += f"- {p_label}:\n  {p_note}\n"
 
-                                    player_notes_section = f"\n\n⭐ [선수별 집중 관찰 메모]\n{combined_player_notes.strip()}" if combined_player_notes.strip() else ""
+                                    player_notes_section = f"\n\n⭐ [선수별 집중 관찰 메모]\n{new_notes_str.strip()}" if new_notes_str.strip() else ""
                                     general_section = f"\n\n📝 [경기 전체 총평]\n{edit_general_input.strip()}"
 
                                     new_full_content = f"{meta_part}{player_notes_section}{general_section}"
@@ -918,7 +943,7 @@ elif menu == "📂 경기 일지 조회":
                                     updated_df = pd.DataFrame(records).astype(str)
 
                                     if save_data_to_sheet(updated_df):
-                                        st.success("🎉 경기 일지 및 선수별 집중 메모가 성공적으로 업데이트되었습니다!")
+                                        st.success("🎉 경기 일지 및 선수별 집중 메모가 기존 내용 유지 상태로 성공적으로 업데이트되었습니다!")
                                         st.rerun()
                 else:
                     st.info("💡 위 목록 표에서 조회하거나 수정할 **경기 일지 행을 클릭**하세요.")
