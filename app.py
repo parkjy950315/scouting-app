@@ -671,7 +671,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (포메이션 및 등번호 완벽 복원)
+# 2. 📂 경기 일지 조회 (기존 선수별 메모 및 포메이션 완벽 복원)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -791,7 +791,21 @@ elif menu == "📂 경기 일지 조회":
                         a_nums_saved = saved_packet.get("away_nums", {})
                         saved_player_memos = saved_packet.get("player_memos", {})
 
-                        # ✨ [핵심 수정] JSON 내부에 포메이션이 비어있거나 구버전 데이터일 경우, 텍스트에서 포메이션 안전 추출
+                        # ✨ [핵심 보완] 만약 JSON에 선수별 메모가 없거나 누적된 텍스트만 있을 경우, 텍스트 본문에서 기존 선수별 메모를 안전하게 파싱하여 복원
+                        if not saved_player_memos and "⭐ [선수별 집중 관찰 메모]" in raw_content:
+                            try:
+                                memo_section = raw_content.split("⭐ [선수별 집중 관찰 메모]")[1].split("📝 [경기 전체 총평]")[0].strip()
+                                for line in memo_section.split("\n"):
+                                    line = line.strip()
+                                    if line.startswith("- ") and ":" in line:
+                                        parts = line[2:].split(":", 1)
+                                        p_lbl = parts[0].strip()
+                                        p_val = parts[1].strip()
+                                        saved_player_memos[p_lbl] = p_val
+                            except Exception:
+                                pass
+
+                        # 포메이션 안전 추출
                         if not h_form_saved and "🏠 [홈팀" in raw_content:
                             try:
                                 h_sec = raw_content.split("🏠 [홈팀")[1].split("✈️ [어웨이팀")[0]
