@@ -220,15 +220,11 @@ def parse_team_info(team_str):
         return current_team, past_teams
     return team_str, ""
 
-# ----------------------------------------------------
-# 📄 텍스트 안전 파싱 보조 함수 (등번호 100% 복원용)
-# ----------------------------------------------------
 def parse_numbers_from_text(text_block):
     nums_map = {}
     if not text_block:
         return nums_map
     
-    # 예: "포지션별 등번호: LB: #3, LCB: #4" 또는 "LB: 3, LCB: 4"
     if "포지션별 등번호:" in text_block:
         line = text_block.split("포지션별 등번호:")[1].split("\n")[0].strip()
         if line and line != "없음":
@@ -241,21 +237,22 @@ def parse_numbers_from_text(text_block):
                         nums_map[clean_pos] = clean_num
     return nums_map
 
+def extract_pos_key(label):
+    """ 라벨에서 [홈/어웨이] 팀 - 포지션 키 추출 (등번호 무관 매칭용) """
+    if " - " in label:
+        parts = label.split(" - ")
+        prefix_team = parts[0].strip()
+        pos_part = parts[1].split("(")[0].strip()
+        return f"{prefix_team} - {pos_part}"
+    return label
+
 # ----------------------------------------------------
 # 📄 PDF 보고서 생성 함수 (선수용)
 # ----------------------------------------------------
 def generate_pdf_report(player_data):
     korean_font = register_korean_font()
-    
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer, 
-        pagesize=A4, 
-        rightMargin=36, 
-        leftMargin=36, 
-        topMargin=36, 
-        bottomMargin=36
-    )
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     story = []
     
     PRIMARY_COLOR = colors.HexColor('#0F172A')
@@ -265,16 +262,12 @@ def generate_pdf_report(player_data):
 
     title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=16, leading=20, alignment=0, textColor=PRIMARY_COLOR)
     header_date = ParagraphStyle('HeaderDate', fontName=korean_font, fontSize=8.5, leading=11, alignment=2, textColor=colors.HexColor('#64748B'))
-    
     section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=10, leading=14, alignment=0, textColor=PRIMARY_COLOR)
     body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, alignment=0, textColor=TEXT_COLOR)
-    
     table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=8.5, leading=11, alignment=0, textColor=colors.HexColor('#64748B'))
     table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=PRIMARY_COLOR)
 
-    header_data = [
-        [Paragraph("<b>SMC SCOUTING REPORT</b>", title_style), Paragraph(f"<b>발급일:</b> {datetime.today().strftime('%Y-%m-%d')}", header_date)]
-    ]
+    header_data = [[Paragraph("<b>SMC SCOUTING REPORT</b>", title_style), Paragraph(f"<b>발급일:</b> {datetime.today().strftime('%Y-%m-%d')}", header_date)]]
     header_table = Table(header_data, colWidths=[350, 170])
     header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('BOTTOMPADDING', (0,0), (-1,-1), 6)]))
     story.append(header_table)
@@ -692,7 +685,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (등번호 & 메모 파싱 완벽 보장형)
+# 2. 📂 경기 일지 조회 (라벨 무관 메모 100% 매칭 및 복원 보장)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -812,7 +805,7 @@ elif menu == "📂 경기 일지 조회":
                         a_nums_saved = saved_packet.get("away_nums", {})
                         saved_player_memos = saved_packet.get("player_memos", {})
 
-                        # 🛡️ [이중 복원 장치] JSON이 깨졌을 경우 텍스트 직접 추출로 100% 등번호 파싱
+                        # 🛡️ [이중 복원] 텍스트 파싱 보완
                         if "🏠 [홈팀:" in raw_content or "✈️ [어웨이팀:" in raw_content:
                             try:
                                 home_chunk = raw_content.split("🏠 [홈팀:")[1].split("✈️ [어웨이팀:")[0] if "🏠 [홈팀:" in raw_content and "✈️ [어웨이팀:" in raw_content else ""
@@ -833,7 +826,7 @@ elif menu == "📂 경기 일지 조회":
                         if not h_form_saved: h_form_saved = "4-3-3"
                         if not a_form_saved: a_form_saved = "4-3-3"
 
-                        # 텍스트 내 세부 메모 복원
+                        # 텍스트 내 개개인 메모 복원
                         if not saved_player_memos and "⭐ [선수별 집중 관찰 메모]" in raw_content:
                             try:
                                 memo_section = raw_content.split("⭐ [선수별 집중 관찰 메모]")[1].split("📝 [경기 전체 총평]")[0].strip()
@@ -889,7 +882,6 @@ elif menu == "📂 경기 일지 조회":
 
                             st.write("---")
 
-                            # ✨ [핵심 해결] 세션 초기화 및 등번호 복원 보장 함수
                             def render_editable_team_grid_fixed(team_name, formation_name, prefix, prev_nums):
                                 layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
                                 updated_team_nums = {}
@@ -902,7 +894,6 @@ elif menu == "📂 경기 일지 조회":
                                         k_name = f"mod_{prefix}_{target_memo_idx}_{pos}"
                                         default_val = prev_nums.get(pos, "")
                                         
-                                        # 최초 세션 로딩 시 복원 값 강제 주입
                                         if k_name not in st.session_state:
                                             st.session_state[k_name] = default_val
 
@@ -937,25 +928,21 @@ elif menu == "📂 경기 일지 조회":
                                 if num:
                                     active_edit_players.append(f"[어웨이] {edit_at_name} - {pos} (#{num})")
 
-                            # 세션 세부 메모 자동 로딩
-                            init_load_flag_key = f"memo_loaded_flag_{target_memo_idx}"
-                            if init_load_flag_key not in st.session_state:
-                                st.session_state[init_load_flag_key] = True
-                                for orig_p_label, orig_p_note in saved_player_memos.items():
-                                    memo_session_key = f"edit_memo_val_{target_memo_idx}_{orig_p_label}"
-                                    st.session_state[memo_session_key] = orig_p_note
+                            # ✨ [핵심 해결] 팀-포지션 고유 키 매핑
+                            pos_to_saved_memo = {}
+                            for orig_lbl, orig_note in saved_player_memos.items():
+                                p_key = extract_pos_key(orig_lbl)
+                                pos_to_saved_memo[p_key] = orig_note
 
                             updated_player_specific_memos = {}
 
                             if active_edit_players:
+                                # 저장된 메모가 존재하는 선수만 유일하게 선택
                                 default_selected_memos = []
                                 for act_p in active_edit_players:
-                                    pos_p = act_p.split(' - ')[1] if ' - ' in act_p else ""
-                                    if any(pos_p in k for k in saved_player_memos.keys()) or act_p in saved_player_memos:
+                                    act_p_key = extract_pos_key(act_p)
+                                    if act_p_key in pos_to_saved_memo:
                                         default_selected_memos.append(act_p)
-
-                                if not default_selected_memos and saved_player_memos:
-                                    default_selected_memos = active_edit_players.copy()
 
                                 selected_edit_memo_players = st.multiselect(
                                     "관찰 메모를 작성/수정할 선수 선택",
@@ -969,20 +956,17 @@ elif menu == "📂 경기 일지 조회":
                                     for p_label in selected_edit_memo_players:
                                         st.markdown(f"**📌 {p_label} 개개인 관찰 기록**")
                                         
-                                        p_memo_key = f"edit_memo_val_{target_memo_idx}_{p_label}"
+                                        p_key = extract_pos_key(p_label)
+                                        p_memo_key = f"edit_memo_val_{target_memo_idx}_{p_key}"
                                         
-                                        if p_memo_key not in st.session_state or st.session_state[p_memo_key] is None:
-                                            found_val = ""
-                                            for k, v in saved_player_memos.items():
-                                                if p_label in k or ((' - ' in p_label) and (p_label.split(' - ')[1] in k)):
-                                                    found_val = v
-                                                    break
-                                            st.session_state[p_memo_key] = found_val
+                                        # 복원 데이터 주입
+                                        if p_memo_key not in st.session_state or not st.session_state[p_memo_key]:
+                                            st.session_state[p_memo_key] = pos_to_saved_memo.get(p_key, "")
 
                                         updated_p_note = st.text_area(
                                             f"{p_label} 세부 메모 수정",
                                             value=st.session_state.get(p_memo_key, ""),
-                                            key=f"ta_widget_{target_memo_idx}_{p_label}",
+                                            key=f"ta_widget_{target_memo_idx}_{p_key}",
                                             height=100
                                         )
                                         st.session_state[p_memo_key] = updated_p_note
