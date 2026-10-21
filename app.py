@@ -491,10 +491,10 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.text_input("🏠 홈팀 명*", value="장훈고")
+        home_team = st.text_input("🏠 홈팀 명*", placeholder="홈팀 이름 입력")
         home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="home_form")
     with col_t2:
-        away_team = st.text_input("✈️ 어웨이팀 명*", value="상대팀")
+        away_team = st.text_input("✈️ 어웨이팀 명*", placeholder="어웨이팀 이름 입력")
         away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="away_form")
 
     st.write("---")
@@ -599,7 +599,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 home_num_str = ", ".join([f"{pos}:{num}" for pos, num in home_numbers.items() if num]) if home_numbers else "없음"
                 away_num_str = ", ".join([f"{pos}:{num}" for pos, num in away_numbers.items() if num]) if away_numbers else "없음"
 
-                # 포지션별 등번호 데이터를 완벽히 복원할 수 있도록 JSON 데이터로 패키징
                 state_packet = {
                     "home_form": home_formation,
                     "home_nums": home_numbers,
@@ -752,7 +751,6 @@ elif menu == "📂 경기 일지 조회":
 
                         st.write("")
 
-                        # 📦 저장된 JSON 패키지 파싱 (이전에 입력했던 등번호 상태 복원용)
                         saved_packet = {}
                         try:
                             if "[SMC_JSON_DATA:" in raw_content:
@@ -790,9 +788,6 @@ elif menu == "📂 경기 일지 조회":
                         st.markdown("**📝 기존 저장된 상세 관찰 기록**")
                         st.info(clean_content)
 
-                        # ----------------------------------------------------
-                        # ✨ [핵심 기능] 저장된 일지 속 등번호를 다시 그리드로 불러와서 이어서 수정/채우기
-                        # ----------------------------------------------------
                         st.write("---")
                         with st.expander(f"✏️ [{match_title}] 등번호 마저 채우기 및 메모 이어서 수정하기", expanded=True):
                             st.caption("이전에 저장했던 등번호 입력 칸들이 그대로 복원됩니다. 빈 칸을 마저 채우거나 수정한 뒤 아래 저장 버튼을 누르세요.")
