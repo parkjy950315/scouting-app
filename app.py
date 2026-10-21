@@ -799,7 +799,8 @@ elif menu == "📂 경기 일지 조회":
                     orig_idx = orig_indices[0]
                     match_label = f"[{row.get('작성일자', '-')}] {row.get('선수명', '')} ({row.get('소속팀', '')})"
                     
-                    is_checked = st.checkbox(match_label, value=select_all, key=f"chk_del_tab_{orig_idx}")
+                    # ✅ 수정 포인트: 루프 순번(idx)을 키에 포함하여 중복 에러 완전 방지
+                    is_checked = st.checkbox(match_label, value=select_all, key=f"chk_del_tab_{idx}_{orig_idx}")
                     if is_checked:
                         selected_indices_to_delete.append(orig_idx)
 
@@ -877,7 +878,7 @@ elif menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 4. 선수 검색 및 상세 관찰일지 조회 & PDF 다운로드 (수정 완료)
+# 4. 선수 검색 및 상세 관찰일지 조회 & PDF 다운로드
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
     st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
