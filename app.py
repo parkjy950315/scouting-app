@@ -619,7 +619,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (내부 탭 구조: 목록/조회 | 일괄 삭제)
+# 2. 📂 경기 일지 조회
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -630,7 +630,6 @@ elif menu == "📂 경기 일지 조회":
     if memo_df.empty:
         st.info("아직 저장된 경기 관찰 일지가 없습니다. [🏟️ 현장 경기 관찰 메모] 메뉴에서 첫 일지를 작성해 보세요!")
     else:
-        # 내부 탭 구성
         tab_view, tab_delete = st.tabs(["📋 일지 목록 및 조회", "🗑️ 일지 일괄 삭제"])
 
         with tab_view:
@@ -671,7 +670,7 @@ elif menu == "📂 경기 일지 조회":
                 st.warning("🔍 검색 조건에 일치하는 경기 일지가 없습니다.")
             else:
                 display_memo_df = filtered_memo_df[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
-                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 오웨이", "대회 정보"]
+                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
 
                 memo_selection = st.dataframe(
                     display_memo_df,
@@ -878,12 +877,12 @@ elif menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 4. 선수 검색 및 상세 관찰일지 조회 & PDF 다운로드
+# 4. 선수 검색 및 상세 관찰일지 조회 & PDF 다운로드 (수정 완료)
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
     st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
     
-    official_df = df[df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"].copy()
+    official_df = df[df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
     
     if official_df.empty:
         st.info("등록된 선수 데이터가 없습니다.")
@@ -959,52 +958,59 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
         selected_rows = selection.selection.rows if hasattr(selection, "selection") else []
         
         if selected_rows:
-            target_idx = filtered_df.index[selected_rows[0]]
-            p = df.loc[target_idx]
-            
-            current_team_name, past_team_history = parse_team_info(p.get('소속팀', ''))
-            
-            st.write("---")
-            
-            head_col1, head_col2 = st.columns([3, 1])
-            with head_col1:
-                st.markdown(f"### ⚽ [{p.get('진행 상태', '')}] {p.get('선수명', '')}")
-            with head_col2:
-                try:
-                    pdf_bytes = generate_pdf_report(p)
-                    filename = f"{p.get('선수명', '선수')}_스카우팅관찰일지.pdf"
-                    b64 = base64.b64encode(pdf_bytes.getvalue()).decode()
-                    dl_html = f"""
-                    <div style="display: flex; flex-direction: column; width: 100%;">
-                        <a href="data:application/octet-stream;base64,{b64}" download="{filename}" 
-                           style="background-color: #2563EB; color: white; padding: 10px 16px; text-align: center; 
-                                  text-decoration: none; display: inline-block; font-size: 14px; font-weight: bold; 
-                                  border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%;">
-                            📄 관찰일지 PDF 다운로드
-                        </a>
-                    </div>
-                    """
-                    st.markdown(dl_html, unsafe_allow_html=True)
-                except Exception as e:
-                    st.error(f"PDF 생성 중 오류 발생: {e}")
+            selected_row_filtered = filtered_df.iloc[selected_rows[0]]
+            match_indices = df[(df["선수명"] == selected_row_filtered["선수명"]) & 
+                               (df["소속팀"] == selected_row_filtered["소속팀"]) & 
+                               (df["생년월일"] == selected_row_filtered["생년월일"]) &
+                               (df["진행 상태"] != "현장 관찰 메모 (임시)")].index
 
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("현재 소속팀 / 등번호", f"{current_team_name} / {p.get('등번호', '-')}번")
-            c2.metric("포지션 / 주발", f"{p.get('포지션', '-')} / {p.get('주발', '-')}")
-            c3.metric("나이", f"{p.get('만 나이', '-')}")
-            weight_display = f"{p.get('체중(kg)')}kg" if p.get('체중(kg)') else "미입력"
-            c4.metric("피지컬", f"{p.get('신장(cm)', '-')}cm / {weight_display}")
-            
-            st.write(f"• **작성일자**: {p.get('작성일자', '-')}")
-            st.markdown("---")
+            if len(match_indices) > 0:
+                target_idx = match_indices[0]
+                p = df.loc[target_idx]
+                
+                current_team_name, past_team_history = parse_team_info(p.get('소속팀', ''))
+                
+                st.write("---")
+                
+                head_col1, head_col2 = st.columns([3, 1])
+                with head_col1:
+                    st.markdown(f"### ⚽ [{p.get('진행 상태', '')}] {p.get('선수명', '')}")
+                with head_col2:
+                    try:
+                        pdf_bytes = generate_pdf_report(p)
+                        filename = f"{p.get('선수명', '선수')}_스카우팅관찰일지.pdf"
+                        b64 = base64.b64encode(pdf_bytes.getvalue()).decode()
+                        dl_html = f"""
+                        <div style="display: flex; flex-direction: column; width: 100%;">
+                            <a href="data:application/octet-stream;base64,{b64}" download="{filename}" 
+                               style="background-color: #2563EB; color: white; padding: 10px 16px; text-align: center; 
+                                      text-decoration: none; display: inline-block; font-size: 14px; font-weight: bold; 
+                                      border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%;">
+                                📄 관찰일지 PDF 다운로드
+                            </a>
+                        </div>
+                        """
+                        st.markdown(dl_html, unsafe_allow_html=True)
+                    except Exception as e:
+                        st.error(f"PDF 생성 중 오류 발생: {e}")
 
-            st.subheader("📚 상세 메모 및 분석 내용")
-            with st.container():
-                overall_text = p.get('종합 평가', '')
-                if pd.notna(overall_text) and str(overall_text).strip():
-                    st.info(overall_text)
-                else:
-                    st.write("등록된 내용이 없습니다.")
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("현재 소속팀 / 등번호", f"{current_team_name} / {p.get('등번호', '-')}번")
+                c2.metric("포지션 / 주발", f"{p.get('포지션', '-')} / {p.get('주발', '-')}")
+                c3.metric("나이", f"{p.get('만 나이', '-')}")
+                weight_display = f"{p.get('체중(kg)')}kg" if p.get('체중(kg)') else "미입력"
+                c4.metric("피지컬", f"{p.get('신장(cm)', '-')}cm / {weight_display}")
+                
+                st.write(f"• **작성일자**: {p.get('작성일자', '-')}")
+                st.markdown("---")
+
+                st.subheader("📚 상세 메모 및 분석 내용")
+                with st.container():
+                    overall_text = p.get('종합 평가', '')
+                    if pd.notna(overall_text) and str(overall_text).strip():
+                        st.info(overall_text)
+                    else:
+                        st.write("등록된 내용이 없습니다.")
         else:
             st.info("💡 목록 표에서 조회하고 싶은 **행을 클릭**하시면 상세 내용이 하단에 나타납니다.")
 
@@ -1014,7 +1020,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
 elif menu == "✏️ 선수 정보/일지 수정 및 삭제":
     st.header("✏️ 기존 정보 수정 및 데이터 삭제")
     
-    edit_base_df = df[df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"].copy()
+    edit_base_df = df[df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
     
     if edit_base_df.empty:
         st.info("수정할 선수 데이터가 없습니다.")
@@ -1059,87 +1065,94 @@ elif menu == "✏️ 선수 정보/일지 수정 및 삭제":
         edit_selected_rows = edit_selection.selection.rows if hasattr(edit_selection, "selection") else []
         
         if edit_selected_rows:
-            target_idx = edit_filtered_df.index[edit_selected_rows[0]]
-            target_row = df.loc[target_idx]
-            
-            current_t, past_t = parse_team_info(target_row.get("소속팀", ""))
-            
-            st.write("---")
+            selected_edit_row = edit_filtered_df.iloc[edit_selected_rows[0]]
+            match_indices = df[(df["선수명"] == selected_edit_row["선수명"]) & 
+                               (df["소속팀"] == selected_edit_row["소속팀"]) & 
+                               (df["생년월일"] == selected_edit_row["생년월일"]) &
+                               (df["진행 상태"] != "현장 관찰 메모 (임시)")].index
 
-            st.markdown(f"### 🗑️ [{target_row.get('선수명', '')}] 데이터 삭제")
-            if st.button("⚠️ 이 데이터를 영구 삭제하기", type="secondary", use_container_width=True, key=f"btn_delete_{target_idx}"):
-                with st.spinner("구글 시트에서 데이터를 삭제하는 중..."):
-                    df = df.drop(target_idx).reset_index(drop=True)
-                    if save_data_to_sheet(df):
-                        st.success("🗑️ 데이터가 성공적으로 삭제되었습니다! 페이지를 갱신합니다.")
-                        st.rerun()
+            if len(match_indices) > 0:
+                target_idx = match_indices[0]
+                target_row = df.loc[target_idx]
+                
+                current_t, past_t = parse_team_info(target_row.get("소속팀", ""))
+                
+                st.write("---")
 
-            st.write("---")
-            st.markdown(f"### ✏️ [{target_row.get('선수명', '')}] 정보 수정")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                edit_name = st.text_input("이름 / 제목", value=str(target_row.get("선수명", "")), key=f"edit_name_{target_idx}")
-                edit_team_input = st.text_input("소속팀 / 대진", value=current_t, key=f"edit_team_{target_idx}")
-                
-                cur_pos = str(target_row.get("포지션", "MF"))
-                pos_idx = POSITION_OPTIONS.index(cur_pos) if cur_pos in POSITION_OPTIONS else 2
-                edit_position = st.selectbox("포지션", POSITION_OPTIONS, index=pos_idx, key=f"edit_pos_{target_idx}")
-                
-                default_status = str(target_row.get("진행 상태", STATUS_OPTIONS[0]))
-                status_index = STATUS_OPTIONS.index(default_status) if default_status in STATUS_OPTIONS else 0
-                edit_status = st.selectbox("진행 상태", STATUS_OPTIONS, index=status_index, key=f"edit_status_{target_idx}")
-                
-                cur_num = str(target_row.get("등번호", "")).strip()
-                back_num_options = ["-"] + [str(i) for i in range(1, 100)]
-                num_idx = back_num_options.index(cur_num) if cur_num in back_num_options else 0
-                edit_back_num = st.selectbox("등번호", options=back_num_options, index=num_idx, key=f"edit_num_{target_idx}")
-
-            with col2:
-                default_birth = parse_date(target_row.get("생년월일"))
-                edit_birth_date = st.date_input("생년월일", value=default_birth, key=f"edit_birth_{target_idx}")
-                age_full_str, age_year_str = calculate_age(edit_birth_date)
-                
-                default_foot = str(target_row.get("주발", "오른발"))
-                foot_options = ["오른발", "왼발", "양발"]
-                foot_index = foot_options.index(default_foot) if default_foot in foot_options else 0
-                edit_foot = st.selectbox("주발", foot_options, index=foot_index, key=f"edit_foot_{target_idx}")
-                
-                edit_date = st.date_input("관찰 작성일자", value=datetime.today(), key=f"edit_date_{target_idx}")
-                
-                cur_h = safe_int(target_row.get("신장(cm)", ""), 175)
-                cur_w = safe_int(target_row.get("체중(kg)", ""), 70)
-                
-                h_options = [str(h) for h in range(150, 205)]
-                h_idx = h_options.index(str(cur_h)) if str(cur_h) in h_options else 25
-                edit_height = st.selectbox("신장 (cm)", options=h_options + [""], index=h_idx, key=f"edit_h_{target_idx}")
-                
-                w_options = [str(w) for w in range(50, 105)]
-                w_idx = w_options.index(str(cur_w)) if str(cur_w) in w_options else 20
-                edit_weight = st.selectbox("체중 (kg)", options=[""] + w_options, index=w_idx + 1 if str(cur_w) in w_options else 0, key=f"edit_w_{target_idx}")
-
-            st.subheader("➕ 메모 내용 수정")
-            edit_overall = st.text_area("상세 내용 / 종합 평가", value=str(target_row.get("종합 평가", "")), height=150, key=f"edit_overall_{target_idx}")
-            
-            if st.button("🔄 변경사항 저장하기", type="primary", use_container_width=True, key=f"btn_save_{target_idx}"):
-                if not edit_name.strip():
-                    st.error("이름은 필수입니다.")
-                else:
-                    with st.spinner("구글 시트에 업데이트하는 중..."):
-                        df.loc[target_idx, "선수명"] = edit_name.strip()
-                        df.loc[target_idx, "소속팀"] = edit_team_input.strip()
-                        df.loc[target_idx, "등번호"] = str(edit_back_num)
-                        df.loc[target_idx, "포지션"] = edit_position
-                        df.loc[target_idx, "진행 상태"] = edit_status
-                        df.loc[target_idx, "생년월일"] = str(edit_birth_date)
-                        df.loc[target_idx, "만 나이"] = age_full_str
-                        df.loc[target_idx, "연 나이"] = age_year_str
-                        df.loc[target_idx, "주발"] = edit_foot
-                        df.loc[target_idx, "신장(cm)"] = str(edit_height)
-                        df.loc[target_idx, "체중(kg)"] = str(edit_weight)
-                        df.loc[target_idx, "종합 평가"] = edit_overall.strip()
-                        df.loc[target_idx, "작성일자"] = str(edit_date)
-
+                st.markdown(f"### 🗑️ [{target_row.get('선수명', '')}] 데이터 삭제")
+                if st.button("⚠️ 이 데이터를 영구 삭제하기", type="secondary", use_container_width=True, key=f"btn_delete_{target_idx}"):
+                    with st.spinner("구글 시트에서 데이터를 삭제하는 중..."):
+                        df = df.drop(target_idx).reset_index(drop=True)
                         if save_data_to_sheet(df):
-                            st.success("🎉 정보가 성공적으로 업데이트되었습니다!")
+                            st.success("🗑️ 데이터가 성공적으로 삭제되었습니다! 페이지를 갱신합니다.")
                             st.rerun()
+
+                st.write("---")
+                st.markdown(f"### ✏️ [{target_row.get('선수명', '')}] 정보 수정")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    edit_name = st.text_input("이름 / 제목", value=str(target_row.get("선수명", "")), key=f"edit_name_{target_idx}")
+                    edit_team_input = st.text_input("소속팀 / 대진", value=current_t, key=f"edit_team_{target_idx}")
+                    
+                    cur_pos = str(target_row.get("포지션", "MF"))
+                    pos_idx = POSITION_OPTIONS.index(cur_pos) if cur_pos in POSITION_OPTIONS else 2
+                    edit_position = st.selectbox("포지션", POSITION_OPTIONS, index=pos_idx, key=f"edit_pos_{target_idx}")
+                    
+                    default_status = str(target_row.get("진행 상태", STATUS_OPTIONS[0]))
+                    status_index = STATUS_OPTIONS.index(default_status) if default_status in STATUS_OPTIONS else 0
+                    edit_status = st.selectbox("진행 상태", STATUS_OPTIONS, index=status_index, key=f"edit_status_{target_idx}")
+                    
+                    cur_num = str(target_row.get("등번호", "")).strip()
+                    back_num_options = ["-"] + [str(i) for i in range(1, 100)]
+                    num_idx = back_num_options.index(cur_num) if cur_num in back_num_options else 0
+                    edit_back_num = st.selectbox("등번호", options=back_num_options, index=num_idx, key=f"edit_num_{target_idx}")
+
+                with col2:
+                    default_birth = parse_date(target_row.get("생년월일"))
+                    edit_birth_date = st.date_input("생년월일", value=default_birth, key=f"edit_birth_{target_idx}")
+                    age_full_str, age_year_str = calculate_age(edit_birth_date)
+                    
+                    default_foot = str(target_row.get("주발", "오른발"))
+                    foot_options = ["오른발", "왼발", "양발"]
+                    foot_index = foot_options.index(default_foot) if default_foot in foot_options else 0
+                    edit_foot = st.selectbox("주발", foot_options, index=foot_index, key=f"edit_foot_{target_idx}")
+                    
+                    edit_date = st.date_input("관찰 작성일자", value=datetime.today(), key=f"edit_date_{target_idx}")
+                    
+                    cur_h = safe_int(target_row.get("신장(cm)", ""), 175)
+                    cur_w = safe_int(target_row.get("체중(kg)", ""), 70)
+                    
+                    h_options = [str(h) for h in range(150, 205)]
+                    h_idx = h_options.index(str(cur_h)) if str(cur_h) in h_options else 25
+                    edit_height = st.selectbox("신장 (cm)", options=h_options + [""], index=h_idx, key=f"edit_h_{target_idx}")
+                    
+                    w_options = [str(w) for w in range(50, 105)]
+                    w_idx = w_options.index(str(cur_w)) if str(cur_w) in w_options else 20
+                    edit_weight = st.selectbox("체중 (kg)", options=[""] + w_options, index=w_idx + 1 if str(cur_w) in w_options else 0, key=f"edit_w_{target_idx}")
+
+                st.subheader("➕ 메모 내용 수정")
+                edit_overall = st.text_area("상세 내용 / 종합 평가", value=str(target_row.get("종합 평가", "")), height=150, key=f"edit_overall_{target_idx}")
+                
+                if st.button("🔄 변경사항 저장하기", type="primary", use_container_width=True, key=f"btn_save_{target_idx}"):
+                    if not edit_name.strip():
+                        st.error("이름은 필수입니다.")
+                    else:
+                        with st.spinner("구글 시트에 업데이트하는 중..."):
+                            df.loc[target_idx, "선수명"] = edit_name.strip()
+                            df.loc[target_idx, "소속팀"] = edit_team_input.strip()
+                            df.loc[target_idx, "등번호"] = str(edit_back_num)
+                            df.loc[target_idx, "포지션"] = edit_position
+                            df.loc[target_idx, "진행 상태"] = edit_status
+                            df.loc[target_idx, "생년월일"] = str(edit_birth_date)
+                            df.loc[target_idx, "만 나이"] = age_full_str
+                            df.loc[target_idx, "연 나이"] = age_year_str
+                            df.loc[target_idx, "주발"] = edit_foot
+                            df.loc[target_idx, "신장(cm)"] = str(edit_height)
+                            df.loc[target_idx, "체중(kg)"] = str(edit_weight)
+                            df.loc[target_idx, "종합 평가"] = edit_overall.strip()
+                            df.loc[target_idx, "작성일자"] = str(edit_date)
+
+                            if save_data_to_sheet(df):
+                                st.success("🎉 정보가 성공적으로 업데이트되었습니다!")
+                                st.rerun()
