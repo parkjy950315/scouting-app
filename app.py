@@ -289,20 +289,18 @@ menu = st.sidebar.radio(
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (새롭게 추가된 직관적 메모 기능)
+# 1. 🏟️ 현장 경기 관찰 메모 (대회명, 팀명, 포메이션, 라인업, 눈에 띈 선수 메모)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("직관적으로 대회명, 홈/어웨이팀, 포메이션, 눈에 띈 선수 메모를 빠르게 작성하세요.")
+    st.caption("대회 이름, 홈/어웨이 팀, 포메이션 및 라인업, 눈에 띈 선수 메모를 간편하게 기록하세요.")
 
     with st.form("match_memo_form", clear_on_submit=True):
-        col_m1, col_m2, col_m3 = st.columns(3)
+        col_m1, col_m2 = st.columns(2)
         with col_m1:
             match_date = st.date_input("경기 일자", value=datetime.today())
         with col_m2:
             tournament_name = st.text_input("대회 이름", placeholder="예: 금석배 U18, 대통령배 등")
-        with col_m3:
-            match_round = st.text_input("라운드 / 조별리그", placeholder="예: 조별리그 1차전, 16강 등")
 
         st.write("---")
 
@@ -317,9 +315,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             away_lineup = st.text_area("어웨이팀 주요 라인업 / 등번호", placeholder="예: FW 9번 이영호, MF 8번 박지성...")
 
         st.write("---")
-        st.subheader("⭐ 눈에 띈 선수 & 현장 메모")
+        st.subheader("⭐ 눈에 띈 선수 & 경기 핵심 메모")
         outstanding_memo = st.text_area(
-            "눈에 띈 선수 및 경기 핵심 메모", 
+            "눈에 띈 선수 및 경기 메모", 
             placeholder="[예시]\n- 홈팀 10번: 탈압박 능력 탁월, 전진 패스 예리함\n- 어웨이팀 7번: 스피드 매우 빠름, 후반전 체력 저하 체크 필요\n- 경기 흐름: 전반전 탐색전 이후 후반 난타전 양상",
             height=200
         )
@@ -331,11 +329,10 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다.")
             else:
                 with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
-                    # 현장 메모를 선수 DB 형식에 맞춰 깔끔하게 요약 저장
                     memo_player_name = f"[{tournament_name}] {home_team} vs {away_team}"
                     memo_team = f"{home_team} (홈) vs {away_team} (어웨이)"
                     memo_overall = (
-                        f"📅 일자: {match_date} | 대회: {tournament_name} ({match_round})\n\n"
+                        f"📅 일자: {match_date} | 대회: {tournament_name}\n\n"
                         f"🏠 [홈팀: {home_team}] 포메이션: {home_formation}\n"
                         f"- 라인업 요약: {home_lineup}\n\n"
                         f"✈️ [어웨이팀: {away_team}] 포메이션: {away_formation}\n"
