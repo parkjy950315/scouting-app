@@ -308,7 +308,7 @@ def generate_pdf_report(player_data):
     buffer.seek(0)
     return buffer
 
-# 데이터 데이터프레임 로드
+# 데이터 로드
 df = load_data()
 
 display_logo()
@@ -327,39 +327,70 @@ st.sidebar.markdown("---")
 
 menu = st.sidebar.radio(
     "이동할 메뉴",
-    ["📋 현장 실시간 메모 (터치형)", "선수 등록", "🔍 선수 검색 및 관찰일지 조회", "✏️ 선수 정보/일지 수정 및 추가"]
+    ["📋 실시간 전술판 & 터치 노트", "선수 등록", "🔍 선수 검색 및 관찰일지 조회", "✏️ 선수 정보/일지 수정 및 추가"]
 )
 
 # ----------------------------------------------------
-# 1. 📋 현장 실시간 메모 (신규 추가: 빠른 태그형 독립 입력)
+# 1. 📋 현장 전술판 및 터치형 스카우팅 메모
 # ----------------------------------------------------
-if menu == "📋 현장 실시간 메모 (터치형)":
-    st.header("📋 현장 실시간 스카우팅 노트")
-    st.caption("※ 경기 중 등번호와 태그로 신속히 기록하며, '현장 관찰 메모 (임시)' 상태로 구글 시트에 안전하게 저장됩니다.")
+if menu == "📋 실시간 전술판 & 터치 노트":
+    st.header("🏟️ 그라운드 전술판 & 터치 스카우트 노트")
+    st.caption("※ 홈팀/어웨이팀 포메이션과 라인별 등번호를 세팅하고, 관찰할 선수를 선택해 신속히 기록하세요.")
 
-    st.markdown("### 🏟️ 1. 경기 정보 설정")
+    st.markdown("### 🏟️ 1. 경기 정보 및 포메이션 설정")
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        team_a = st.text_input("A팀 이름", value="A팀")
-        form_a = st.selectbox(f"{team_a} 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2", "3-4-3", "기타"], key="fa")
+        home_team = st.text_input("홈팀 이름", value="홈팀")
+        form_home = st.selectbox(f"{home_team} 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2", "3-4-3", "기타"], key="form_home")
     with col_t2:
-        team_b = st.text_input("B팀 이름", value="B팀")
-        form_b = st.selectbox(f"{team_b} 포메이션", ["4-2-3-1", "4-3-3", "4-4-2", "3-5-2", "3-4-3", "기타"], key="fb")
+        away_team = st.text_input("어웨이팀 이름", value="어웨이팀")
+        form_away = st.selectbox(f"{away_team} 포메이션", ["4-2-3-1", "4-3-3", "4-4-2", "3-5-2", "3-4-3", "기타"], key="form_away")
 
     st.divider()
 
-    st.markdown("### 👕 2. 관찰 선수 지정")
-    c1, c2, c3 = st.columns([1.2, 1, 1])
-    with c1:
-        target_team = st.radio("관찰 팀 선택", [team_a, team_b], horizontal=True)
-    with c2:
-        back_num_val = st.number_input("등번호", min_value=1, max_value=99, value=5, step=1)
-    with c3:
-        position = st.selectbox("포지션", POSITION_OPTIONS, index=1)
+    # 그라운드 뷰 모드
+    selected_view_team = st.radio("전술판 조회 팀 선택", [home_team, away_team], horizontal=True)
+    current_formation = form_home if selected_view_team == home_team else form_away
+
+    st.markdown(f"""
+    <div style="background-color: #1b4d3e; padding: 15px; border-radius: 10px; text-align: center; color: white; border: 2px solid #ffffff; margin-bottom: 15px;">
+        <h4 style="margin: 0; color: #ffeb3b;">⚽ [ {selected_view_team} ] 그라운드 포메이션 ({current_formation}) ⚽</h4>
+        <p style="font-size: 12px; color: #d1e7dd; margin: 5px 0 0 0;">각 라인별 핵심 관찰 선수의 등번호를 입력·확인하세요.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 라인별 등번호 설정 (터치/선택 편의형)
+    col_pos1, col_pos2, col_pos3, col_pos4 = st.columns(4)
+    with col_pos1:
+        gk_num = st.number_input("GK 등번호", min_value=1, max_value=99, value=1, key=f"{selected_view_team}_gk")
+    with col_pos2:
+        df_num = st.number_input("주요 DF 등번호", min_value=1, max_value=99, value=5, key=f"{selected_view_team}_df")
+    with col_pos3:
+        mf_num = st.number_input("주요 MF 등번호", min_value=1, max_value=99, value=10, key=f"{selected_view_team}_mf")
+    with col_pos4:
+        fw_num = st.number_input("주요 FW 등번호", min_value=1, max_value=99, value=9, key=f"{selected_view_team}_fw")
 
     st.divider()
 
-    st.markdown("### 📊 3. 플레이 및 역량 평가 (터치 체크)")
+    st.markdown("### 👕 2. 집중 관찰 선수 선택 및 역량 체크")
+    
+    target_pos_choice = st.selectbox(
+        "기록할 포지션 및 등번호 선택", 
+        [
+            f"GK (등번호: {gk_num})", 
+            f"DF (등번호: {df_num})", 
+            f"MF (등번호: {mf_num})", 
+            f"FW (등번호: {fw_num})"
+        ]
+    )
+    
+    # 선택된 포지션과 등번호 파싱
+    position = target_pos_choice.split(" (")[0]
+    selected_back_num = target_pos_choice.split("등번호: ")[1].replace(")", "")
+
+    st.info(f"📍 현재 기록 대상: **[{selected_view_team}] {position} - {selected_back_num}번 선수**")
+
+    # 역량 태그 선택 영역
     col_p1, col_p2 = st.columns(2)
     with col_p1:
         height_tag = st.multiselect("📐 체형 및 신장", ["170대", "180초반", "180중반", "180후반", "190이상", "단단함", "비율좋음", "피지컬우수"], default=["180중반", "비율좋음"])
@@ -385,21 +416,20 @@ if menu == "📋 현장 실시간 메모 (터치형)":
 
     # 모든 태그 문자열 취합
     all_tags = height_tag + [f"스피드:{speed_tag}"] + def_tag + tech_tag + transition_tag + scanning_tag + pressure_tag
-    target_form = form_a if target_team == team_a else form_b
 
     st.divider()
 
     if st.button("💾 구글 시트에 현장 메모 임시 저장", type="primary", use_container_width=True):
-        temp_player_name = f"[{target_team}] {back_num_val}번"
+        temp_player_name = f"[{selected_view_team}] {selected_back_num}번"
         pros_summary = f"[체형/특징] {', '.join(all_tags)}"
-        overall_summary = f"대회/경기: {team_a} vs {team_b} | 포메이션: {target_form} | 관찰등급: {verdict}"
+        overall_summary = f"대회/경기: {home_team} vs {away_team} | 포메이션({selected_view_team}): {current_formation} | 관찰등급: {verdict}"
         if detail_memo:
             overall_summary += f" | 메모: {detail_memo}"
 
         new_field_data = {
             "선수명": temp_player_name,
-            "소속팀": target_team,
-            "등번호": str(back_num_val),
+            "소속팀": selected_view_team,
+            "등번호": str(selected_back_num),
             "포지션": position,
             "생년월일": "",
             "만 나이": "",
@@ -417,11 +447,11 @@ if menu == "📋 현장 실시간 메모 (터치형)":
         with st.spinner("구글 시트에 현장 메모를 기록하는 중..."):
             updated_df = pd.DataFrame([new_field_data]) if df.empty else pd.concat([df, pd.DataFrame([new_field_data])], ignore_index=True)
             if save_data_to_sheet(updated_df):
-                st.success(f"🎉 [{target_team} {back_num_val}번] 선수 메모가 구글 시트에 안전하게 임시 저장되었습니다!")
+                st.success(f"🎉 [{selected_view_team} {selected_back_num}번] 선수 메모가 구글 시트에 안전하게 임시 저장되었습니다!")
                 st.balloons()
 
 # ----------------------------------------------------
-# 2. 선수 등록
+# 2. 선수 정식 등록
 # ----------------------------------------------------
 elif menu == "선수 등록":
     st.header("📋 신규 관찰 선수 정식 등록")
@@ -489,7 +519,6 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
     if df.empty:
         st.info("등록된 선수 데이터가 없습니다.")
     else:
-        # 공식 등록된 데이터만 카운트
         official_df = df[df["진행 상태"] != "현장 관찰 메모 (임시)"]
         total_count = len(official_df)
         watchlist_count = len(official_df[official_df["진행 상태"] == "관심 선수 (Watchlist)"])
@@ -632,7 +661,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
             st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 관찰일지와 PDF 다운로드 버튼이 나타납니다.")
 
 # ----------------------------------------------------
-# 4. ✏️ 현장 메모 복기 및 공식 DB 승인/수정
+# 4. 선수 정보 수정 및 임시 메모 공식 DB 승인
 # ----------------------------------------------------
 elif menu == "✏️ 선수 정보/일지 수정 및 추가":
     st.header("✏️ 기존 선수 정보 수정 및 현장 메모 공식 DB 승인")
@@ -686,7 +715,6 @@ elif menu == "✏️ 선수 정보/일지 수정 및 추가":
             
             st.write("---")
             
-            # 현장 임시 메모 데이터인 경우 안내 메세지 표시
             if target_row.get("진행 상태") == "현장 관찰 메모 (임시)":
                 st.warning("💡 선택하신 항목은 '현장 관찰 메모'입니다. 선수 이름 및 프로필을 정식 등록 후 진행 상태를 변경해 주세요.")
 
