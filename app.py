@@ -99,7 +99,7 @@ GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1WSbVkwCr5Dv5hN3zU0Bw
 GOOGLE_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxTTvgJqNnmBxwuCGvT3agMEo0_0Fon0JGWdREyR7usEIu4Mfw9M1lq66njtr8S_cbP/exec"
 
 STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완료", "계약 검토", "보류 / 제외"]
-POSITION_OPTIONS = ["GK", "CB", "LB", "RB", "MF", "LW", "RW", "CF"]
+POSITION_OPTIONS = ["GK", "CB", "LCB", "RCB", "LB", "RB", "MF", "LW", "RW", "CF"]
 
 # ----------------------------------------------------
 # 🏢 성문컴퍼니(SMC) 로고 HTML 렌더링
@@ -388,32 +388,32 @@ formation_layouts = {
     "4-3-3": [
         {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
         {"line": "MF LINE", "positions": ["LCM", "CDM", "RCM"]},
-        {"line": "DF LINE", "positions": ["LB", "CB1", "CB2", "RB"]},
+        {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
         {"line": "GK LINE", "positions": ["GK"]}
     ],
     "4-4-2": [
         {"line": "FW LINE", "positions": ["ST1", "ST2"]},
         {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
-        {"line": "DF LINE", "positions": ["LB", "CB1", "CB2", "RB"]},
+        {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
         {"line": "GK LINE", "positions": ["GK"]}
     ],
     "4-2-3-1": [
         {"line": "FW LINE", "positions": ["ST"]},
         {"line": "AM LINE", "positions": ["LAM", "CAM", "RAM"]},
         {"line": "DM LINE", "positions": ["LDM", "RDM"]},
-        {"line": "DF LINE", "positions": ["LB", "CB1", "CB2", "RB"]},
+        {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
         {"line": "GK LINE", "positions": ["GK"]}
     ],
     "3-4-3": [
         {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
         {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
-        {"line": "DF LINE", "positions": ["CB1", "CB2", "CB3"]},
+        {"line": "DF LINE", "positions": ["LCB", "CB", "RCB"]},
         {"line": "GK LINE", "positions": ["GK"]}
     ],
     "3-5-2": [
         {"line": "FW LINE", "positions": ["ST1", "ST2"]},
         {"line": "MF LINE", "positions": ["LWB", "LCM", "CDM", "RCM", "RWB"]},
-        {"line": "DF LINE", "positions": ["CB1", "CB2", "CB3"]},
+        {"line": "DF LINE", "positions": ["LCB", "CB", "RCB"]},
         {"line": "GK LINE", "positions": ["GK"]}
     ],
     "5-3-2": [
@@ -430,7 +430,7 @@ formation_layouts = {
     ]
 }
 
-# ⚽ 5백 포함 모든 포메이션이 절대 잘리지 않도록 최적화된 피치 렌더러
+# ⚽ 포메이션별 라인 피치 렌더러 (LCB, RCB 적용)
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     
@@ -459,7 +459,6 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     """
     
     import streamlit.components.v1 as components
-    # 5백 등 수비 라인업(5명 배치)이 포함된 포메이션도 넉넉하게 수용할 수 있도록 컴포넌트 높이 설정
     components.html(complete_html, height=410, scrolling=False)
 
 display_logo()
@@ -489,7 +488,7 @@ menu = st.sidebar.radio("이동할 메뉴", [
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("경기를 보며 등번호나 메모를 중간중간 추가해도 작성 중인 내용이 날아가지 않고 유지됩니다.")
+    st.caption("상단에서 등번호를 입력할 포지션을 직접 골라 빠르고 간편하게 등번호를 기입하세요.")
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
@@ -509,29 +508,45 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    def render_team_pitch_with_inputs(team_name, formation_name, prefix):
+    def render_team_quick_input_pitch(team_name, formation_name, prefix):
         layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
-        team_entered_numbers = {}
-
-        render_pitch_graphic_from_saved(team_name, formation_name, {pos: st.session_state.get(f"{prefix}_{pos}", "") for row in layout for pos in row['positions']})
-
-        st.markdown(f"**📝 {team_name} 포지션별 등번호 기입**")
-        for row in layout:
-            cols_input = st.columns(len(row['positions']))
-            for idx, pos in enumerate(row['positions']):
-                key_name = f"{prefix}_{pos}"
-                with cols_input[idx]:
-                    val = st.text_input(f"{pos}", value=st.session_state.get(key_name, ""), key=key_name, placeholder="등번호")
-                    if val.strip():
-                        team_entered_numbers[pos] = val.strip()
+        all_positions = [pos for row in layout for pos in row['positions']]
         
-        return team_entered_numbers
+        # 세션 상태에 저장된 등번호 딕셔너리 가져오기
+        nums_dict = {pos: st.session_state.get(f"{prefix}_{pos}", "") for pos in all_positions}
+
+        # 1. 시각화 그라운드 먼저 출력
+        render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
+
+        # 2. 모바일 친화적 '포지션 선택 후 빠른 입력' UI
+        st.markdown(f"**⚡ {team_name} 포지션별 등번호 간편 입력**")
+        
+        selected_pos_to_edit = st.selectbox(
+            f"등번호를 입력할 포지션 선택 ({team_name})", 
+            options=all_positions, 
+            key=f"{prefix}_quick_select_pos"
+        )
+        
+        if selected_pos_to_edit:
+            current_val = st.session_state.get(f"{prefix}_{selected_pos_to_edit}", "")
+            new_entered_num = st.text_input(
+                f"[{selected_pos_to_edit}] 포지션 등번호 입력",
+                value=current_val,
+                key=f"{prefix}_{selected_pos_to_edit}_input_field",
+                placeholder="예: 7, 10 등"
+            )
+            if new_entered_num != current_val:
+                st.session_state[f"{prefix}_{selected_pos_to_edit}"] = new_entered_num.strip()
+                st.rerun()
+
+        # 현재 입력된 모든 등번호 반환
+        return {pos: st.session_state.get(f"{prefix}_{pos}", "").strip() for pos in all_positions if st.session_state.get(f"{prefix}_{pos}", "").strip()}
 
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
-        home_numbers = render_team_pitch_with_inputs(home_team if home_team else "홈팀", home_formation, "home")
+        home_numbers = render_team_quick_input_pitch(home_team if home_team else "홈팀", home_formation, "home")
     with pitch_col2:
-        away_numbers = render_team_pitch_with_inputs(away_team if away_team else "어웨이팀", away_formation, "away")
+        away_numbers = render_team_quick_input_pitch(away_team if away_team else "어웨이팀", away_formation, "away")
 
     st.write("---")
 
@@ -540,9 +555,11 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     active_players = []
     for pos, num in home_numbers.items():
-        active_players.append(f"[홈] {home_team} - {pos} (#{num})")
+        if num:
+            active_players.append(f"[홈] {home_team} - {pos} (#{num})")
     for pos, num in away_numbers.items():
-        active_players.append(f"[어웨이] {away_team} - {pos} (#{num})")
+        if num:
+            active_players.append(f"[어웨이] {away_team} - {pos} (#{num})")
 
     player_specific_memos = {}
 
@@ -569,7 +586,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 if player_note.strip():
                     player_specific_memos[player_label] = player_note.strip()
     else:
-        st.info("💡 위 포메이션 입력창에 선수 등번호를 기입하면, 여기에 선수별 메모장 활성화 체크박스가 나타납니다.")
+        st.info("💡 위에서 포지션을 선택하고 등번호를 기입하면, 여기에 선수별 메모장 활성화 체크박스가 나타납니다.")
 
     st.write("---")
     st.subheader("📋 경기 전체 총평 및 핵심 메모")
@@ -586,8 +603,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다.")
         else:
             with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
-                home_num_str = ", ".join([f"{pos}:{num}" for pos, num in home_numbers.items()]) if home_numbers else "없음"
-                away_num_str = ", ".join([f"{pos}:{num}" for pos, num in away_numbers.items()]) if away_numbers else "없음"
+                home_num_str = ", ".join([f"{pos}:{num}" for pos, num in home_numbers.items() if num]) if home_numbers else "없음"
+                away_num_str = ", ".join([f"{pos}:{num}" for pos, num in away_numbers.items() if num]) if away_numbers else "없음"
 
                 player_notes_formatted = ""
                 if player_specific_memos:
