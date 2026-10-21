@@ -238,7 +238,6 @@ def parse_numbers_from_text(text_block):
     return nums_map
 
 def extract_pos_key(label):
-    """ 라벨에서 [홈/어웨이] 팀 - 포지션 키 추출 """
     if " - " in label:
         parts = label.split(" - ")
         prefix_team = parts[0].strip()
@@ -685,7 +684,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (기존 메모 직접 보존/수정 완벽 보장형)
+# 2. 📂 경기 일지 조회 (상태 완벽 고유 ID 격리형)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -881,7 +880,8 @@ elif menu == "📂 경기 일지 조회":
 
                             st.write("---")
 
-                            def render_editable_team_grid_fixed(team_name, formation_name, prefix, prev_nums):
+                            # ✨ [핵심 수정] 포메이션 및 등번호 상태 고유 키 부여
+                            def render_editable_team_grid_isolated(team_name, formation_name, prefix, prev_nums):
                                 layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
                                 updated_team_nums = {}
                                 st.markdown(f"**⚡ [{team_name if team_name else '팀'}] 포지션별 등번호 수정/입력**")
@@ -890,11 +890,8 @@ elif menu == "📂 경기 일지 조회":
                                     st.markdown(f"<div style='font-size: 10px; font-weight: bold; color: #64748B; margin-top: 2px;'>{row['line']}</div>", unsafe_allow_html=True)
                                     cols = st.columns(len(row['positions']))
                                     for idx, pos in enumerate(row['positions']):
-                                        k_name = f"mod_{prefix}_{target_memo_idx}_{pos}"
+                                        k_name = f"mod_iso_{prefix}_{target_memo_idx}_{pos}"
                                         default_val = prev_nums.get(pos, "")
-                                        
-                                        if k_name not in st.session_state:
-                                            st.session_state[k_name] = default_val
 
                                         with cols[idx]:
                                             val = st.text_input(
@@ -912,9 +909,9 @@ elif menu == "📂 경기 일지 조회":
 
                             ed_col1, ed_col2 = st.columns(2)
                             with ed_col1:
-                                new_h_nums = render_editable_team_grid_fixed(edit_ht_name, edit_hf_sel, "h_edit", h_nums_saved)
+                                new_h_nums = render_editable_team_grid_isolated(edit_ht_name, edit_hf_sel, "h_edit", h_nums_saved)
                             with ed_col2:
-                                new_a_nums = render_editable_team_grid_fixed(edit_at_name, edit_af_sel, "a_edit", a_nums_saved)
+                                new_a_nums = render_editable_team_grid_isolated(edit_at_name, edit_af_sel, "a_edit", a_nums_saved)
 
                             st.write("---")
                             st.subheader("⭐ 선수별 개개인 집중 관찰 메모 수정 및 추가")
@@ -956,7 +953,6 @@ elif menu == "📂 경기 일지 조회":
 
                                         st.markdown(f"**📌 {p_label} 개개인 관찰 기록**")
 
-                                        # ✨ [핵심 수정] value에 기존 메모를 그대로 넣어서 사용자가 박스 안에서 직접 이어 쓰거나 수정하게 함!
                                         input_key = f"direct_edit_area_{target_memo_idx}_{p_key}"
                                         edit_input_keys_map[p_label] = input_key
 
@@ -988,7 +984,7 @@ elif menu == "📂 경기 일지 조회":
                                         ed_h_layout = formation_layouts.get(edit_hf_sel, formation_layouts["4-3-3"])
                                         for row in ed_h_layout:
                                             for pos in row['positions']:
-                                                k = f"mod_h_edit_{target_memo_idx}_{pos}"
+                                                k = f"mod_iso_h_edit_{target_memo_idx}_{pos}"
                                                 val = st.session_state.get(k, "")
                                                 if val.strip():
                                                     final_edit_h_nums[pos] = val.strip()
@@ -997,7 +993,7 @@ elif menu == "📂 경기 일지 조회":
                                         ed_a_layout = formation_layouts.get(edit_af_sel, formation_layouts["4-3-3"])
                                         for row in ed_a_layout:
                                             for pos in row['positions']:
-                                                k = f"mod_a_edit_{target_memo_idx}_{pos}"
+                                                k = f"mod_iso_a_edit_{target_memo_idx}_{pos}"
                                                 val = st.session_state.get(k, "")
                                                 if val.strip():
                                                     final_edit_a_nums[pos] = val.strip()
@@ -1005,7 +1001,6 @@ elif menu == "📂 경기 일지 조회":
                                         h_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_h_nums.items() if num]) if final_edit_h_nums else "없음"
                                         a_num_str = ", ".join([f"{pos}:{num}" for pos, num in final_edit_a_nums.items() if num]) if final_edit_a_nums else "없음"
 
-                                        # 🔥 [핵심 저장 로직] 박스 안에 있는 내용 전체(기존+수정/추가)를 100% 온전히 보존 저장!
                                         final_player_memos = {}
                                         if active_edit_players and selected_edit_memo_players:
                                             for p_lbl in selected_edit_memo_players:
