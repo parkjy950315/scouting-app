@@ -370,67 +370,153 @@ if menu == "📋 실시간 전술판 & 터치 노트":
 
     st.divider()
 
-    # ====================================================
-    # ⚽ [실제 축구장 피치 배경 위에 포지션별 핀 배치 UI]
-    # ====================================================
-    st.markdown(f"""
-    <div class="soccer-pitch">
-        <div style="text-align: center; margin-bottom: 15px;">
-            <h2 style="margin: 0; color: #ffeb3b; font-weight: 900; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">
-                ⚽ TACTICAL PITCH — {home_team} ({form_home})
-            </h2>
-            <p style="font-size: 13px; color: #e8f8f5; margin: 5px 0 0 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">
-                피치 위에 배치된 포지션별 핀(마커)과 등번호를 확인하고 아래에서 선택해 기록하세요[cite: 2].
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # 포메이션별 포지션 슬롯 구성
-    formation_slots = {
-        "4-3-3": {"FW": ["LW", "CF", "RW"], "MF": ["LCM", "CDM", "RCM"], "DF": ["LB", "CB1", "CB2", "RB"], "GK": ["GK"]},
-        "4-4-2": {"FW": ["ST1", "ST2"], "MF": ["LM", "LCM", "RCM", "RM"], "DF": ["LB", "CB1", "CB2", "RB"], "GK": ["GK"]},
-        "4-2-3-1": {"FW": ["ST"], "MF": ["LAM", "CAM", "RAM"], "DM": ["LDM", "RDM"], "DF": ["LB", "CB1", "CB2", "RB"], "GK": ["GK"]},
-        "3-5-2": {"FW": ["ST1", "ST2"], "MF": ["LWB", "LCM", "CDM", "RCM", "RWB"], "DF": ["CB1", "CB2", "CB3"], "GK": ["GK"]}
+    # 포메이션별 핀 데이터 정의 (포지션명, 기본등번호)
+    formation_configs = {
+        "4-3-3": [
+            {"line": "FW", "pos": "LW", "num": 11},
+            {"line": "FW", "pos": "CF", "num": 9},
+            {"line": "FW", "pos": "RW", "num": 7},
+            {"line": "MF", "pos": "LCM", "num": 8},
+            {"line": "MF", "pos": "CDM", "num": 6},
+            {"line": "MF", "pos": "RCM", "num": 10},
+            {"line": "DF", "pos": "LB", "num": 3},
+            {"line": "DF", "pos": "CB1", "num": 4},
+            {"line": "DF", "pos": "CB2", "num": 5},
+            {"line": "DF", "pos": "RB", "num": 2},
+            {"line": "GK", "pos": "GK", "num": 1}
+        ],
+        "4-4-2": [
+            {"line": "FW", "pos": "ST1", "num": 9},
+            {"line": "FW", "pos": "ST2", "num": 11},
+            {"line": "MF", "pos": "LM", "num": 7},
+            {"line": "MF", "pos": "LCM", "num": 6},
+            {"line": "MF", "pos": "RCM", "num": 8},
+            {"line": "MF", "pos": "RM", "num": 10},
+            {"line": "DF", "pos": "LB", "num": 3},
+            {"line": "DF", "pos": "CB1", "num": 4},
+            {"line": "DF", "pos": "CB2", "num": 5},
+            {"line": "DF", "pos": "RB", "num": 2},
+            {"line": "GK", "pos": "GK", "num": 1}
+        ],
+        "4-2-3-1": [
+            {"line": "FW", "pos": "ST", "num": 9},
+            {"line": "AM", "pos": "LAM", "num": 11},
+            {"line": "AM", "pos": "CAM", "num": 10},
+            {"line": "AM", "pos": "RAM", "num": 7},
+            {"line": "DM", "pos": "LDM", "num": 6},
+            {"line": "DM", "pos": "RDM", "num": 8},
+            {"line": "DF", "pos": "LB", "num": 3},
+            {"line": "DF", "pos": "CB1", "num": 4},
+            {"line": "DF", "pos": "CB2", "num": 5},
+            {"line": "DF", "pos": "RB", "num": 2},
+            {"line": "GK", "pos": "GK", "num": 1}
+        ],
+        "3-5-2": [
+            {"line": "FW", "pos": "ST1", "num": 9},
+            {"line": "FW", "pos": "ST2", "num": 11},
+            {"line": "MF", "pos": "LWB", "num": 3},
+            {"line": "MF", "pos": "LCM", "num": 8},
+            {"line": "MF", "pos": "CDM", "num": 6},
+            {"line": "MF", "pos": "RCM", "num": 10},
+            {"line": "MF", "pos": "RWB", "num": 2},
+            {"line": "DF", "pos": "CB1", "num": 4},
+            {"line": "DF", "pos": "CB2", "num": 5},
+            {"line": "DF", "pos": "CB3", "num": 14},
+            {"line": "GK", "pos": "GK", "num": 1}
+        ]
     }
 
-    active_slots = formation_slots.get(form_home, formation_slots["4-3-3"])
-    player_mapping = {}
+    pins = formation_configs.get(form_home, formation_configs["4-3-3"])
 
-    # 피치 내부에서 라인별 핀 배치 시뮬레이션
-    for line_name, positions in active_slots.items():
-        st.markdown(f"<div style='color: #a3e4d7; font-weight: bold; margin: 12px 0 6px 0; font-size: 13px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);'>📍 {line_name} 라인 포진</div>", unsafe_allow_html=True)
-        cols = st.columns(len(positions))
-        for i, pos_name in enumerate(positions):
-            with cols[i]:
+    if "player_numbers" not in st.session_state:
+        st.session_state.player_numbers = {}
+
+    for p in pins:
+        key_name = f"{p['line']}_{p['pos']}"
+        if key_name not in st.session_state.player_numbers:
+            st.session_state.player_numbers[key_name] = p['num']
+
+    # ====================================================
+    # ⚽ [전체 통짜 잔디밭 그래픽 피치 판 UI]
+    # ====================================================
+    st.markdown(f"### ⚽ [{home_team}] {form_home} 잔디 전술판")
+    
+    pitch_html = f"""
+    <div style="
+        background: radial-gradient(circle, #2e8b57 0%, #1b4d3e 100%);
+        border: 4px solid #ffffff;
+        border-radius: 18px;
+        padding: 25px 15px;
+        box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.3);
+        margin-bottom: 25px;
+    ">
+        <div style="text-align: center; color: #ffeb3b; font-weight: 900; font-size: 20px; letter-spacing: 2px; margin-bottom: 15px; text-shadow: 2px 2px 4px #000;">
+            🏟️ {home_team} FIELD PITCH ({form_home})
+        </div>
+        <div style="border-bottom: 2px solid rgba(255,255,255,0.4); margin: 10px 0 20px 0;"></div>
+    """
+    st.markdown(pitch_html, unsafe_allow_html=True)
+
+    lines_order = list(dict.fromkeys([p['line'] for p in pins]))
+
+    for line in lines_order:
+        line_pins = [p for p in pins if p['line'] == line]
+        st.markdown(f"<div style='color:#a3e4d7; font-weight:bold; font-size:12px; margin-top:8px;'>📍 {line} LINE</div>", unsafe_allow_html=True)
+        cols = st.columns(len(line_pins))
+        for idx, p in enumerate(line_pins):
+            key_name = f"{p['line']}_{p['pos']}"
+            current_num = st.session_state.player_numbers.get(key_name, p['num'])
+            with cols[idx]:
                 st.markdown(f"""
-                <div class="pitch-marker">
-                    <span style="font-size:11px;">{pos_name}</span>
+                <div style="
+                    background: radial-gradient(circle, #ff5252 0%, #b71c1c 100%);
+                    color: white;
+                    border: 2.5px solid #ffffff;
+                    border-radius: 50%;
+                    width: 58px;
+                    height: 58px;
+                    margin: 0 auto 4px auto;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+                    font-weight: bold;
+                ">
+                    <span style="font-size: 10px; color: #ffeb3b;">{p['pos']}</span>
+                    <span style="font-size: 15px; line-height: 1;">{current_num}</span>
                 </div>
                 """, unsafe_allow_html=True)
-                num = st.number_input(f"{pos_name} 등번호", min_value=1, max_value=99, value=10+i, key=f"pitch_{line_name}_{i}", label_visibility="collapsed")
-                player_mapping[f"{line_name} - {pos_name}"] = num
 
-    st.markdown("</div>", unsafe_allow_html=True) # 피치 박스 닫기
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.divider()
 
     # ====================================================
-    # 🎯 2. 피치 위 핀(포지션) 터치 및 노트 연동
+    # 🎯 2. 피치 위 핀 선택 및 등번호/메모 작성 연동
     # ====================================================
-    st.markdown("### 🎯 2. 기록할 피치 핀(포지션) 터치 선택")
+    st.markdown("### 🎯 2. 피치 핀 터치 선택 및 관찰 노트 작성")
+
+    options_list = [f"{p['line']} - {p['pos']} (현재 {st.session_state.player_numbers.get(f'{p['line']}_{p['pos']}', p['num'])}번)" for p in pins]
     
-    selected_position_slot = st.selectbox(
-        "기록을 남길 포지션 핀 선택",
-        options=list(player_mapping.keys()),
-        format_func=lambda x: f"⚽ 피치 핀 [{x}] — 등번호 {player_mapping[x]}번"
-    )
+    selected_target = st.selectbox("📝 기록할 피치 핀 선택", options=options_list)
+    
+    selected_pos_key = selected_target.split(" (")[0].replace(" - ", "_")
+    selected_pos_label = selected_target.split(" (")[0]
+    
+    c_num1, c_num2 = st.columns([1, 2])
+    with c_num1:
+        new_back_num = st.number_input(
+            f"📍 {selected_pos_label} 실제 등번호 설정", 
+            min_value=1, max_value=99, 
+            value=st.session_state.player_numbers.get(selected_pos_key, 10),
+            key=f"input_{selected_pos_key}"
+        )
+        st.session_state.player_numbers[selected_pos_key] = new_back_num
 
-    selected_back_num = player_mapping[selected_position_slot]
-    position_short = selected_position_slot.split(" - ")[-1]
+    with c_num2:
+        st.info(f"💡 현재 **[{home_team}] {selected_pos_label} (등번호: {new_back_num}번)** 선수를 집중 기록 중입니다.")
 
-    st.info(f"📍 현재 피치에서 선택된 집중 관찰 대상: **[{home_team}] {selected_position_slot} (등번호: {selected_back_num}번)**")
-
-    # 역량 태그 선택 영역
     col_p1, col_p2 = st.columns(2)
     with col_p1:
         height_tag = st.multiselect("📐 체형 및 신장", ["170대", "180초반", "180중반", "180후반", "190이상", "단단함", "비율좋음", "피지컬우수"], default=["180중반", "비율좋음"])
@@ -443,39 +529,26 @@ if menu == "📋 실시간 전술판 & 터치 노트":
     with col_s2:
         tech_tag = st.multiselect("⚽ 공격 / 테크닉", ["첫터치부드러움", "탈압박우수", "전환패스우수", "양발자유자재", "골결정력우수"])
 
-    with st.expander("🧠 [고급 평가] 전환, 스캐닝, 압박 대처, 멘탈 성향 세부 체크"):
-        ca1, ca2 = st.columns(2)
-        with ca1:
-            transition_tag = st.multiselect("🔄 공수 전환", ["수비전환 즉각적", "역습판단 빠름", "수비참여 부족", "템포 지연"])
-            scanning_tag = st.multiselect("👀 인지 및 판단 (스캐닝)", ["주변 확인(스캐닝) 우수", "터치 전 다음 플레이 결정", "볼을 오래 끌어 템포 죽임"])
-        with ca2:
-            pressure_tag = st.multiselect("🧗 압박 대처 & 멘탈", ["강압박 속 침착함 유지", "기복 없이 안정적", "콜사운드 명확/리더십", "흥분/파울 성향 있음"])
-
     verdict = st.radio("🔥 현장 관찰 등급", ["🔥 A급 (즉시 관찰/계약 검토)", "👀 B급 (지속 관찰 필요)", "C급 (보통)", "미달"], horizontal=True)
     detail_memo = st.text_input("📝 추가 한줄 자유 메모", placeholder="예: 전반 20분 상대 CF 공중볼 완벽 제압")
 
-    all_tags = height_tag + [f"스피드:{speed_tag}"] + def_tag + tech_tag + transition_tag + scanning_tag + pressure_tag
+    all_tags = height_tag + [f"스피드:{speed_tag}"] + def_tag + tech_tag
 
     st.divider()
 
-    if st.button("💾 구글 시트에 피치 핀 메모 임시 저장", type="primary", use_container_width=True):
-        temp_player_name = f"[{home_team}] {selected_back_num}번"
-        pros_summary = f"[체형/특징] {', '.join(all_tags)}"
-        overall_summary = f"상대팀: vs {opponent_team} | 포메이션: {form_home} ({selected_position_slot}) | 관찰등급: {verdict}"
+    if st.button("💾 구글 시트에 현장 작전판 메모 저장", type="primary", use_container_width=True):
+        temp_player_name = f"[{home_team}] {new_back_num}번"
+        pros_summary = f"[특징] {', '.join(all_tags)}"
+        overall_summary = f"상대: vs {opponent_team} | 포메이션: {form_home} ({selected_pos_label}) | 관찰등급: {verdict}"
         if detail_memo:
             overall_summary += f" | 메모: {detail_memo}"
 
         new_field_data = {
             "선수명": temp_player_name,
             "소속팀": home_team,
-            "등번호": str(selected_back_num),
-            "포지션": position_short,
-            "생년월일": "",
-            "만 나이": "",
-            "연 나이": "",
-            "주발": "",
-            "신장(cm)": "",
-            "체중(kg)": "",
+            "등번호": str(new_back_num),
+            "포지션": selected_pos_label.split("_")[-1],
+            "생년월일": "", "만 나이": "", "연 나이": "", "주발": "", "신장(cm)": "", "체중(kg)": "",
             "진행 상태": "현장 관찰 메모 (임시)",
             "장점/특기": pros_summary,
             "보완점/단점": "",
@@ -483,10 +556,10 @@ if menu == "📋 실시간 전술판 & 터치 노트":
             "작성일자": datetime.today().strftime('%Y-%m-%d')
         }
 
-        with st.spinner("구글 시트에 피치 핀 메모를 기록하는 중..."):
+        with st.spinner("구글 시트에 메모를 기록하는 중..."):
             updated_df = pd.DataFrame([new_field_data]) if df.empty else pd.concat([df, pd.DataFrame([new_field_data])], ignore_index=True)
             if save_data_to_sheet(updated_df):
-                st.success(f"🎉 [{home_team} {selected_back_num}번] 피치 핀 메모가 구글 시트에 안전하게 임시 저장되었습니다!")
+                st.success(f"🎉 [{home_team} {new_back_num}번] 피치 메모가 구글 시트에 저장되었습니다!")
                 st.balloons()
 
 # ----------------------------------------------------
