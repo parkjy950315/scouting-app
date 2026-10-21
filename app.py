@@ -558,7 +558,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         home_numbers = render_team_interactive_grid(home_team, home_formation, "home")
     with pitch_col2:
         st.markdown("### ✈️ 어웨이팀 그라운드 및 등번호")
-        away_numbers = render_team_interactive_grid(home_team if 'home_team' in locals() else "", away_formation, "away")
+        away_numbers = render_team_interactive_grid(away_team, away_formation, "away")
 
     st.write("---")
 
@@ -677,11 +677,11 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (메모 추가 및 수정 기능 포함)
+# 2. 📂 경기 일지 조회 (선수별 집중 메모 + 총평 모두 이어서 추가/수정 가능)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음 및 추가 수정")
-    st.caption("작성된 현장 경기 일지를 조회하고, 하단에서 기존 메모에 내용을 이어서 추가하거나 수정할 수 있습니다.")
+    st.caption("작성된 현장 경기 일지를 조회하고, 하단에서 선수별 집중 관찰 메모와 총평을 이어서 수정하거나 추가할 수 있습니다.")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
@@ -831,40 +831,59 @@ elif menu == "📂 경기 일지 조회":
                             render_pitch_graphic_from_saved(a_team_name, away_form, away_nums)
 
                         st.markdown("---")
-                        st.markdown("**📝 현재 저장된 상세 관찰 기록 및 총평**")
+                        st.markdown("**📝 현재 저장된 상세 관찰 기록 및 선수별 메모**")
                         st.info(clean_content)
 
-                        # 💡 기존 메모에 이어서 수정 및 추가할 수 있는 폼 영역
+                        # 💡 선수별 집중 관찰 메모 및 총평을 모두 이어서 추가/수정할 수 있는 폼 영역
                         st.markdown("---")
-                        with st.expander("✏️ 이 경기 일지에 새로운 메모 추가 및 내용 수정하기", expanded=True):
-                            st.caption("기존 작성된 내용 아래에 새로운 관찰 내용이나 수정 사항을 이어서 작성할 수 있습니다.")
+                        with st.expander("✏️ 이 경기 일지의 선수별 메모 및 총평 이어서 추가 및 수정하기", expanded=True):
+                            st.caption("기존에 작성된 선수별 집중 관찰 메모와 총평 내용을 그대로 불러왔습니다. 아래에서 내용을 수정하거나 추가로 이어쓸 수 있습니다.")
                             
-                            # 기존 전체 총평 부분 추출
+                            # 기존 선수별 메모 및 총평 분리 추출
+                            existing_player_notes = ""
                             existing_general_memo = ""
-                            if "📝 [경기 전체 총평]\n" in raw_content:
-                                existing_general_memo = raw_content.split("📝 [경기 전체 총평]\n")[-1]
-                            else:
-                                existing_general_memo = raw_content
 
-                            updated_general_input = st.text_area(
-                                "총평 내용 수정 및 이어쓰기",
-                                value=existing_general_memo,
-                                key=f"edit_memo_textarea_{target_memo_idx}",
-                                height=180
+                            if "⭐ [선수별 집중 관찰 메모]" in raw_content:
+                                parts = raw_content.split("⭐ [선수별 집중 관찰 메모]")
+                                meta_and_teams = parts[0]
+                                rest_parts = parts[1].split("📝 [경기 전체 총평]\n")
+                                existing_player_notes = rest_parts[0].strip()
+                                existing_general_memo = rest_parts[1].strip() if len(rest_parts) > 1 else ""
+                            else:
+                                if "📝 [경기 전체 총평]\n" in raw_content:
+                                    existing_general_memo = raw_content.split("📝 [경기 전체 총평]\n")[-1]
+                                else:
+                                    existing_general_memo = raw_content
+
+                            edit_player_notes_input = st.text_area(
+                                "📌 선수별 집중 관찰 메모 수정 및 이어쓰기",
+                                value=existing_player_notes,
+                                key=f"edit_player_notes_{target_memo_idx}",
+                                height=150
                             )
 
-                            if st.button("💾 수정 내용 및 추가 메모 반영하기", type="primary", use_container_width=True, key=f"btn_save_memo_edit_{target_memo_idx}"):
+                            edit_general_input = st.text_area(
+                                "📋 경기 전체 총평 수정 및 이어쓰기",
+                                value=existing_general_memo,
+                                key=f"edit_general_memo_{target_memo_idx}",
+                                height=150
+                            )
+
+                            if st.button("💾 선수별 메모 및 총평 수정·추가 반영하기", type="primary", use_container_width=True, key=f"btn_save_all_memo_edit_{target_memo_idx}"):
                                 with st.spinner("구글 시트의 일지 내용을 업데이트하는 중..."):
-                                    # 메타데이터와 기존 선수별 메모는 그대로 보존하고 총평 부분만 업데이트
-                                    meta_part = raw_content.split("📝 [경기 전체 총평]")[0]
-                                    new_full_content = f"{meta_part}📝 [경기 전체 총평]\n{updated_general_input.strip()}"
+                                    meta_part = raw_content.split("⭐ [선수별 집중 관찰 메모]")[0] if "⭐ [선수별 집중 관찰 메모]" in raw_content else raw_content.split("📝 [경기 전체 총평]")[0]
+
+                                    player_notes_section = f"\n\n⭐ [선수별 집중 관찰 메모]\n{edit_player_notes_input.strip()}" if edit_player_notes_input.strip() else ""
+                                    general_section = f"\n\n📝 [경기 전체 총평]\n{edit_general_input.strip()}"
+
+                                    new_full_content = f"{meta_part}{player_notes_section}{general_section}"
 
                                     records = df.to_dict('records')
                                     records[target_memo_idx]["종합 평가"] = new_full_content
                                     updated_df = pd.DataFrame(records).astype(str)
 
                                     if save_data_to_sheet(updated_df):
-                                        st.success("🎉 경기 일지 메모가 성공적으로 수정·업데이트되었습니다!")
+                                        st.success("🎉 선수별 집중 관찰 메모와 총평이 성공적으로 수정·업데이트되었습니다!")
                                         st.rerun()
                 else:
                     st.info("💡 위 목록 표에서 조회하거나 수정할 **경기 일지 행을 클릭**하세요.")
