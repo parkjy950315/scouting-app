@@ -331,11 +331,11 @@ menu = st.sidebar.radio(
 )
 
 # ----------------------------------------------------
-# 1. 📋 현장 전술판 및 터치형 스카우팅 메모 (포메이션 연동형)
+# 1. 📋 현장 전술판 및 터치형 스카우팅 메모 (포메이션 및 핀 연동형)
 # ----------------------------------------------------
 if menu == "📋 실시간 전술판 & 터치 노트":
     st.header("🏟️ 실시간 그라운드 전술판 & 터치 스카우트 노트")
-    st.caption("※ 홈팀/어웨이팀의 선택한 포메이션 구조가 그라운드 위에 구현되며, 포지션별 등번호를 입력하고 선택하여 기록합니다.")
+    st.caption("※ 홈팀/어웨이팀 포메이션 구조가 반영된 축구장 그라운드 위에서 선수를 선택해 기록하세요.")
 
     st.markdown("### 🏟️ 1. 경기 정보 및 포메이션 설정")
     col_t1, col_t2 = st.columns(2)
@@ -353,44 +353,44 @@ if menu == "📋 실시간 전술판 & 터치 노트":
     current_formation = form_home if selected_view_team == home_team else form_away
 
     # ====================================================
-    # ⚽ 운동장(그라운드) 전술판 레이아웃 구현
+    # ⚽ [시각적 축구장 그라운드 & 포지션 핀 레이아웃]
     # ====================================================
     st.markdown(f"""
-    <div style="background-color: #1b4d3e; padding: 15px; border-radius: 12px; text-align: center; color: white; border: 2px solid #ffffff; margin-bottom: 15px;">
-        <h3 style="margin: 0; color: #ffeb3b;">⚽ {selected_view_team} 그라운드 전술판 ({current_formation}) ⚽</h3>
-        <p style="font-size: 13px; color: #d1e7dd; margin: 5px 0 0 0;">포메이션 라인업 위치에 맞게 등번호를 입력해 주세요.</p>
+    <div style="background-color: #1b4d3e; border: 3px solid #ffffff; padding: 20px; border-radius: 16px; text-align: center; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;">
+        <div style="border: 2px dashed rgba(255,255,255,0.4); border-radius: 10px; padding: 15px;">
+            <h3 style="margin: 0 0 10px 0; color: #ffeb3b; font-weight: 800;">⚽ {selected_view_team} 그라운드 전술판 ({current_formation})</h3>
+            <p style="font-size: 13px; color: #d1e7dd; margin: 0 0 15px 0;">아래 각 포지션 위치에 실제 선수의 <b>등번호</b>를 입력하고, 관찰할 포지션을 선택하세요.</p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 포메이션별 포지션 슬롯 동적 구성
+    # 포메이션별 포지션 슬롯 구성
     formation_slots = {
-        "4-3-3": {"FW": ["LW (좌측 윙)", "CF (원톱)", "RW (우측 윙)"], "MF": ["LCM (중앙 미드)", "CDM (수비형 미드)", "RCM (중앙 미드)"], "DF": ["LB (좌측 풀백)", "CB (중앙 수비)", "CB (중앙 수비)", "RB (우측 풀백)"], "GK": ["GK (골키퍼)"]},
-        "4-4-2": {"FW": ["ST (스트라이커)", "ST (스트라이커)"], "MF": ["LM (좌측 미드)", "LCM (중앙 미드)", "RCM (중앙 미드)", "RM (우측 미드)"], "DF": ["LB (좌측 풀백)", "CB (중앙 수비)", "CB (중앙 수비)", "RB (우측 풀백)"], "GK": ["GK (골키퍼)"]},
-        "4-2-3-1": {"FW": ["ST (원톱)"], "MF": ["LAM (공격 미드)", "CAM (공격 미드)", "RAM (공격 미드)", "LDM (수비형 미드)", "RDM (수비형 미드)"], "DF": ["LB (좌측 풀백)", "CB (중앙 수비)", "CB (중앙 수비)", "RB (우측 풀백)"], "GK": ["GK (골키퍼)"]},
-        "3-5-2": {"FW": ["ST (스트라이커)", "ST (스트라이커)"], "MF": ["LWB (윙백)", "LCM (미드필더)", "CDM (수비형 미드)", "RCM (미드필더)", "RWB (윙백)"], "DF": ["CB (좌측 스토퍼)", "CB (중앙 스위퍼)", "CB (우측 스토퍼)"], "GK": ["GK (골키퍼)"]}
+        "4-3-3": {"FW": ["LW", "CF", "RW"], "MF": ["LCM", "CDM", "RCM"], "DF": ["LB", "CB1", "CB2", "RB"], "GK": ["GK"]},
+        "4-4-2": {"FW": ["ST1", "ST2"], "MF": ["LM", "LCM", "RCM", "RM"], "DF": ["LB", "CB1", "CB2", "RB"], "GK": ["GK"]},
+        "4-2-3-1": {"FW": ["ST"], "MF": ["LAM", "CAM", "RAM", "LDM", "RDM"], "DF": ["LB", "CB1", "CB2", "RB"], "GK": ["GK"]},
+        "3-5-2": {"FW": ["ST1", "ST2"], "MF": ["LWB", "LCM", "CDM", "RCM", "RWB"], "DF": ["CB(L)", "CB(C)", "CB(R)"], "GK": ["GK"]}
     }
 
     active_slots = formation_slots.get(current_formation, formation_slots["4-3-3"])
-
-    # 그라운드 시각화 컨테이너 내부에 포지션별 등번호 입력 필드 배치
     player_mapping = {}
 
     with st.container():
-        st.markdown("##### ⚡ [FW] 공격진")
+        st.markdown("##### ⚡ [FW] 공격 라인")
         fw_cols = st.columns(len(active_slots["FW"]))
         for i, pos_name in enumerate(active_slots["FW"]):
             with fw_cols[i]:
                 num = st.number_input(pos_name, min_value=1, max_value=99, value=9+i, key=f"{selected_view_team}_fw_{i}")
                 player_mapping[f"FW - {pos_name}"] = num
 
-        st.markdown("##### ⚙️ [MF] 미드필더진")
+        st.markdown("##### ⚙️ [MF] 미드필더 라인")
         mf_cols = st.columns(len(active_slots["MF"]))
         for i, pos_name in enumerate(active_slots["MF"]):
             with mf_cols[i]:
                 num = st.number_input(pos_name, min_value=1, max_value=99, value=6+i, key=f"{selected_view_team}_mf_{i}")
                 player_mapping[f"MF - {pos_name}"] = num
 
-        st.markdown("##### 🛡️ [DF] 수비진")
+        st.markdown("##### 🛡️ [DF] 수비 라인")
         df_cols = st.columns(len(active_slots["DF"]))
         for i, pos_name in enumerate(active_slots["DF"]):
             with df_cols[i]:
@@ -406,20 +406,20 @@ if menu == "📋 실시간 전술판 & 터치 노트":
     st.divider()
 
     # ====================================================
-    # 📝 2. 그라운드에서 특정 선수 선택 및 역량 체크
+    # 🎯 2. 그라운드 핀 선택형 관찰 대상 지정
     # ====================================================
-    st.markdown("### 🎯 2. 관찰할 선수 선택 (터치 연동)")
+    st.markdown("### 🎯 2. 관찰할 포지션(선수 핀) 선택")
     
     selected_position_slot = st.selectbox(
-        "그라운드에서 관찰할 포지션/선수 선택",
+        "기록할 그라운드 위치(포지션) 선택",
         options=list(player_mapping.keys()),
-        format_func=lambda x: f"[{x}] (등번호: {player_mapping[x]}번)"
+        format_func=lambda x: f"📍 [{x}] — 등번호 {player_mapping[x]}번"
     )
 
     selected_back_num = player_mapping[selected_position_slot]
     position_short = selected_position_slot.split(" - ")[0]
 
-    st.info(f"📍 현재 집중 관찰 대상: **[{selected_view_team}] {selected_position_slot} (등번호: {selected_back_num}번)**")
+    st.info(f"📍 현재 집중 관찰 중인 선수: **[{selected_view_team}] {selected_position_slot} (등번호: {selected_back_num}번)**")
 
     # 역량 태그 선택 영역
     col_p1, col_p2 = st.columns(2)
