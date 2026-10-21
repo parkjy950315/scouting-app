@@ -40,13 +40,15 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 상단 여백 및 스타일 설정
+# 📱 PC & 모바일 최적화 스타일 설정 (모바일 세로 나열 방지 및 그라운드 컴팩트화)
 # ----------------------------------------------------
 st.markdown("""
     <style>
     .block-container {
-        padding-top: 3rem !important;
+        padding-top: 2.5rem !important;
         padding-bottom: 3rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
     }
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 2.5rem !important;
@@ -59,12 +61,12 @@ st.markdown("""
         cursor: pointer;
     }
     
-    /* ⚽ 화사하고 세련된 밝은 잔디 피치 그라운드 */
+    /* ⚽ 화사하고 세련된 잔디 피치 그라운드 */
     .match-soccer-pitch {
         background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%);
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 16px;
-        padding: 22px 14px;
+        padding: 16px 10px;
         box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1);
         margin-bottom: 15px;
     }
@@ -75,9 +77,9 @@ st.markdown("""
         color: white;
         border: 2px solid rgba(255, 255, 255, 0.9);
         border-radius: 50%;
-        width: 52px;
-        height: 52px;
-        margin: 0 auto 4px auto;
+        width: 44px;
+        height: 44px;
+        margin: 0 auto 2px auto;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -85,7 +87,29 @@ st.markdown("""
         box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
 
+    /* 📱 모바일 환경에서 st.columns가 세로로 깨지는 현상 강제 방지 및 컴팩트 정렬 */
     @media (max-width: 768px) {
+        div[data-testid="column"] {
+            width: unset !important;
+            flex: 1 !important;
+            min-width: 0 !important;
+        }
+        div[data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            gap: 4px !important;
+        }
+        .match-pitch-pin {
+            width: 36px !important;
+            height: 36px !important;
+        }
+        .match-pitch-pin span:nth-child(1) {
+            font-size: 7px !important;
+        }
+        .match-pitch-pin span:nth-child(2) {
+            font-size: 10px !important;
+        }
         [data-testid="stSidebar"] {
             min-width: 290px !important;
             max-width: 330px !important;
@@ -98,15 +122,10 @@ st.markdown("""
             padding: 14px 18px !important;
             font-size: 17px !important;
         }
-        .block-container {
-            padding-left: 1.2rem !important;
-            padding-right: 1.2rem !important;
-            padding-top: 2rem !important;
-        }
         h1 {
-            font-size: 23px !important;
-            margin-top: 10px !important;
-            margin-bottom: 20px !important;
+            font-size: 22px !important;
+            margin-top: 5px !important;
+            margin-bottom: 15px !important;
         }
     }
     @media (min-width: 769px) {
@@ -245,13 +264,6 @@ def save_data_to_sheet(df):
     except Exception as e:
         st.error(f"저장 중 오류 발생: {e}")
         return False
-
-def safe_int(val, default_val):
-    try:
-        cleaned = str(val).replace('.0', '').strip()
-        return int(cleaned) if cleaned.isdigit() else default_val
-    except:
-        return default_val
 
 def parse_team_info(team_str):
     if not team_str or pd.isna(team_str):
@@ -457,15 +469,15 @@ formation_layouts = {
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     st.markdown(f"""
     <div class="match-soccer-pitch">
-        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px;">
-            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 12px; font-weight: normal;">({formation_name})</span>
+        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 5px;">
+            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 11px; font-weight: normal;">({formation_name})</span>
         </div>
     """, unsafe_allow_html=True)
     
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     
     for row in layout:
-        st.markdown(f"<div style='color:#e2e8f0; font-weight:600; font-size:10px; letter-spacing: 1px; margin-bottom:4px; text-transform: uppercase;'>📍 {row['line']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='color:#e2e8f0; font-weight:600; font-size:9px; letter-spacing: 1px; margin-bottom:3px; text-transform: uppercase;'>📍 {row['line']}</div>", unsafe_allow_html=True)
         cols = st.columns(len(row['positions']))
         for idx, pos in enumerate(row['positions']):
             assigned_num = num_dict.get(pos, "")
@@ -474,8 +486,8 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
             with cols[idx]:
                 st.markdown(f"""
                 <div class="match-pitch-pin">
-                    <span style="font-size: 8px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
-                    <span style="font-size: 12px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
+                    <span style="font-size: 7px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
+                    <span style="font-size: 11px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
                 </div>
                 """, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
@@ -533,13 +545,13 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
         st.markdown(f"""
         <div class="match-soccer-pitch">
-            <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px;">
-                🏟️ {team_name} <span style="color: #cbd5e1; font-size: 12px; font-weight: normal;">({formation_name})</span>
+            <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 5px;">
+                🏟️ {team_name} <span style="color: #cbd5e1; font-size: 11px; font-weight: normal;">({formation_name})</span>
             </div>
         """, unsafe_allow_html=True)
         
         for row in layout:
-            st.markdown(f"<div style='color:#e2e8f0; font-weight:600; font-size:10px; letter-spacing: 1px; margin-bottom:4px; text-transform: uppercase;'>📍 {row['line']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color:#e2e8f0; font-weight:600; font-size:9px; letter-spacing: 1px; margin-bottom:3px; text-transform: uppercase;'>📍 {row['line']}</div>", unsafe_allow_html=True)
             cols = st.columns(len(row['positions']))
             for idx, pos in enumerate(row['positions']):
                 key_name = f"{prefix}_{pos}"
@@ -549,8 +561,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 with cols[idx]:
                     st.markdown(f"""
                     <div class="match-pitch-pin">
-                        <span style="font-size: 8px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
-                        <span style="font-size: 12px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
+                        <span style="font-size: 7px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
+                        <span style="font-size: 11px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
                     </div>
                     """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
@@ -876,7 +888,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 선수 등록 (신장/체중 레이아웃을 좌우 균형에 맞게 깔끔하게 정돈)
+# 3. 선수 등록
 # ----------------------------------------------------
 elif menu == "선수 등록":
     st.header("📋 신규 관찰 선수 등록")
@@ -902,7 +914,6 @@ elif menu == "선수 등록":
             foot = st.selectbox("주발", ["오른발", "왼발", "양발"])
             date = st.date_input("관찰/작성일자", value=datetime.today())
             
-            # ✨ 좌우 균형에 맞게 2개 열로 나란히 배치하여 외톨이 느낌 제거
             hw_col1, hw_col2 = st.columns(2)
             with hw_col1:
                 height_val = st.text_input("신장 (cm)", value="175", placeholder="예: 182")
