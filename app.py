@@ -40,15 +40,15 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 최적화 스타일 설정
+# 📱 PC & 모바일 최적화 스타일 설정 (키보드 간섭 및 스크롤 개선)
 # ----------------------------------------------------
 st.markdown("""
     <style>
     .block-container {
-        padding-top: 2.5rem !important;
-        padding-bottom: 3rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-top: 2rem !important;
+        padding-bottom: 4rem !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
     }
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 2.5rem !important;
@@ -61,6 +61,11 @@ st.markdown("""
         cursor: pointer;
     }
     
+    /* 모바일 입력창 컴팩트 디자인 */
+    input {
+        font-size: 16px !important;
+    }
+
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 290px !important;
@@ -70,23 +75,10 @@ st.markdown("""
             font-size: 18px !important;
             font-weight: 700 !important;
         }
-        [data-testid="stSidebar"] button {
-            padding: 14px 18px !important;
-            font-size: 17px !important;
-        }
         h1 {
-            font-size: 22px !important;
-            margin-top: 5px !important;
-            margin-bottom: 15px !important;
-        }
-    }
-    @media (min-width: 769px) {
-        [data-testid="stSidebar"] {
-            min-width: 260px;
-            max-width: 300px;
-        }
-        [data-testid="stSidebar"] .stRadio label p {
-            font-size: 15px !important;
+            font-size: 20px !important;
+            margin-top: 2px !important;
+            margin-bottom: 10px !important;
         }
     }
     </style>
@@ -106,9 +98,9 @@ POSITION_OPTIONS = ["GK", "CB", "LCB", "RCB", "LB", "RB", "MF", "LW", "RW", "CF"
 # ----------------------------------------------------
 def display_logo():
     logo_html = """
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 10px 0 20px 0; margin-bottom: 10px;">
-        <div style="color: #007bff; font-weight: 900; letter-spacing: 4px; font-size: 32px; font-family: sans-serif; line-height: 1.1;">SMC</div>
-        <div style="color: #6c757d; font-weight: 700; letter-spacing: 4px; font-size: 11px; font-family: sans-serif; margin-top: 5px;">SUNGMUN COMPANY</div>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 5px 0 15px 0; margin-bottom: 5px;">
+        <div style="color: #007bff; font-weight: 900; letter-spacing: 4px; font-size: 28px; font-family: sans-serif; line-height: 1.1;">SMC</div>
+        <div style="color: #6c757d; font-weight: 700; letter-spacing: 4px; font-size: 10px; font-family: sans-serif; margin-top: 3px;">SUNGMUN COMPANY</div>
     </div>
     """
     st.sidebar.markdown(logo_html, unsafe_allow_html=True)
@@ -430,36 +422,36 @@ formation_layouts = {
     ]
 }
 
-# ⚽ 포메이션별 라인 피치 렌더러 (LCB, RCB 적용)
-def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
+# ⚽ 피치 그래픽 렌더러 (입력된 등번호가 피치 위 빨간 원에 즉시 반영됨)
+def render_pitch_graphic_with_numbers(team_name, formation_name, num_dict):
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     
     rows_html = ""
     for row in layout:
-        rows_html += f"<div style='color:#e2e8f0; font-weight:600; font-size:8.5px; letter-spacing: 1px; margin-bottom:2px; text-transform: uppercase; text-align: center;'>📍 {row['line']}</div>"
-        rows_html += "<div style='display: flex; justify-content: center; gap: 5px; margin-bottom: 5px; flex-wrap: nowrap; width: 100%;'>"
+        rows_html += f"<div style='color:#e2e8f0; font-weight:600; font-size:8px; letter-spacing: 1px; margin-bottom:1px; text-transform: uppercase; text-align: center;'>{row['line']}</div>"
+        rows_html += "<div style='display: flex; justify-content: center; gap: 4px; margin-bottom: 4px; flex-wrap: nowrap; width: 100%;'>"
         for pos in row['positions']:
             assigned_num = num_dict.get(pos, "")
             display_num = assigned_num if assigned_num else "-"
             rows_html += f"""
-            <div style="background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%); color: white; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; width: 34px; height: 34px; min-width: 34px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.3);">
-                <span style="font-size: 6px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
-                <span style="font-size: 9.5px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
+            <div style="background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%); color: white; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; width: 32px; height: 32px; min-width: 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+                <span style="font-size: 5.5px; color: #fecaca; font-weight: 700; line-height: 1.0;">{pos}</span>
+                <span style="font-size: 9px; color: #ffffff; font-weight: 900; line-height: 1.0;">{display_num}</span>
             </div>
             """
         rows_html += "</div>"
 
     complete_html = f"""
-    <div style="background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 10px 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1); margin-bottom: 15px; width: 100%; box-sizing: border-box; font-family: sans-serif;">
-        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 11.5px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 3px;">
-            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 9.5px; font-weight: normal;">({formation_name})</span>
+    <div style="background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 14px; padding: 8px 4px; box-shadow: 0 6px 15px rgba(0,0,0,0.25); margin-bottom: 10px; width: 100%; box-sizing: border-box; font-family: sans-serif;">
+        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 2px;">
+            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 9px; font-weight: normal;">({formation_name})</span>
         </div>
         {rows_html}
     </div>
     """
     
     import streamlit.components.v1 as components
-    components.html(complete_html, height=410, scrolling=False)
+    components.html(complete_html, height=360, scrolling=False)
 
 display_logo()
 
@@ -484,45 +476,45 @@ menu = st.sidebar.radio("이동할 메뉴", [
 ])
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모
+# 1. 🏟️ 현장 경기 관찰 메모 (모바일 스크롤 & 입력 최적화 버전)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("포메이션 진형 모양 그대로 배치된 입력 칸을 터치하여 등번호를 바로 기입하세요.")
+    st.caption("포메이션 진형에 맞춰 등번호를 기입하면, 위쪽 피치(그라운드) 빨간 원에 즉시 반영됩니다.")
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
         match_date = st.date_input("경기 일자", value=datetime.today())
     with col_m2:
-        tournament_name = st.text_input("대회 이름", placeholder="예: 금석배 U18, 대통령배 등")
+        tournament_name = st.text_input("대회 이름", placeholder="예: 금석배 U18")
 
     st.write("---")
 
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.text_input("🏠 홈팀 명*", value="홈팀")
+        home_team = st.text_input("🏠 홈팀 명*", value="장훈고")
         home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="home_form")
     with col_t2:
-        away_team = st.text_input("✈️ 어웨이팀 명*", value="어웨이팀")
+        away_team = st.text_input("✈️ 어웨이팀 명*", value="상대팀")
         away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="away_form")
 
     st.write("---")
 
-    def render_team_interactive_grid(team_name, formation_name, prefix):
+    def render_team_compact_grid(team_name, formation_name, prefix):
         layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
         team_entered_numbers = {}
         
         all_positions = [pos for row in layout for pos in row['positions']]
         nums_dict = {pos: st.session_state.get(f"{prefix}_{pos}", "") for pos in all_positions}
 
-        # 1. 시각화 그라운드 출력
-        render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
+        # 1. 등번호가 실시간 반영되는 그라운드 시각화 상단 배치
+        render_pitch_graphic_with_numbers(team_name if team_name else "팀", formation_name, nums_dict)
 
-        # 2. 포메이션 형태 맞춤형 직접 입력 그리드
-        st.markdown(f"**⚡ {team_name} 포메이션 진형별 등번호 직접 입력**")
+        # 2. 스크롤을 최소화하기 위한 컴팩트 가로 배치 입력 그리드 (폰에서 키보드가 올라와도 조작 용이)
+        st.markdown(f"**⚡ [{team_name}] 포지션별 등번호 입력**")
         
         for row in layout:
-            st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 4px;'>{row['line']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size: 10px; font-weight: bold; color: #64748B; margin-top: 2px;'>{row['line']}</div>", unsafe_allow_html=True)
             cols = st.columns(len(row['positions']))
             for idx, pos in enumerate(row['positions']):
                 key_name = f"{prefix}_{pos}"
@@ -531,8 +523,10 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                         f"{pos}", 
                         value=st.session_state.get(key_name, ""), 
                         key=key_name, 
-                        placeholder="번호"
+                        placeholder=pos,
+                        label_visibility="collapsed"
                     )
+                    st.markdown(f"<p style='text-align:center; font-size:10px; color:#475569; margin-top:-10px;'>{pos}</p>", unsafe_allow_html=True)
                     if val.strip():
                         team_entered_numbers[pos] = val.strip()
 
@@ -541,13 +535,13 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
-        home_numbers = render_team_interactive_grid(home_team if home_team else "홈팀", home_formation, "home")
+        home_numbers = render_team_compact_grid(home_team, home_formation, "home")
     with pitch_col2:
-        away_numbers = render_team_interactive_grid(away_team if away_team else "어웨이팀", away_formation, "away")
+        away_numbers = render_team_compact_grid(away_team, away_formation, "away")
 
     st.write("---")
 
-    st.subheader("⭐ 눈에 띈 선수별 집중 메모")
+    st.subheader("⭐ 눈에 띤 선수별 집중 메모")
     st.caption("위에서 등번호가 기입된 선수들 중 메모를 남기고 싶은 선수를 선택하세요.")
 
     active_players = []
@@ -578,7 +572,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     value=st.session_state.get(memo_key, ""),
                     placeholder="장점, 플레이 스타일, 특이사항 등을 적어주세요...",
                     key=memo_key,
-                    height=100
+                    height=90
                 )
                 if player_note.strip():
                     player_specific_memos[player_label] = player_note.strip()
@@ -589,9 +583,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     st.subheader("📋 경기 전체 총평 및 핵심 메모")
     general_memo = st.text_area(
         "경기 전체 흐름 및 총평", 
-        placeholder="[예시]\n- 전반전 탐색전 이후 후반 난타전 양상\n- 양팀 전술적 움직임 및 세트피스 분석 등",
+        placeholder="[예시]\n- 전반전 탐색전 이후 후반 난타전 양상\n- 양팀 전술적 움직임 분석 등",
         key="general_match_memo_input",
-        height=140
+        height=120
     )
 
     st.write("")
@@ -666,7 +660,7 @@ elif menu == "📂 경기 일지 조회":
 
             sc_col1, sc_col2 = st.columns([3, 1])
             with sc_col1:
-                search_query = st.text_input("🔍 검색어 입력 (팀명, 대회명, 날짜 등)", placeholder="예: 안산, 금석배, 2026-03 등", key="memo_search_box")
+                search_query = st.text_input("🔍 검색어 입력 (팀명, 대회명, 날짜 등)", placeholder="예: 안산, 금석배 등", key="memo_search_box")
             with sc_col2:
                 available_months = ["전체"]
                 if "작성일자" in memo_df_sorted.columns:
@@ -795,9 +789,9 @@ elif menu == "📂 경기 일지 조회":
                             a_team_name = parts[1].replace(" (어웨이)", "").strip()
 
                         with p_col1:
-                            render_pitch_graphic_from_saved(h_team_name, home_form, home_nums)
+                            render_pitch_graphic_with_numbers(h_team_name, home_form, home_nums)
                         with p_col2:
-                            render_pitch_graphic_from_saved(a_team_name, away_form, away_nums)
+                            render_pitch_graphic_with_numbers(a_team_name, away_form, away_nums)
 
                         st.markdown("---")
                         st.markdown("**📝 상세 관찰 기록 및 총평**")
@@ -1021,9 +1015,6 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                                       border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%;">
                                 📄 관찰일지 PDF 다운로드
                             </a>
-                            <span style="font-size: 11px; color: #64748B; text-align: center; margin-top: 5px;">
-                                💡 모바일에서 새 창이 열리지 않고 안전하게 파일로 저장됩니다.
-                            </span>
                         </div>
                         """
                         st.markdown(dl_html, unsafe_allow_html=True)
