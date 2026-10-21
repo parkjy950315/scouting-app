@@ -488,7 +488,7 @@ menu = st.sidebar.radio("이동할 메뉴", [
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("상단에서 등번호를 입력할 포지션을 직접 골라 빠르고 간편하게 등번호를 기입하세요.")
+    st.caption("포메이션 진형 모양 그대로 배치된 입력 칸을 터치하여 등번호를 바로 기입하세요.")
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
@@ -508,45 +508,42 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    def render_team_quick_input_pitch(team_name, formation_name, prefix):
+    def render_team_interactive_grid(team_name, formation_name, prefix):
         layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
-        all_positions = [pos for row in layout for pos in row['positions']]
+        team_entered_numbers = {}
         
-        # 세션 상태에 저장된 등번호 딕셔너리 가져오기
+        all_positions = [pos for row in layout for pos in row['positions']]
         nums_dict = {pos: st.session_state.get(f"{prefix}_{pos}", "") for pos in all_positions}
 
-        # 1. 시각화 그라운드 먼저 출력
+        # 1. 시각화 그라운드 출력
         render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
 
-        # 2. 모바일 친화적 '포지션 선택 후 빠른 입력' UI
-        st.markdown(f"**⚡ {team_name} 포지션별 등번호 간편 입력**")
+        # 2. 포메이션 형태 맞춤형 직접 입력 그리드
+        st.markdown(f"**⚡ {team_name} 포메이션 진형별 등번호 직접 입력**")
         
-        selected_pos_to_edit = st.selectbox(
-            f"등번호를 입력할 포지션 선택 ({team_name})", 
-            options=all_positions, 
-            key=f"{prefix}_quick_select_pos"
-        )
-        
-        if selected_pos_to_edit:
-            current_val = st.session_state.get(f"{prefix}_{selected_pos_to_edit}", "")
-            new_entered_num = st.text_input(
-                f"[{selected_pos_to_edit}] 포지션 등번호 입력",
-                value=current_val,
-                key=f"{prefix}_{selected_pos_to_edit}_input_field",
-                placeholder="예: 7, 10 등"
-            )
-            if new_entered_num != current_val:
-                st.session_state[f"{prefix}_{selected_pos_to_edit}"] = new_entered_num.strip()
-                st.rerun()
+        for row in layout:
+            st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 4px;'>{row['line']}</div>", unsafe_allow_html=True)
+            cols = st.columns(len(row['positions']))
+            for idx, pos in enumerate(row['positions']):
+                key_name = f"{prefix}_{pos}"
+                with cols[idx]:
+                    val = st.text_input(
+                        f"{pos}", 
+                        value=st.session_state.get(key_name, ""), 
+                        key=key_name, 
+                        placeholder="번호"
+                    )
+                    if val.strip():
+                        team_entered_numbers[pos] = val.strip()
 
-        # 현재 입력된 모든 등번호 반환
-        return {pos: st.session_state.get(f"{prefix}_{pos}", "").strip() for pos in all_positions if st.session_state.get(f"{prefix}_{pos}", "").strip()}
+        st.write("")
+        return team_entered_numbers
 
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
-        home_numbers = render_team_quick_input_pitch(home_team if home_team else "홈팀", home_formation, "home")
+        home_numbers = render_team_interactive_grid(home_team if home_team else "홈팀", home_formation, "home")
     with pitch_col2:
-        away_numbers = render_team_quick_input_pitch(away_team if away_team else "어웨이팀", away_formation, "away")
+        away_numbers = render_team_interactive_grid(away_team if away_team else "어웨이팀", away_formation, "away")
 
     st.write("---")
 
@@ -586,7 +583,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 if player_note.strip():
                     player_specific_memos[player_label] = player_note.strip()
     else:
-        st.info("💡 위에서 포지션을 선택하고 등번호를 기입하면, 여기에 선수별 메모장 활성화 체크박스가 나타납니다.")
+        st.info("💡 포메이션 칸에 등번호를 기입하면, 여기에 선수별 메모장 활성화 체크박스가 나타납니다.")
 
     st.write("---")
     st.subheader("📋 경기 전체 총평 및 핵심 메모")
