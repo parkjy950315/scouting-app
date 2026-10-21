@@ -415,40 +415,52 @@ formation_layouts = {
         {"line": "MF LINE", "positions": ["LWB", "LCM", "CDM", "RCM", "RWB"]},
         {"line": "DF LINE", "positions": ["CB1", "CB2", "CB3"]},
         {"line": "GK LINE", "positions": ["GK"]}
+    ],
+    "5-3-2": [
+        {"line": "FW LINE", "positions": ["ST1", "ST2"]},
+        {"line": "MF LINE", "positions": ["LCM", "CM", "RCM"]},
+        {"line": "DF LINE", "positions": ["LWB", "LCB", "CB", "RCB", "RWB"]},
+        {"line": "GK LINE", "positions": ["GK"]}
+    ],
+    "5-4-1": [
+        {"line": "FW LINE", "positions": ["ST"]},
+        {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
+        {"line": "DF LINE", "positions": ["LWB", "LCB", "CB", "RCB", "RWB"]},
+        {"line": "GK LINE", "positions": ["GK"]}
     ]
 }
 
-# ⚽ 포메이션별 라인 수에 맞춰 높이가 자동 조절되는 완벽한 피치 렌더러
+# ⚽ 5백 포함 모든 포메이션이 절대 잘리지 않도록 최적화된 피치 렌더러
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     
     rows_html = ""
     for row in layout:
-        rows_html += f"<div style='color:#e2e8f0; font-weight:600; font-size:9px; letter-spacing: 1px; margin-bottom:2px; text-transform: uppercase; text-align: center;'>📍 {row['line']}</div>"
-        rows_html += "<div style='display: flex; justify-content: center; gap: 6px; margin-bottom: 6px; flex-wrap: nowrap; width: 100%;'>"
+        rows_html += f"<div style='color:#e2e8f0; font-weight:600; font-size:8.5px; letter-spacing: 1px; margin-bottom:2px; text-transform: uppercase; text-align: center;'>📍 {row['line']}</div>"
+        rows_html += "<div style='display: flex; justify-content: center; gap: 5px; margin-bottom: 5px; flex-wrap: nowrap; width: 100%;'>"
         for pos in row['positions']:
             assigned_num = num_dict.get(pos, "")
             display_num = assigned_num if assigned_num else "-"
             rows_html += f"""
-            <div style="background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%); color: white; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; width: 36px; height: 36px; min-width: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-                <span style="font-size: 6.5px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
-                <span style="font-size: 10px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
+            <div style="background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%); color: white; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; width: 34px; height: 34px; min-width: 34px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.3);">
+                <span style="font-size: 6px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
+                <span style="font-size: 9.5px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
             </div>
             """
         rows_html += "</div>"
 
     complete_html = f"""
-    <div style="background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 12px 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1); margin-bottom: 15px; width: 100%; box-sizing: border-box; font-family: sans-serif;">
-        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 4px;">
-            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 10px; font-weight: normal;">({formation_name})</span>
+    <div style="background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 10px 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1); margin-bottom: 15px; width: 100%; box-sizing: border-box; font-family: sans-serif;">
+        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 11.5px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 3px;">
+            🏟️ {team_name} <span style="color: #cbd5e1; font-size: 9.5px; font-weight: normal;">({formation_name})</span>
         </div>
         {rows_html}
     </div>
     """
     
     import streamlit.components.v1 as components
-    # 라인이 5개인 4-2-3-1 등도 여유 있게 모두 담기도록 높이를 420px로 넉넉하게 상향 조정
-    components.html(complete_html, height=420, scrolling=False)
+    # 5백 등 수비 라인업(5명 배치)이 포함된 포메이션도 넉넉하게 수용할 수 있도록 컴포넌트 높이 설정
+    components.html(complete_html, height=410, scrolling=False)
 
 display_logo()
 
@@ -490,10 +502,10 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     col_t1, col_t2 = st.columns(2)
     with col_t1:
         home_team = st.text_input("🏠 홈팀 명*", value="홈팀")
-        home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2"], key="home_form")
+        home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="home_form")
     with col_t2:
         away_team = st.text_input("✈️ 어웨이팀 명*", value="어웨이팀")
-        away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2"], key="away_form")
+        away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="away_form")
 
     st.write("---")
 
