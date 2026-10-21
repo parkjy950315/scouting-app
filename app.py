@@ -603,7 +603,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 home_num_str = ", ".join([f"{pos}:{num}" for pos, num in home_numbers.items() if num]) if home_numbers else "없음"
                 away_num_str = ", ".join([f"{pos}:{num}" for pos, num in away_numbers.items() if num]) if away_numbers else "없음"
 
-                # 📦 선수별 개개인 메모 데이터까지 완벽하게 JSON 패키지에 포함하여 저장
                 state_packet = {
                     "home_form": home_formation,
                     "home_nums": home_numbers,
@@ -652,7 +651,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (선수별 메모 및 등번호 이어서 수정 기능 완벽 지원)
+# 2. 📂 경기 일지 조회 (선수별 누적 메모 및 등번호 이어서 수정 기능 완벽 지원)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -757,7 +756,6 @@ elif menu == "📂 경기 일지 조회":
 
                         st.write("")
 
-                        # 📦 저장된 JSON 패키지 파싱 (등번호 및 선수별 메모 상태 복원용)
                         saved_packet = {}
                         try:
                             if "[SMC_JSON_DATA:" in raw_content:
@@ -796,14 +794,10 @@ elif menu == "📂 경기 일지 조회":
                         st.markdown("**📝 기존 저장된 상세 관찰 기록**")
                         st.info(clean_content)
 
-                        # ----------------------------------------------------
-                        # ✨ [핵심 개선] 선수별 개개인 메모 입력 칸들과 등번호 그리드를 완벽하게 대칭 배치하여 수정
-                        # ----------------------------------------------------
                         st.write("---")
                         with st.expander(f"✏️ [{match_title}] 등번호 마저 채우기 및 선수별 메모 이어서 수정하기", expanded=True):
                             st.caption("이전에 저장했던 대칭형 등번호 입력 칸들과 선수별 개개인 메모 상자들이 그대로 복원됩니다. 수정 후 아래 저장 버튼을 누르세요.")
 
-                            # ⚖️ 수정 화면에서의 홈팀/어웨이팀 설정 완벽한 대칭 배치
                             ed_head1, ed_head2 = st.columns(2)
                             with ed_head1:
                                 edit_ht_name = st.text_input("홈팀 명", value=h_team_name, key=f"edit_ht_{target_memo_idx}")
@@ -845,7 +839,6 @@ elif menu == "📂 경기 일지 조회":
                                 st.write("")
                                 return updated_team_nums
 
-                            # ⚖️ 대칭형 등번호 입력 그리드 배치
                             ed_col1, ed_col2 = st.columns(2)
                             with ed_col1:
                                 new_h_nums = render_editable_team_grid(edit_ht_name, edit_hf_sel, "h_edit", h_nums_saved)
@@ -866,7 +859,6 @@ elif menu == "📂 경기 일지 조회":
                             updated_player_specific_memos = {}
 
                             if active_edit_players:
-                                # 기존에 작성되어 있던 선수 메모 키들을 기본값으로 자동 선택되도록 설정
                                 default_selected_memos = [p for p in active_edit_players if any(p.split(' - ')[1] in k for k in saved_player_memos.keys())]
                                 if not default_selected_memos and saved_player_memos:
                                     default_selected_memos = list(saved_player_memos.keys())[:len(active_edit_players)]
@@ -882,7 +874,6 @@ elif menu == "📂 경기 일지 조회":
                                     st.markdown("---")
                                     for p_label in selected_edit_memo_players:
                                         st.markdown(f"**📌 {p_label} 개개인 관찰 기록**")
-                                        # 기존에 저장되어 있던 선수별 메모 내용을 텍스트 상자에 그대로 복원
                                         existing_note = saved_player_memos.get(p_label, "")
                                         p_memo_key = f"edit_memo_desc_{target_memo_idx}_{p_label}"
                                         
@@ -917,7 +908,6 @@ elif menu == "📂 경기 일지 조회":
                                         h_num_str = ", ".join([f"{pos}:{num}" for pos, num in new_h_nums.items() if num]) if new_h_nums else "없음"
                                         a_num_str = ", ".join([f"{pos}:{num}" for pos, num in new_a_nums.items() if num]) if new_a_nums else "없음"
 
-                                        # 새로운 패킷에 선수별 개개인 메모 상태까지 완벽히 포함
                                         new_packet = {
                                             "home_form": edit_hf_sel,
                                             "home_nums": new_h_nums,
@@ -933,9 +923,16 @@ elif menu == "📂 경기 일지 조회":
                                             for p_label, p_note in updated_player_specific_memos.items():
                                                 player_notes_formatted += f"- {p_label}:\n  {p_note}\n"
 
-                                        base_clean_text = clean_content
+                                        # ✨ [핵심 수정] 기존 본문을 지우지 않고, 새로운 내용이나 추가 메모를 기존 총평 아래에 자연스럽게 이어서 누적
+                                        # 메타데이터 라인과 [메모] 라인들을 제외한 순수 총평 본문 추출
+                                        old_clean_body = clean_content
+                                        if "📝 [경기 전체 총평]" in old_clean_body:
+                                            old_clean_body = old_clean_body.split("📝 [경기 전체 총평]")[1].strip()
+
                                         if additional_memo_input.strip():
-                                            base_clean_text = f"{base_clean_text}\n\n[{today_str} 추가 메모 기록]\n{additional_memo_input.strip()}"
+                                            combined_general_memo = f"{old_clean_body}\n\n[{today_str} 추가 기록]\n{additional_memo_input.strip()}"
+                                        else:
+                                            combined_general_memo = old_clean_body
 
                                         updated_overall_content = (
                                             f"📅 일자: {match_date_str} | 대회: {match_title.split(']')[0].replace('[', '') if ']' in match_title else ''}\n"
@@ -945,7 +942,7 @@ elif menu == "📂 경기 일지 조회":
                                             f"✈️ [어웨이팀: {edit_at_name}] 포메이션: {edit_af_sel}\n"
                                             f"- 포지션별 등번호: {a_num_str.replace(':', ': #')}"
                                             f"{player_notes_formatted}\n\n"
-                                            f"📝 [경기 전체 총평]\n{base_clean_text}"
+                                            f"📝 [경기 전체 총평]\n{combined_general_memo}"
                                         )
 
                                         df.loc[target_memo_idx, "선수명"] = f"[{match_title.split(']')[0].replace('[', '') if ']' in match_title else '대회'}] {edit_ht_name} vs {edit_at_name}"
@@ -953,7 +950,7 @@ elif menu == "📂 경기 일지 조회":
                                         df.loc[target_memo_idx, "종합 평가"] = updated_overall_content
                                         
                                         if save_data_to_sheet(df):
-                                            st.success("🎉 등번호와 선수별 개개인 메모가 성공적으로 수정·업데이트되었습니다!")
+                                            st.success("🎉 등번호와 선수별 개개인 메모가 성공적으로 이어서 업데이트되었습니다!")
                                             st.rerun()
 
                             with col_del_memo:
