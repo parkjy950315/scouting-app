@@ -69,7 +69,7 @@ st.markdown("""
     
     /* 🔴 고급스러운 글래스모피즘 포지션 핀 */
     .match-pitch-pin {
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) tag, rgba(185, 28, 28, 0.95));
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(185, 28, 28, 0.95));
         color: white;
         border: 1.5px solid rgba(255, 255, 255, 0.6);
         border-radius: 12px;
@@ -1156,7 +1156,7 @@ elif menu == "✏️ 선수 정보/일지 수정 및 삭제":
                             df.loc[target_idx, "연 나이"] = age_year_str
                             df.loc[target_idx, "주발"] = edit_foot
                             df.loc[target_idx, "신장(cm)"] = str(edit_height)
-                            df.loc[target_idx, "체중(kg)": str(edit_weight)
+                            df.loc[target_idx, "체중(kg)"] = str(edit_weight)
                             df.loc[target_idx, "종합 평가"] = edit_overall.strip()
                             df.loc[target_idx, "작성일자"] = str(edit_date)
 
