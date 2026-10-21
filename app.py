@@ -671,7 +671,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (기존 선수별 메모 및 포메이션 완벽 복원)
+# 2. 📂 경기 일지 조회 (선수별 기존 메모 완벽 복원 및 보존)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -791,7 +791,7 @@ elif menu == "📂 경기 일지 조회":
                         a_nums_saved = saved_packet.get("away_nums", {})
                         saved_player_memos = saved_packet.get("player_memos", {})
 
-                        # ✨ [핵심 보완] 만약 JSON에 선수별 메모가 없거나 누적된 텍스트만 있을 경우, 텍스트 본문에서 기존 선수별 메모를 안전하게 파싱하여 복원
+                        # 텍스트 파싱 보완 (구버전 데이터 대비)
                         if not saved_player_memos and "⭐ [선수별 집중 관찰 메모]" in raw_content:
                             try:
                                 memo_section = raw_content.split("⭐ [선수별 집중 관찰 메모]")[1].split("📝 [경기 전체 총평]")[0].strip()
@@ -805,7 +805,6 @@ elif menu == "📂 경기 일지 조회":
                             except Exception:
                                 pass
 
-                        # 포메이션 안전 추출
                         if not h_form_saved and "🏠 [홈팀" in raw_content:
                             try:
                                 h_sec = raw_content.split("🏠 [홈팀")[1].split("✈️ [어웨이팀")[0]
@@ -826,7 +825,6 @@ elif menu == "📂 경기 일지 조회":
                         if not a_form_saved:
                             a_form_saved = "4-3-3"
 
-                        # 등번호 복원 보완
                         if not h_nums_saved and "🏠 [홈팀" in raw_content:
                             try:
                                 home_section = raw_content.split("🏠 [홈팀")[1].split("✈️ [어웨이팀")[0]
@@ -907,7 +905,7 @@ elif menu == "📂 경기 일지 조회":
                                         k_name = f"mod_{prefix}_{target_memo_idx}_{pos}"
                                         default_val = prev_nums.get(pos, "")
                                         
-                                        if k_name not in st.session_state or not st.session_state[k_name]:
+                                        if k_name not in st.session_state:
                                             st.session_state[k_name] = default_val
 
                                         with cols[idx]:
@@ -944,9 +942,15 @@ elif menu == "📂 경기 일지 조회":
                             updated_player_specific_memos = {}
 
                             if active_edit_players:
-                                default_selected_memos = [p for p in active_edit_players if any(p.split(' - ')[1] in k for k in saved_player_memos.keys())]
+                                # 기존 메모가 있는 선수 라벨들 자동 체크
+                                default_selected_memos = []
+                                for act_p in active_edit_players:
+                                    pos_part = act_p.split(' - ')[1] if ' - ' in act_p else ""
+                                    if any(pos_part in k for k in saved_player_memos.keys()) or act_p in saved_player_memos:
+                                        default_selected_memos.append(act_p)
+
                                 if not default_selected_memos and saved_player_memos:
-                                    default_selected_memos = list(saved_player_memos.keys())[:len(active_edit_players)]
+                                    default_selected_memos = active_edit_players.copy()
 
                                 selected_edit_memo_players = st.multiselect(
                                     "관찰 메모를 작성/수정할 선수 선택",
@@ -959,17 +963,25 @@ elif menu == "📂 경기 일지 조회":
                                     st.markdown("---")
                                     for p_label in selected_edit_memo_players:
                                         st.markdown(f"**📌 {p_label} 개개인 관찰 기록**")
-                                        existing_note = saved_player_memos.get(p_label, "")
+                                        
+                                        # 기존에 저장된 해당 선수의 메모 찾기
+                                        existing_note = ""
+                                        for k, v in saved_player_memos.items():
+                                            if p_label in k or ((' - ' in p_label) and (p_label.split(' - ')[1] in k)):
+                                                existing_note = v
+                                                break
+                                        
                                         p_memo_key = f"edit_memo_desc_{target_memo_idx}_{p_label}"
                                         
-                                        if p_memo_key not in st.session_state or not st.session_state[p_memo_key]:
+                                        # ✨ session_state에 기존 메모 값을 확실하게 동기화 (기존 내용 유지 핵심)
+                                        if p_memo_key not in st.session_state:
                                             st.session_state[p_memo_key] = existing_note
 
                                         updated_p_note = st.text_area(
                                             f"{p_label} 세부 메모 수정",
-                                            value=st.session_state.get(p_memo_key, existing_note),
+                                            value=st.session_state[p_memo_key],
                                             key=p_memo_key,
-                                            height=90
+                                            height=100
                                         )
                                         if updated_p_note.strip():
                                             updated_player_specific_memos[p_label] = updated_p_note.strip()
@@ -1051,7 +1063,7 @@ elif menu == "📂 경기 일지 조회":
                                         df.loc[target_memo_idx, "종합 평가"] = updated_overall_content
                                         
                                         if save_data_to_sheet(df):
-                                            st.success("🎉 포메이션과 등번호가 성공적으로 업데이트되었습니다!")
+                                            st.success("🎉 포메이션과 개개인 관찰 메모가 성공적으로 저장되었습니다!")
                                             st.rerun()
 
                             with col_del_memo:
