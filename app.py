@@ -299,7 +299,7 @@ def generate_pdf_report(player_data):
 
 df = load_data()
 
-# 포메이션별 라인업 구조 데이터 명확하게 정의
+# 포메이션별 라인업 구조 데이터 명확하게 정의 (3-4-3 추가 완료)
 formation_layouts = {
     "4-3-3": [
         {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
@@ -318,6 +318,12 @@ formation_layouts = {
         {"line": "AM LINE", "positions": ["LAM", "CAM", "RAM"]},
         {"line": "DM LINE", "positions": ["LDM", "RDM"]},
         {"line": "DF LINE", "positions": ["LB", "CB1", "CB2", "RB"]},
+        {"line": "GK LINE", "positions": ["GK"]}
+    ],
+    "3-4-3": [
+        {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
+        {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
+        {"line": "DF LINE", "positions": ["CB1", "CB2", "CB3"]},
         {"line": "GK LINE", "positions": ["GK"]}
     ],
     "3-5-2": [
@@ -369,7 +375,7 @@ menu = st.sidebar.radio(
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (폼 제거로 실시간 연동)
+# 1. 🏟️ 현장 경기 관찰 메모 (3-4-3 포함 실시간 반영)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -386,16 +392,16 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     col_t1, col_t2 = st.columns(2)
     with col_t1:
         home_team = st.text_input("🏠 홈팀 명*", value="홈팀")
-        home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2"], key="home_form")
+        home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2"], key="home_form")
         home_lineup = st.text_area("홈팀 주요 라인업 / 등번호", placeholder="예: GK 1번 홍길동, DF 4번 김철수...")
     with col_t2:
         away_team = st.text_input("✈️ 어웨이팀 명*", value="어웨이팀")
-        away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2"], key="away_form")
+        away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2"], key="away_form")
         away_lineup = st.text_area("어웨이팀 주요 라인업 / 등번호", placeholder="예: FW 9번 이영호, MF 8번 박지성...")
 
     st.write("---")
 
-    # 🏟️ 실시간 포메이션 연동 잔디 피치 미리보기 (폼 밖이라 즉시 변경됨)
+    # 🏟️ 실시간 포메이션 연동 잔디 피치 미리보기
     st.subheader("🏟️ 선택한 포메이션별 그라운드 피치 실시간 미리보기")
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
