@@ -505,7 +505,7 @@ display_logo()
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 사이드바 설정 (불필요한 메뉴 제거 완료)
+# 사이드바 설정
 # ----------------------------------------------------
 st.sidebar.title("📌 메뉴")
 
@@ -896,7 +896,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 선수 등록 (원본 기능 유지)
+# 3. 선수 등록 (깔끔하게 정돈된 신장/체중 선택 폼 적용)
 # ----------------------------------------------------
 elif menu == "선수 등록":
     st.header("📋 신규 관찰 선수 등록")
@@ -923,11 +923,12 @@ elif menu == "선수 등록":
             date = st.date_input("관찰/작성일자", value=datetime.today())
             
             st.write("---")
-            height_options = [str(h) for h in range(150, 205)] + [""]
-            height_val = st.selectbox("신장 (cm)", options=height_options, index=25, placeholder="신장 선택")
+            # ✨ 빈 줄(공백) 없이 깔끔하게 값이 선택되도록 리스트 정리
+            height_options = [str(h) for h in range(150, 205)]
+            height_val = st.selectbox("신장 (cm)", options=height_options, index=25)
             
-            weight_options = [""] + [str(w) for w in range(50, 105)]
-            weight_val = st.selectbox("체중 (kg)", options=weight_options, index=0, placeholder="체중 선택")
+            weight_options = [str(w) for w in range(50, 105)]
+            weight_val = st.selectbox("체중 (kg)", options=weight_options, index=20)
 
         st.subheader("📝 관찰 리포트 / 첫 메모")
         pros = st.text_area("장점 및 주요 특기")
@@ -1157,11 +1158,11 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                         
                         h_options = [str(h) for h in range(150, 205)]
                         h_idx = h_options.index(str(cur_h)) if str(cur_h) in h_options else 25
-                        edit_height = st.selectbox("신장 (cm)", options=h_options + [""], index=h_idx, key=f"inline_edit_h_{target_idx}")
+                        edit_height = st.selectbox("신장 (cm)", options=h_options, index=h_idx, key=f"inline_edit_h_{target_idx}")
                         
                         w_options = [str(w) for w in range(50, 105)]
                         w_idx = w_options.index(str(cur_w)) if str(cur_w) in w_options else 20
-                        edit_weight = st.selectbox("체중 (kg)", options=[""] + w_options, index=w_idx + 1 if str(cur_w) in w_options else 0, key=f"inline_edit_w_{target_idx}")
+                        edit_weight = st.selectbox("체중 (kg)", options=w_options, index=w_idx, key=f"inline_edit_w_{target_idx}")
 
                     st.subheader("➕ 오늘 관찰한 내용 추가 입력 (누적 기록)")
                     new_pros = st.text_area("새 관찰 장점", key=f"inline_new_pros_{target_idx}")
