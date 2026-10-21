@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 최적화 스타일 설정 (세로 스크롤 및 고정 정렬)
+# 📱 PC & 모바일 최적화 스타일 설정
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -418,12 +418,12 @@ formation_layouts = {
     ]
 }
 
-# ⚽ 모바일/PC 모두에서 뭉그러지지 않고 깔끔하게 정렬되는 HTML 플렉스박스 피치 렌더러
+# ⚽ 모바일/PC 모두에서 뭉그러짐 없이 완벽하게 정렬되는 피치 렌더러
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     
     html_content = f"""
-    <div style="background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 18px 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1); margin-bottom: 15px;">
+    <div style="background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 18px 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1); margin-bottom: 15px; width: 100%; box-sizing: border-box;">
         <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px;">
             🏟️ {team_name} <span style="color: #cbd5e1; font-size: 11px; font-weight: normal;">({formation_name})</span>
         </div>
@@ -431,7 +431,7 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     
     for row in layout:
         html_content += f"<div style='color:#e2e8f0; font-weight:600; font-size:9px; letter-spacing: 1px; margin-bottom:4px; text-transform: uppercase;'>📍 {row['line']}</div>"
-        html_content += "<div style='display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; flex-wrap: nowrap;'>"
+        html_content += "<div style='display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; flex-wrap: nowrap; width: 100%;'>"
         for pos in row['positions']:
             assigned_num = num_dict.get(pos, "")
             display_num = assigned_num if assigned_num else "-"
