@@ -334,7 +334,6 @@ def generate_pdf_report_for_memo(row_data):
     table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=8.5, leading=11, alignment=0, textColor=colors.HexColor('#64748B'))
     table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=PRIMARY_COLOR)
 
-    # 💡 PDF 상단 제목에서도 불필요한 타임스탬프 문구 제거
     raw_match_title = row_data.get('선수명', '경기 기록')
     match_title = re.sub(r' \(타임:\d+\)', '', str(raw_match_title))
     match_date = row_data.get('작성일자', '-')
@@ -557,52 +556,54 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
+        st.markdown("### 🏠 홈팀 그라운드 및 등번호")
         home_numbers = render_team_interactive_grid(home_team, home_formation, "home")
     with pitch_col2:
+        st.markdown("### ✈️ 어웨이팀 그라운드 및 등번호")
         away_numbers = render_team_interactive_grid(away_team, away_formation, "away")
 
     st.write("---")
 
-    st.subheader("⭐ 눈에 띈 선수별 집중 메모")
-    st.caption("위에서 등번호가 기입된 선수들 중 메모를 남기고 싶은 선수를 선택하세요.")
+    # 💡 포메이션 시각화 기반 포지션별 직접 선택 메모 시스템
+    st.subheader("⭐ 시각화 포지션별 집중 관찰 메모")
+    st.caption("위 그라운드 포메이션에 등번호를 입력하면 아래에 해당 포지션들이 자동으로 활성화됩니다. 메모할 포지션을 체크하세요!")
 
-    active_players = []
     h_display_label = home_team if home_team else "홈팀"
     a_display_label = away_team if away_team else "어웨이팀"
-    
-    for pos, num in home_numbers.items():
-        if num:
-            active_players.append(f"[홈] {h_display_label} - {pos} (#{num})")
-    for pos, num in away_numbers.items():
-        if num:
-            active_players.append(f"[어웨이] {a_display_label} - {pos} (#{num})")
 
     player_specific_memos = {}
 
-    if active_players:
-        selected_players_to_memo = st.multiselect(
-            "관찰 메모를 작성할 선수 선택",
-            options=active_players,
-            placeholder="메모할 선수를 체크하세요 (복수 선택 가능)",
-            key="selected_memo_players_multiselect"
-        )
+    memo_col_h, memo_col_a = st.columns(2)
 
-        if selected_players_to_memo:
-            st.markdown("---")
-            for player_label in selected_players_to_memo:
-                st.markdown(f"**📌 {player_label} 관찰 기록**")
-                memo_key = f"memo_desc_{player_label}"
-                player_note = st.text_area(
-                    f"{player_label}에 대한 세부 메모",
-                    value=st.session_state.get(memo_key, ""),
-                    placeholder="장점, 플레이 스타일, 특이사항 등을 적어주세요...",
-                    key=memo_key,
-                    height=100
-                )
-                if player_note.strip():
-                    player_specific_memos[player_label] = player_note.strip()
-    else:
-        st.info("💡 포메이션 칸에 등번호를 기입하면, 여기에 선수별 메모장 활성화 체크박스가 나타납니다.")
+    with memo_col_h:
+        st.markdown(f"**🏠 홈팀 ({h_display_label}) 포지션별 메모**")
+        active_home_pos = {pos: num for pos, num in home_numbers.items() if num}
+        if active_home_pos:
+            for pos, num in active_home_pos.items():
+                chk_key = f"chk_memo_home_{pos}"
+                is_checked = st.checkbox(f"📌 [{pos}]번 (등번호 #{num}) 집중 메모", key=chk_key)
+                if is_checked:
+                    text_key = f"text_memo_home_{pos}"
+                    note_val = st.text_area(f"{pos} (# {num}) 세부 관찰 기록", placeholder=f"{pos} (# {num}) 선수의 플레이 장점, 특징 등을 적어주세요...", key=text_key, height=90)
+                    if note_val.strip():
+                        player_specific_memos[f"[홈] {h_display_label} - {pos} (#{num})"] = note_val.strip()
+        else:
+            st.info("💡 홈팀 포메이션 칸에 등번호를 입력해 주세요.")
+
+    with memo_col_a:
+        st.markdown(f"**✈️ 어웨이팀 ({a_display_label}) 포지션별 메모**")
+        active_away_pos = {pos: num for pos, num in away_numbers.items() if num}
+        if active_away_pos:
+            for pos, num in active_away_pos.items():
+                chk_key = f"chk_memo_away_{pos}"
+                is_checked = st.checkbox(f"📌 [{pos}]번 (등번호 #{num}) 집중 메모", key=chk_key)
+                if is_checked:
+                    text_key = f"text_memo_away_{pos}"
+                    note_val = st.text_area(f"{pos} (# {num}) 세부 관찰 기록", placeholder=f"{pos} (# {num}) 선수의 플레이 장점, 특징 등을 적어주세요...", key=text_key, height=90)
+                    if note_val.strip():
+                        player_specific_memos[f"[어웨이] {a_display_label} - {pos} (#{num})"] = note_val.strip()
+        else:
+            st.info("💡 어웨이팀 포메이션 칸에 등번호를 입력해 주세요.")
 
     st.write("---")
     st.subheader("📋 경기 전체 총평 및 핵심 메모")
@@ -636,7 +637,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
                 t_name_prefix = f"[{tournament_name}] " if tournament_name.strip() else ""
                 
-                # 내부적으로는 중복 방지용 고유 타임스탬프 결합 (데이터 무결성 유지)
                 timestamp_id = datetime.now().strftime('%H%M%S')
                 memo_player_name = f"{t_name_prefix}{home_team.strip()} vs {away_team.strip()} (타임:{timestamp_id})"
                 memo_team = f"{home_team.strip()} (홈) vs {away_team.strip()} (어웨이)"
@@ -731,8 +731,6 @@ elif menu == "📂 경기 일지 조회":
                 st.warning("🔍 검색 조건에 일치하는 경기 일지가 없습니다.")
             else:
                 display_memo_df = filtered_memo_df[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
-                
-                # 💡 화면 목록 표에서 타임스탬프 문구 완벽 제거
                 display_memo_df["선수명"] = display_memo_df["선수명"].apply(lambda x: re.sub(r' \(타임:\d+\)', '', str(x)))
                 display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
 
@@ -754,7 +752,6 @@ elif menu == "📂 경기 일지 조회":
                         target_memo_idx = match_indices[0]
                         p_memo = df.loc[target_memo_idx]
 
-                        # 💡 상세 타이틀에서도 타임스탬프 문구 제거
                         match_title = re.sub(r' \(타임:\d+\)', '', p_memo.get("선수명", "경기 기록"))
                         match_date_str = p_memo.get("작성일자", "-")
                         match_teams = p_memo.get("소속팀", "-")
