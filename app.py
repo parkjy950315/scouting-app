@@ -489,7 +489,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    # ⚖️ 홈팀과 어웨이팀 설정 (완벽한 좌우 대칭 구조)
     col_t1, col_t2 = st.columns(2)
     with col_t1:
         st.markdown("### 🏠 홈팀 설정")
@@ -538,7 +537,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         st.write("")
         return team_entered_numbers
 
-    # ⚖️ 피치 및 등번호 입력 칸 대칭 배치
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
         home_numbers = render_team_compact_grid(home_team, home_formation, "home")
@@ -651,7 +649,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (선수별 누적 메모 및 등번호 이어서 수정 기능 완벽 지원)
+# 2. 📂 경기 일지 조회 (등번호 및 선수별 메모 완벽 복원 및 이어서 수정)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -756,6 +754,7 @@ elif menu == "📂 경기 일지 조회":
 
                         st.write("")
 
+                        # 📦 저장된 JSON 패키지 파싱 (등번호 및 선수별 메모 상태 복원용)
                         saved_packet = {}
                         try:
                             if "[SMC_JSON_DATA:" in raw_content:
@@ -812,7 +811,8 @@ elif menu == "📂 경기 일지 조회":
 
                             st.write("---")
 
-                            def render_editable_team_grid(team_name, formation_name, prefix, prev_nums):
+                            # ✨ [핵심 수정] 수정 폼을 열 때 세션 상태에 기존 저장된 등번호 값을 주입하여 초기화 현상 방지
+                            def render_editable_team_grid_fixed(team_name, formation_name, prefix, prev_nums):
                                 layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
                                 updated_team_nums = {}
                                 st.markdown(f"**⚡ [{team_name if team_name else '팀'}] 포지션별 등번호 수정/입력**")
@@ -823,8 +823,11 @@ elif menu == "📂 경기 일지 조회":
                                     for idx, pos in enumerate(row['positions']):
                                         k_name = f"mod_{prefix}_{target_memo_idx}_{pos}"
                                         default_val = prev_nums.get(pos, "")
-                                        if k_name not in st.session_state:
+                                        
+                                        # 세션 상태가 없거나 비어있으면 기존 저장된 번호로 세팅
+                                        if k_name not in st.session_state or not st.session_state[k_name]:
                                             st.session_state[k_name] = default_val
+
                                         with cols[idx]:
                                             val = st.text_input(
                                                 f"{pos}", 
@@ -841,9 +844,9 @@ elif menu == "📂 경기 일지 조회":
 
                             ed_col1, ed_col2 = st.columns(2)
                             with ed_col1:
-                                new_h_nums = render_editable_team_grid(edit_ht_name, edit_hf_sel, "h_edit", h_nums_saved)
+                                new_h_nums = render_editable_team_grid_fixed(edit_ht_name, edit_hf_sel, "h_edit", h_nums_saved)
                             with ed_col2:
-                                new_a_nums = render_editable_team_grid(edit_at_name, edit_af_sel, "a_edit", a_nums_saved)
+                                new_a_nums = render_editable_team_grid_fixed(edit_at_name, edit_af_sel, "a_edit", a_nums_saved)
 
                             st.write("---")
                             st.subheader("⭐ 선수별 개개인 집중 관찰 메모 수정 및 추가")
@@ -877,7 +880,7 @@ elif menu == "📂 경기 일지 조회":
                                         existing_note = saved_player_memos.get(p_label, "")
                                         p_memo_key = f"edit_memo_desc_{target_memo_idx}_{p_label}"
                                         
-                                        if p_memo_key not in st.session_state:
+                                        if p_memo_key not in st.session_state or not st.session_state[p_memo_key]:
                                             st.session_state[p_memo_key] = existing_note
 
                                         updated_p_note = st.text_area(
@@ -923,8 +926,6 @@ elif menu == "📂 경기 일지 조회":
                                             for p_label, p_note in updated_player_specific_memos.items():
                                                 player_notes_formatted += f"- {p_label}:\n  {p_note}\n"
 
-                                        # ✨ [핵심 수정] 기존 본문을 지우지 않고, 새로운 내용이나 추가 메모를 기존 총평 아래에 자연스럽게 이어서 누적
-                                        # 메타데이터 라인과 [메모] 라인들을 제외한 순수 총평 본문 추출
                                         old_clean_body = clean_content
                                         if "📝 [경기 전체 총평]" in old_clean_body:
                                             old_clean_body = old_clean_body.split("📝 [경기 전체 총평]")[1].strip()
