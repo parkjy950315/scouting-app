@@ -619,7 +619,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (내부 탭 구조: 목록/조회 | 다중선택 일괄 삭제)
+# 2. 📂 경기 일지 조회
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 현장 경기 관찰 일지 모음")
@@ -788,7 +788,6 @@ elif menu == "📂 경기 일지 조회":
             display_del_df = memo_df_del[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
             display_del_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
 
-            # 💡 다중 선택 모드(multi-row)로 표 출력
             del_selection = st.dataframe(
                 display_del_df,
                 use_container_width=True,
@@ -807,13 +806,14 @@ elif menu == "📂 경기 일지 조회":
                     with st.spinner("구글 시트에서 선택된 일지들을 삭제하는 중..."):
                         indices_to_drop = []
                         for r_idx in selected_del_rows:
-                            selected_row_data = memo_df_del.iloc[r_idx]
-                            orig_indices = df[(df["선수명"] == selected_row_data["선수명"]) & 
-                                              (df["소속팀"] == selected_row_data["소속팀"]) & 
-                                              (df["작성일자"] == selected_row_data["작성일자"]) &
-                                              (df["진행 상태"] == "현장 관찰 메모 (임시)")].index
-                            if len(orig_indices) > 0:
-                                indices_to_drop.append(orig_indices[0])
+                            if r_idx < len(memo_df_del):
+                                selected_row_data = memo_df_del.iloc[r_idx]
+                                orig_indices = df[(df["선수명"] == selected_row_data["선수명"]) & 
+                                                  (df["소속팀"] == selected_row_data["소속팀"]) & 
+                                                  (df["작성일자"] == selected_row_data["작성일자"]) &
+                                                  (df["진행 상태"] == "현장 관찰 메모 (임시)")].index
+                                if len(orig_indices) > 0:
+                                    indices_to_drop.append(orig_indices[0])
 
                         if indices_to_drop:
                             df = df.drop(indices_to_drop).reset_index(drop=True)
