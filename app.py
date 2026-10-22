@@ -7,6 +7,12 @@ import os
 import base64
 from datetime import datetime
 
+# ----------------------------------------------------
+# 📌 세션 상태 초기화 (메뉴 선택 상태를 위젯 생성보다 먼저 정의)
+# ----------------------------------------------------
+if "menu_selection" not in st.session_state:
+    st.session_state["menu_selection"] = "🏟️ 현장 경기 관찰 메모"
+
 # 연관검색어 드롭다운을 위한 외부 라이브러리 (requirements.txt에 streamlit-searchbox 필요)
 try:
     from streamlit_searchbox import st_searchbox
@@ -667,11 +673,8 @@ display_logo()
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 사이드바 설정 (메뉴 선택 상태를 session_state로 관리)
+# 사이드바 설정 (라디오 버튼 생성)
 # ----------------------------------------------------
-if "menu_selection" not in st.session_state:
-    st.session_state["menu_selection"] = "🏟️ 현장 경기 관찰 메모"
-
 st.sidebar.title("📌 메뉴")
 
 if st.sidebar.button("🔄 앱 새로고침 (실시간 동기화)", use_container_width=True, type="secondary"):
@@ -1224,11 +1227,11 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (선택 시 정식 등록 연동 버튼 추가)
+# 3. 📂 경기관찰선수리스트 (선택 시 '선수등록' 연동 버튼 추가)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기관찰 선수 리스트")
-    st.caption("현장 경기 관찰 메모에서 직접 체크하고 세부 메모를 남긴 선수들의 누적 기록입니다. 표에서 **선수를 클릭**하면 상세 이력 확인 및 **[정식 선수 등록]**으로 바로 연결할 수 있습니다.")
+    st.caption("현장 경기 관찰 메모에서 직접 체크하고 세부 메모를 남긴 선수들의 누적 기록입니다. 표에서 **선수를 클릭**하면 상세 이력 확인 및 **[선수등록]**으로 바로 연결할 수 있습니다.")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
@@ -1369,13 +1372,13 @@ elif menu == "📂 경기관찰선수리스트":
 
                 st.write("---")
                 
-                # 🎯 [핵심 기능] 선택한 선수를 정식 선수 등록으로 연동하는 버튼 영역
+                # 🎯 [핵심 기능] 버튼 문구를 '선수등록'으로 변경하고 세션 값 세팅 후 즉시 rerun
                 reg_action_col1, reg_action_col2 = st.columns([3, 1])
                 with reg_action_col1:
                     st.markdown(f"### ⚽ [{p_team}] 등번호: {p_num}번 — 상세 관찰 이력")
                 with reg_action_col2:
                     st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
-                    if st.button("📋 이 선수를 정식 선수로 등록", type="primary", use_container_width=True, key="btn_go_register_player"):
+                    if st.button("📋 선수등록", type="primary", use_container_width=True, key="btn_go_register_player"):
                         st.session_state["prefill_team"] = p_team
                         st.session_state["prefill_back_num"] = p_num
                         st.session_state["menu_selection"] = "선수 등록"
@@ -1398,7 +1401,7 @@ elif menu == "📂 경기관찰선수리스트":
                         </div>
                         """, unsafe_allow_html=True)
             else:
-                st.info("💡 위 목록 표에서 상세 관찰 내용을 확인하거나 **정식 선수로 등록할 선수를 행 클릭**하세요.")
+                st.info("💡 위 목록 표에서 상세 관찰 내용을 확인하거나 **[선수등록]으로 연동할 선수를 행 클릭**하세요.")
 
 # ----------------------------------------------------
 # 4. 선수 등록 (연동된 팀명 및 등번호 자동 입력 반영)
@@ -1411,7 +1414,7 @@ elif menu == "선수 등록":
         st.balloons()
         st.session_state["reg_success_msg"] = None
 
-    # 세션 상태에 저장된 연동 데이터 가져오기
+    # 세션 상태에 저장된 연동 데이터 가져오기 (비워지면 기본값 유지)
     default_team_val = st.session_state.pop("prefill_team", "")
     default_num_val = st.session_state.pop("prefill_back_num", "")
 
