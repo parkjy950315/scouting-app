@@ -984,11 +984,13 @@ elif menu == "📂 경기 일지 조회":
 
                         st.write("---")
                         
-                        act_col1, act_col2 = st.columns([3, 1])
+                        # 📐 깔끔하게 정렬된 타이틀 및 다운로드 버튼 영역
+                        act_col1, act_col2 = st.columns([3.2, 1.8], gap="medium")
                         with act_col1:
                             st.markdown(f"### ⚽ {match_title}")
-                            st.markdown(f"**🗓️ 일자:** {match_date_str} | **대진:** {match_teams}")
+                            st.markdown(f"**🗓️ 일자:** {match_date_str} &nbsp;|&nbsp; **대진:** {match_teams}")
                         with act_col2:
+                            st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
                             try:
                                 pdf_bytes = generate_pdf_report_for_memo(p_memo)
                                 filename = f"{match_title.replace(' ', '_')}_경기일지.pdf"
@@ -996,8 +998,8 @@ elif menu == "📂 경기 일지 조회":
                                 dl_html = f"""
                                 <div style="display: flex; flex-direction: column; width: 100%;">
                                     <a href="data:application/octet-stream;base64,{b64}" download="{filename}" 
-                                       style="background-color: #2563EB; color: white; padding: 10px 16px; text-align: center; 
-                                              text-decoration: none; display: inline-block; font-size: 14px; font-weight: bold; 
+                                       style="background-color: #2563EB; color: white; padding: 10px 14px; text-align: center; 
+                                              text-decoration: none; display: inline-block; font-size: 13.5px; font-weight: bold; 
                                               border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%;">
                                         📄 일지 PDF 다운로드
                                     </a>
@@ -1665,13 +1667,13 @@ elif menu == "🗑️ 데이터 삭제":
             selected_names = [df.loc[idx, '선수명'] for idx in del_selected_rows]
             st.warning(f"⚠️ 선택된 선수 총 **{selected_count}명**: {', '.join(selected_names)}")
             
-            confirm_key = "confirm_delete_mode"
-            if confirm_key not in st.session_state:
-                st.session_state[confirm_key] = False
+            cf_key = "confirm_delete_mode"
+            if cf_key not in st.session_state:
+                st.session_state[cf_key] = False
             
-            if not st.session_state[confirm_key]:
+            if not st.session_state[cf_key]:
                 if st.button(f"🗑️ 선택한 {selected_count}명 데이터 영구 삭제하기", type="primary", use_container_width=True):
-                    st.session_state[confirm_key] = True
+                    st.session_state[cf_key] = True
                     st.rerun()
             else:
                 st.error(f"🚨 **정말로 총 {selected_count}명의 데이터를 삭제하시겠습니까?** 이 작업은 되돌릴 수 없습니다!")
@@ -1682,12 +1684,12 @@ elif menu == "🗑️ 데이터 삭제":
                         with st.spinner("구글 시트에서 선택된 데이터를 영구 삭제하는 중..."):
                             updated_df = df.drop(del_selected_rows).reset_index(drop=True)
                             if save_data_to_sheet(updated_df):
-                                st.session_state[confirm_key] = False
+                                st.session_state[cf_key] = False
                                 st.success(f"총 {selected_count}명의 선수 데이터가 성공적으로 영구 삭제되었습니다!")
                                 st.rerun()
                 with c_no:
                     if st.button("❌ 아니오 (취소)", use_container_width=True):
-                        st.session_state[confirm_key] = False
+                        st.session_state[cf_key] = False
                         st.rerun()
         else:
             if "confirm_delete_mode" in st.session_state:
