@@ -642,7 +642,7 @@ current_menu_index = menu_options.index(st.session_state["menu_selection"]) if s
 menu = st.sidebar.radio("이동할 메뉴", menu_options, index=current_menu_index, key="menu_selection")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (등록된 선수 자동 연동 기능 포함)
+# 1. 🏟️ 현장 경기 관찰 메모
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -807,7 +807,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     for p_label, p_note in player_specific_memos.items():
                         player_notes_formatted += f"- {p_label}:\n  {p_note}\n"
 
-                        # 🎯 [자동 연동 로직] 이미 정식 등록된 선수 중 소속팀과 등번호가 일치하면 관찰일지에 자동 누적
                         try:
                             parts_lbl = p_label.split(" | ")
                             target_team = parts_lbl[0].strip()
@@ -1123,11 +1122,11 @@ elif menu == "📂 경기 일지 조회":
                                 st.rerun()
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트
+# 3. 📂 경기관찰선수리스트 (정식 등록 여부 배지 및 버튼 표시 기능 추가)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기관찰 선수 리스트")
-    st.caption("현장 경기 관찰 메모에서 체크하고 세부 메모를 남긴 선수들의 누적 기록입니다. 선수를 클릭한 뒤 **[선수등록]**을 누르면 팀명, 등번호는 물론 **관찰 메모까지 종합평가 칸에 자동 연동**됩니다.")
+    st.caption("현장 경기 관찰 메모에서 체크하고 세부 메모를 남긴 선수들의 누적 기록입니다. 정식 등록된 선수는 안내 배지가 표시되며, 미등록 선수는 **[선수등록]**을 눌러 간편하게 등록할 수 있습니다.")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
@@ -1247,14 +1246,30 @@ elif menu == "📂 경기관찰선수리스트":
                 p_num = selected_player_summary["등번호"]
                 p_pos = selected_player_summary["포지션"]
 
+                # 🎯 [핵심 기능] 정식 선수DB에 이미 등록되어 있는지 확인
+                registered_match = df[(df["소속팀"].str.contains(p_team, na=False)) & 
+                                      (df["등번호"].str.strip() == p_num) & 
+                                      (df["진행 상태"] != "현장 관찰 메모 (임시)")]
+                
+                is_already_registered = not registered_match.empty
+                reg_player_name = registered_match.iloc[0]["선수명"] if is_already_registered else ""
+                reg_player_status = registered_match.iloc[0]["진행 상태"] if is_already_registered else ""
+
                 st.write("---")
                 
+                # 🎯 등록 여부에 따른 상단 배지 및 알림 안내
+                if is_already_registered:
+                    st.success(f"✅ **[정식 등록된 선수]** 이 선수는 이미 선수DB에 **'{reg_player_name}'** (상태: {reg_player_status})으로 등록되어 있습니다. (현장 메모는 해당 선수 일지에 자동 누적되었습니다!)")
+                else:
+                    st.info(f"💡 **[신규 미등록 선수]** 아직 선수DB에 등록되지 않은 선수입니다. 아래 **[선수등록]**을 눌러 정식 등록해 보세요.")
+
                 reg_action_col1, reg_action_col2 = st.columns([3, 1])
                 with reg_action_col1:
                     st.markdown(f"### ⚽ [{p_team}] 등번호: {p_num}번 — 상세 관찰 이력")
                 with reg_action_col2:
                     st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
-                    if st.button("📋 선수등록", type="primary", use_container_width=True, key="btn_go_register_player"):
+                    btn_label = "📋 정보 수정/확인" if is_already_registered else "📋 선수등록"
+                    if st.button(btn_label, type="primary", use_container_width=True, key="btn_go_register_player"):
                         player_history = obs_df[(obs_df["팀명"] == p_team) & (obs_df["등번호"] == p_num)].sort_values(by="경기날짜", ascending=False)
                         
                         compiled_memo_text = f"[현장 관찰 누적 기록 연동]\n- 포지션: {p_pos} / 등번호: {p_num}번\n"
@@ -1479,7 +1494,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                         cur_num = str(p.get("등번호", "")).strip()
                         back_num_options = [""] + [str(i) for i in range(1, 100)]
                         num_idx = back_num_options.index(cur_num) if cur_num in back_num_options else 0
-                        edit_back_num = st.selectbox("등번호", options=back_num_options, index=num_idx, key=f"inline_edit_num_{target_idx}")
+                        edit_back_num = st.selectbox("등번호", options=back_num_options, index=num_index, key=f"inline_edit_num_{target_idx}")
 
                     with col_e2:
                         default_birth = parse_date(p.get("생년월일"))
