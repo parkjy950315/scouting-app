@@ -131,7 +131,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 최적화 스타일 설정
+# 📱 PC & 모바일 반응형 최적화 스타일 설정 (UI 깨짐 방지 보완)
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -189,14 +189,13 @@ st.markdown("""
             font-size: 14px !important;
             word-break: keep-all !important;
         }
+        /* 모바일에서 열 배치가 강제로 깨지지 않도록 조정 */
         [data-testid="stHorizontalBlock"] {
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            gap: 4px !important;
+            flex-wrap: wrap !important;
         }
         [data-testid="stHorizontalBlock"] > div {
-            flex: 1 !important;
-            min-width: 0 !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
         }
     }
     @media (min-width: 769px) {
@@ -984,13 +983,13 @@ elif menu == "📂 경기 일지 조회":
 
                         st.write("---")
                         
-                        # 📐 깔끔하게 정렬된 타이틀 및 다운로드 버튼 영역
-                        act_col1, act_col2 = st.columns([3.2, 1.8], gap="medium")
+                        # 📐 모바일/PC 모두 텍스트 깨짐 없이 수평 정렬되도록 조정된 영역
+                        act_col1, act_col2 = st.columns([3, 1], gap="small")
                         with act_col1:
                             st.markdown(f"### ⚽ {match_title}")
-                            st.markdown(f"**🗓️ 일자:** {match_date_str} &nbsp;|&nbsp; **대진:** {match_teams}")
+                            st.markdown(f"**🗓️ 일자:** {match_date_str}  \n**대진:** {match_teams}")
                         with act_col2:
-                            st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+                            st.markdown("<div style='height: 2px;'></div>", unsafe_allow_html=True)
                             try:
                                 pdf_bytes = generate_pdf_report_for_memo(p_memo)
                                 filename = f"{match_title.replace(' ', '_')}_경기일지.pdf"
@@ -998,8 +997,8 @@ elif menu == "📂 경기 일지 조회":
                                 dl_html = f"""
                                 <div style="display: flex; flex-direction: column; width: 100%;">
                                     <a href="data:application/octet-stream;base64,{b64}" download="{filename}" 
-                                       style="background-color: #2563EB; color: white; padding: 10px 14px; text-align: center; 
-                                              text-decoration: none; display: inline-block; font-size: 13.5px; font-weight: bold; 
+                                       style="background-color: #2563EB; color: white; padding: 8px 10px; text-align: center; 
+                                              text-decoration: none; display: inline-block; font-size: 12.5px; font-weight: bold; 
                                               border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%;">
                                         📄 일지 PDF 다운로드
                                     </a>
