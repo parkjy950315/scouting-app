@@ -79,7 +79,7 @@ OFFICIAL_HIGH_SCHOOL_TEAMS = [
     # [제주 고등]
     "대기고", "오현고", "제주SK U18", "제주제일고", "제주중앙고", "서귀포고",
     
-    # 🎓 [전국 대학교 명단 추가]
+    # 🎓 [전국 대학교 명단]
     "사이버한국외국어대학교", "제주한라대학교", "고려대학교", "제주관광대학교", "동국대학교",
     "인천대학교", "순복음총신대학교", "동양대학교", "연세대학교", "예원예술대학교",
     "광운대학교", "경민대학교", "강서대학교", "김포대학교", "서울대학교",
@@ -131,7 +131,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 최적화 스타일 설정 (UI 깨짐 방지 보완)
+# 📱 PC & 모바일 반응형 최적화 스타일 설정
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -189,7 +189,6 @@ st.markdown("""
             font-size: 14px !important;
             word-break: keep-all !important;
         }
-        /* 모바일에서 열 배치가 강제로 깨지지 않도록 조정 */
         [data-testid="stHorizontalBlock"] {
             flex-wrap: wrap !important;
         }
@@ -886,7 +885,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     "포지션": "경기분석",
                     "생년월일": "", "만 나이": "", "연 나이": "", "주발": "", "신장(cm)": "", "체중(kg)": "",
                     "진행 상태": "현장 관찰 메모 (임시)",
-                    "장점/특기": f"대회: {tournament_name} / 홈: {home_formation} vs 어웨이: {away_formation}",
+                    "장점/특기": tournament_name.strip() if tournament_name.strip() else "일반 경기",
                     "보완점/단점": "",
                     "종합 평가": memo_overall,
                     "작성일자": str(match_date)
@@ -904,7 +903,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회
+# 2. 📂 경기 일지 조회 (표 레이아웃 깔끔 개편)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 경기일지리스트 및 추가수정")
@@ -954,9 +953,23 @@ elif menu == "📂 경기 일지 조회":
             if filtered_memo_df.empty:
                 st.warning("🔍 검색 조건에 일치하는 경기 일지가 없습니다.")
             else:
-                display_memo_df = filtered_memo_df[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
-                display_memo_df["선수명"] = display_memo_df["선수명"].apply(lambda x: re.sub(r' \(타임:\d+\)', '', str(x)))
-                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
+                # 🎯 중복 열 제거 및 대회명만 깔끔하게 정돈된 표 생성
+                display_memo_df = filtered_memo_df[["작성일자", "선수명", "장점/특기"]].copy()
+                
+                # 팀 대진명 깔끔하게 파싱 (대회명 대괄호 및 타임스탬프 제거)
+                display_memo_df["선수명"] = display_memo_df["선수명"].apply(lambda x: re.sub(r'\[.*?\]\s*', '', re.sub(r' \(타임:\d+\)', '', str(x))).strip())
+                
+                # 대회 정보열에서 '대회:' 글자나 포메이션 텍스트 지우고 깔끔한 대회명만 추출
+                def parse_clean_tournament(val):
+                    val_str = str(val)
+                    if "대회:" in val_str:
+                        val_str = val_str.split("대회:")[1].split("/")[0].strip()
+                    if not val_str or val_str.startswith("홈:"):
+                        return "-"
+                    return val_str
+
+                display_memo_df["장점/특기"] = display_memo_df["장점/특기"].apply(parse_clean_tournament)
+                display_memo_df.columns = ["작성일자", "경기 대진 (팀 VS 팀)", "대회명"]
 
                 memo_selection = st.dataframe(
                     display_memo_df,
@@ -983,7 +996,6 @@ elif menu == "📂 경기 일지 조회":
 
                         st.write("---")
                         
-                        # 📐 모바일/PC 모두 텍스트 깨짐 없이 수평 정렬되도록 조정된 영역
                         act_col1, act_col2 = st.columns([3, 1], gap="small")
                         with act_col1:
                             st.markdown(f"### ⚽ {match_title}")
@@ -1179,9 +1191,10 @@ elif menu == "📂 경기 일지 조회":
 
             memo_df_del = memo_df.sort_values(by="작성일자", ascending=False).reset_index(drop=True) if "작성일자" in memo_df.columns else memo_df.copy()
             
-            display_del_df = memo_df_del[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
-            display_del_df["선수명"] = display_del_df["선수명"].apply(lambda x: re.sub(r' \(타임:\d+\)', '', str(x)))
-            display_del_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
+            display_del_df = memo_df_del[["작성일자", "선수명", "장점/특기"]].copy()
+            display_del_df["선수명"] = display_del_df["선수명"].apply(lambda x: re.sub(r'\[.*?\]\s*', '', re.sub(r' \(타임:\d+\)', '', str(x))).strip())
+            display_del_df["장점/특기"] = display_del_df["장점/특기"].apply(parse_clean_tournament)
+            display_del_df.columns = ["작성일자", "경기 대진 (팀 VS 팀)", "대회명"]
 
             del_selection = st.dataframe(
                 display_del_df,
