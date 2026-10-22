@@ -20,7 +20,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# ⚽ 전국 고등학교 공식 팀 데이터베이스 (전달해주신 최신 목록)
+# ⚽ 전국 고등학교 공식 팀 데이터베이스
 # ----------------------------------------------------
 OFFICIAL_HIGH_SCHOOL_TEAMS = [
     # [서울]
@@ -657,7 +657,7 @@ menu = st.sidebar.radio("이동할 메뉴", [
 ])
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (팀명 검색 및 자동 필터링 기능 적용)
+# 1. 🏟️ 현장 경기 관찰 메모 (단일 검색창 + 실시간 유사팀 버튼 클릭 방식)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -672,32 +672,44 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     st.write("---")
 
     col_t1, col_t2 = st.columns(2)
-    
-    # 유사한 팀명 필터링을 위한 함수
-    def team_search_input(label, key_prefix):
-        typed_query = st.text_input(label, placeholder="팀명을 입력하세요 (예: 영등포)", key=f"{key_prefix}_query")
-        matched_teams = []
-        if typed_query.strip():
-            q = typed_query.strip().lower()
-            matched_teams = [t for t in OFFICIAL_HIGH_SCHOOL_TEAMS if q in t.lower()]
-            
-            # 검색어가 있는데 일치하는 팀이 리스트에 없으면 그대로 직접 입력한 것으로 처리
-            if not matched_teams:
-                matched_teams = [typed_query.strip()]
-        else:
-            matched_teams = OFFICIAL_HIGH_SCHOOL_TEAMS
 
-        selected_team = st.selectbox("선택 또는 유사 팀", options=matched_teams, key=f"{key_prefix}_select", label_visibility="collapsed")
-        return selected_team
+    # 🔍 실시간 단일 검색창 기반 팀명 선택 함수
+    def single_team_search_box(label, key_prefix):
+        selected_key = f"selected_team_{key_prefix}"
+        if selected_key not in st.session_state:
+            st.session_state[selected_key] = ""
+
+        input_val = st.text_input(
+            label, 
+            value=st.session_state[selected_key],
+            placeholder="팀명을 입력하세요 (예: 서울, 영등포)", 
+            key=f"input_{key_prefix}"
+        )
+        st.session_state[selected_key] = input_val
+
+        # 타이핑한 내용이 있을 경우, 실시간으로 포함된 팀들을 아래에 나열
+        if input_val.strip():
+            q = input_val.strip().lower()
+            matched_teams = [t for t in OFFICIAL_HIGH_SCHOOL_TEAMS if q in t.lower()]
+
+            if matched_teams and input_val not in matched_teams:
+                st.caption("💡 아래에서 팀을 선택하거나 계속 입력하세요:")
+                # 버튼들을 가로로 깔끔하게 나열
+                btn_cols = st.columns(min(len(matched_teams), 3))
+                for idx, team_candidate in enumerate(matched_teams[:6]): # 최대 6개까지 표시
+                    with btn_cols[idx % 3]:
+                        if st.button(f"⚽ {team_candidate}", key=f"btn_{key_prefix}_{team_candidate}_{idx}"):
+                            st.session_state[selected_key] = team_candidate
+                            st.rerun()
+
+        return st.session_state[selected_key]
 
     with col_t1:
-        st.markdown("🏠 **홈팀 명***")
-        home_team = team_search_input("🏠 홈팀 명*", "home_team")
+        home_team = single_team_search_box("🏠 홈팀 명*", "home")
         home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="home_form")
         
     with col_t2:
-        st.markdown("✈️ **어웨이팀 명***")
-        away_team = team_search_input("✈️ 어웨이팀 명*", "away_team")
+        away_team = single_team_search_box("✈️ 어웨이팀 명*", "away")
         away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="away_form")
 
     st.write("---")
@@ -872,6 +884,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                         if f"away_{p}" in st.session_state:
                             del st.session_state[f"away_{p}"]
                     
+                    st.session_state["selected_team_home"] = ""
+                    st.session_state["selected_team_away"] = ""
                     st.success("🎉 현장 경기 관찰 메모가 구글 시트에 성공적으로 저장되었습니다!")
                     st.balloons()
 
