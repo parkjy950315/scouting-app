@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 최적화 스타일 및 숫자패드 강제 제어 CSS
+# 📱 PC & 모바일 최적화 스타일 설정
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -61,12 +61,16 @@ st.markdown("""
         cursor: pointer;
     }
     
-    /* 등번호 입력란 모바일 터치 시 숫자 키패드 즉시 호출 */
-    .num-keypad-input input {
-        inputmode: numeric !important;
-        -webkit-user-select: auto !important;
+    /* number_input 증감(+/-) 버튼 감추기 및 깔끔한 터치 영역 확보 */
+    div[data-testid="stNumberInput"] button {
+        display: none !important;
     }
-    
+    div[data-testid="stNumberInput"] input {
+        text-align: center !important;
+        padding: 4px 6px !important;
+        font-weight: bold !important;
+    }
+
     /* 모바일 환경 레이아웃 밀림 방지 및 폰트 크기 최적화 */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
@@ -94,7 +98,7 @@ st.markdown("""
         [data-testid="stHorizontalBlock"] {
             flex-direction: row !important;
             flex-wrap: nowrap !important;
-            gap: 6px !important;
+            gap: 4px !important;
         }
         [data-testid="stHorizontalBlock"] > div {
             flex: 1 !important;
@@ -545,10 +549,11 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         nums_dict = {}
         for pos in valid_positions:
             key_name = f"{prefix}_{pos}"
-            val = st.session_state.get(key_name, "")
-            nums_dict[pos] = str(val) if val is not None else ""
-            if str(val).strip():
-                team_entered_numbers[pos] = str(val).strip()
+            val = st.session_state.get(key_name, None)
+            val_str = str(val) if val is not None else ""
+            nums_dict[pos] = val_str
+            if val_str.strip():
+                team_entered_numbers[pos] = val_str.strip()
 
         render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
 
@@ -561,22 +566,23 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             for idx, pos in enumerate(row['positions']):
                 key_name = f"{prefix}_{pos}"
                 with cols[idx]:
-                    # 💡 스마트폰 터치 시 즉각 숫자 키패드가 노출되도록 HTML 내장 스크립트와 st.text_input 조합
-                    st.markdown("<div class='num-keypad-input'>", unsafe_allow_html=True)
-                    val = st.text_input(
+                    # 💡 모바일 터치 시 '숫자 키패드'가 강제 활성화되도록 st.number_input 적용
+                    val_num = st.number_input(
                         f"{pos}", 
-                        value=st.session_state.get(key_name, ""), 
-                        key=key_name, 
+                        min_value=0, 
+                        max_value=99, 
+                        value=st.session_state.get(key_name, None), 
+                        key=key_name,
+                        step=1,
                         placeholder="번호"
                     )
-                    st.markdown("</div>", unsafe_allow_html=True)
-                    if str(val).strip():
-                        team_entered_numbers[pos] = str(val).strip()
+                    if val_num is not None:
+                        team_entered_numbers[pos] = str(int(val_num))
 
         st.write("")
         return team_entered_numbers
 
-    # 입력한 홈팀명, 어웨이팀명을 바탕으로 제목 자동 변경 (없을 경우 기본값 표기)
+    # 입력한 홈팀명, 어웨이팀명을 바탕으로 제목 자동 변경
     display_home_header = f"🏠 {home_team.strip()} 그라운드 및 등번호" if home_team.strip() else "🏠 홈팀 그라운드 및 등번호"
     display_away_header = f"✈️ {away_team.strip()} 그라운드 및 등번호" if away_team.strip() else "✈️ 어웨이팀 그라운드 및 등번호"
 
