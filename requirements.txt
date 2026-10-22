@@ -1,5 +1,5 @@
-streamlit
-pandas
-requests
-reportlab
+streamlit>=1.30.0
+pandas>=2.0.0
+requests>=2.0.0
+reportlab>=4.0.0
 streamlit-searchbox
