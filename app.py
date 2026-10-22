@@ -730,7 +730,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
     
-    # 💡 종합 메모 부제목 라벨 제거 및 입력창 placeholder 예시 변경
     st.subheader("📋 종합 메모")
     general_memo = st.text_area(
         "", 
@@ -827,7 +826,8 @@ elif menu == "📂 경기 일지 조회":
 
             sc_col1, sc_col2 = st.columns([3, 1])
             with sc_col1:
-                search_query = st.text_input("🔍 검색어 입력 (팀명, 대회명, 날짜 등)", placeholder="예: 안산, 금석배, 2026-03 등", key="memo_search_box")
+                # 💡 검색 라벨 및 placeholder 수정 반영
+                search_query = st.text_input("🔍 검색", placeholder="팀명, 대회명", key="memo_search_box")
             with sc_col2:
                 available_months = ["전체"]
                 if "작성일자" in memo_df_sorted.columns:
