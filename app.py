@@ -1220,7 +1220,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (팀명 정제 및 깔끔한 출력 반영)
+# 3. 📂 경기관찰선수리스트 (팀명, 포지션, 등번호 정확한 파싱 및 집계)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기관찰 선수 리스트")
@@ -1258,33 +1258,33 @@ elif menu == "📂 경기관찰선수리스트":
                         pos_part = ""
                         num_part = ""
                         
+                        # 🎯 [핵심 수정] header_line 형식 예: "[홈] 보인고 - [CB] 5번" 또는 "[어웨이] 보인고 - [CF] 9번"
                         if " - [" in header_line:
                             team_raw, rest = header_line.split(" - [", 1)
+                            # 팀명 정제 ([홈], [어웨이] 및 공백 제거)
                             team_name = re.sub(r'\[.*?\]', '', team_raw).strip()
+                            
                             if "]" in rest:
                                 pos_raw, num_raw = rest.split("]", 1)
                                 pos_part = pos_raw.strip()
                                 num_part = num_raw.strip().replace("번", "")
                         else:
-                            team_name = header_line
+                            team_name = re.sub(r'\[.*?\]', '', header_line).strip()
                             
-                        # 🧹 [핵심 수정] 팀명에 섞여 들어간 불필요한 메타 정보나 잔여 텍스트 정제
+                        # 추가 정제: 소속팀명에 혹시라도 딸려 들어온 괄호나 잔여 문자 제거
                         team_name = re.sub(r'\(.*?\)', '', team_name).strip()
-                        team_name = team_name.replace("[홈]", "").replace("[어웨이]", "").strip()
-                        if " vs " in team_name:
-                            # 만약 대진 전체가 팀명 칸에 들어갔을 경우 첫 번째 팀을 추출하거나 정리
-                            team_name = team_name.split(" vs ")[0].strip()
 
-                        obs_players_data.append({
-                            "연도": year_str,
-                            "경기날짜": match_date,
-                            "대회/경기명": match_title,
-                            "팀명": team_name,
-                            "포지션": pos_part,
-                            "등번호": num_part,
-                            "관찰메모": memo_content,
-                            "player_id": f"{team_name} | {num_part}번"
-                        })
+                        if team_name and num_part:
+                            obs_players_data.append({
+                                "연도": year_str,
+                                "경기날짜": match_date,
+                                "대회/경기명": match_title,
+                                "팀명": team_name,
+                                "포지션": pos_part,
+                                "등번호": num_part,
+                                "관찰메모": memo_content,
+                                "player_id": f"{team_name} | {num_part}번"
+                            })
                 except Exception:
                     pass
 
@@ -1293,7 +1293,7 @@ elif menu == "📂 경기관찰선수리스트":
         else:
             obs_df = pd.DataFrame(obs_players_data)
             
-            # 선수별 누적 관찰 횟수 및 최신 소속팀/포지션 집계
+            # 선수별 누적 관찰 횟수 및 팀명, 포지션, 등번호 집계
             summary_df = obs_df.groupby("player_id").agg(
                 팀명=("팀명", "first"),
                 포지션=("포지션", "first"),
@@ -1303,7 +1303,7 @@ elif menu == "📂 경기관찰선수리스트":
 
             f_col1, f_col2 = st.columns([2, 2])
             with f_col1:
-                search_p = st.text_input("🔍 선수 검색 (팀명, 등번호 등)", placeholder="예: 보인고, 7번 등", key="obs_p_search")
+                search_p = st.text_input("🔍 선수 검색 (팀명, 등번호 등)", placeholder="예: 보인고, 5번 등", key="obs_p_search")
             with f_col2:
                 st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
 
