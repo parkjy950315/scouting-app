@@ -374,7 +374,7 @@ def generate_pdf_report(player_data):
     weight_val = f"{player_data.get('체중(kg)')}kg" if player_data.get('체중(kg)') else "미입력"
     
     profile_data = [
-        [Paragraph("선수명", table_label), Paragraph(f"<b>{player_data.get('선수명', '-')}</b>", table_value), Paragraph("포지션 / 등번호", table_label), Paragraph(f"<b>{player_data.get('선수명', '-')} / {player_data.get('등번호', '-')}번</b>", table_value)],
+        [Paragraph("선수명", table_label), Paragraph(f"<b>{player_data.get('선수명', '-')}</b>", table_value), Paragraph("포지션 / 등번호", table_label), Paragraph(f"<b>{player_data.get('포지션', '-')} / {player_data.get('등번호', '-')}번</b>", table_value)],
         [Paragraph("현재 소속팀", table_label), Paragraph(f"{curr_team}", table_value), Paragraph("진행 상태", table_label), Paragraph(f"<font color='#2563EB'><b>{player_data.get('진행 상태', '-')}</b></font>", table_value)],
         [Paragraph("소속팀 이력", table_label), Paragraph(f"{full_team}", table_value), Paragraph("주발", table_label), Paragraph(f"{player_data.get('주발', '-')}", table_value)],
         [Paragraph("생년월일 (나이)", table_label), Paragraph(f"{player_data.get('생년월일', '-')} ({player_data.get('만 나이', '-')})", table_value), Paragraph("피지컬 (신장/체중)", table_label), Paragraph(f"{player_data.get('신장(cm)', '-')}cm / {weight_val}", table_value)],
@@ -1324,6 +1324,7 @@ elif menu == "📂 경기관찰선수리스트":
                             compiled_memo_text += f"\n📅 일자: {h_row['경기날짜']} | 대회/경기: {h_row['대회/경기명']}\n- 메모: {h_row['관찰메모']}\n"
 
                         if is_already_registered:
+                            # 🎯 [수정됨] 팀명과 등번호 모두 검색되도록 키워드 조합 전달
                             st.session_state["live_search_input"] = f"{p_team} {p_num}"
                             st.session_state["redirect_to_menu"] = "🔍 선수 검색 및 관찰일지 조회"
                         else:
@@ -1417,7 +1418,7 @@ elif menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 5. 🔍 선수 검색 및 관찰일지 조회
+# 5. 🔍 선수 검색 및 관찰일지 조회 (다중 키워드 검색 적용 완료)
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
     st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
@@ -1451,13 +1452,17 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
         
         filtered_df = official_df.copy()
         if search_term:
-            filtered_df = filtered_df[
-                filtered_df["선수명"].str.contains(search_term, case=False, na=False) | 
-                filtered_df["소속팀"].str.contains(search_term, case=False, na=False) |
-                filtered_df["등번호"].str.contains(search_term, case=False, na=False) |
-                filtered_df["장점/특기"].str.contains(search_term, case=False, na=False) |
-                filtered_df["종합 평가"].str.contains(search_term, case=False, na=False)
-            ]
+            # 🎯 [핵심 수정] 띄어쓰기 단위로 키워드를 쪼개어 각각 모두 포함하는지 검사 (예: "보인고 5" 입력 시 '보인고'와 '5' 둘 다 포함된 행 검색)
+            keywords = search_term.strip().split()
+            for kw in keywords:
+                filtered_df = filtered_df[
+                    filtered_df["선수명"].str.contains(kw, case=False, na=False) | 
+                    filtered_df["소속팀"].str.contains(kw, case=False, na=False) |
+                    filtered_df["등번호"].str.contains(kw, case=False, na=False) |
+                    filtered_df["장점/특기"].str.contains(kw, case=False, na=False) |
+                    filtered_df["종합 평가"].str.contains(kw, case=False, na=False)
+                ]
+
         if position_filter != "전체":
             filtered_df = filtered_df[filtered_df["포지션"].str.strip() == position_filter]
         if foot_filter != "전체":
