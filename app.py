@@ -628,7 +628,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    # 💡 요청하신 주 제목: "⚡ 등번호 입력"
+    # 💡 주 제목: "⚡ 등번호 입력"
     st.subheader("⚡ 등번호 입력")
 
     def render_team_interactive_grid(team_name, formation_name, prefix):
@@ -651,8 +651,14 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             if val_str.strip():
                 team_entered_numbers[pos] = val_str.strip()
 
+        # 1. 먼저 포메이션 시각화 그라운드를 렌더링
         render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
         
+        # 2. 그라운드 아래, 등번호 입력 칸 바로 위에 팀명 부제목 배치
+        display_sub_name = team_name.strip() if team_name.strip() else ("홈팀" if prefix == "home" else "어웨이팀")
+        prefix_icon = "🏠" if prefix == "home" else "✈️"
+        st.markdown(f"**{prefix_icon} {display_sub_name} 등번호 기입**")
+
         for row in layout:
             st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 6px; margin-bottom: 2px;'>{row['line']}</div>", unsafe_allow_html=True)
             cols = st.columns(len(row['positions']))
@@ -674,16 +680,10 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         st.write("")
         return team_entered_numbers
 
-    # 💡 포메이션 바로 위에 입력된 홈/어웨이팀 명 기입 부제목
-    display_home_sub = f"🏠 {home_team.strip()}" if home_team.strip() else "🏠 홈팀"
-    display_away_sub = f"✈️ {away_team.strip()}" if away_team.strip() else "✈️ 어웨이팀"
-
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
-        st.markdown(f"**{display_home_sub}**")
         home_numbers = render_team_interactive_grid(home_team, home_formation, "home")
     with pitch_col2:
-        st.markdown(f"**{display_away_sub}**")
         away_numbers = render_team_interactive_grid(away_team, away_formation, "away")
 
     st.write("---")
