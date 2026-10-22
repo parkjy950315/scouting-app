@@ -20,61 +20,56 @@ from reportlab.pdfbase.ttfonts import TTFont
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# ⚽ 전국 고등학교 공식 팀 데이터베이스 (자동완성용)
+# ⚽ 전국 고등학교 공식 팀 데이터베이스 (전달해주신 최신 목록)
 # ----------------------------------------------------
 OFFICIAL_HIGH_SCHOOL_TEAMS = [
     # [서울]
     "YC목동U18", "노원SKDFC U18", "대한FC U18", "더풋볼A U18", "동대부고",
-    "영등포선유FC U18", "인터서울U18", "장훈고", "JLFC U18", "NUFC U18", "JHLFC U18", "경신고",
+    "영등포선유FC U18", "인터서울U18", "장훈고", "JLFC U18", "NUFC U18", "경신고",
     "보인고", "숭실고", "인창고", "중경고", "중동고", "중앙고", "광운인공지능고", "광진U18", "남강고",
-    "대동세무고", "여의도고", "영등포공고", "한양과학기술고", "경희고", "동북고", "배재고",
-    "상문고", "서울공고", "용문고", "중대부고", "풋볼A U18",
+    "대동세무고", "여의도고", "영등포공고", "한양과학기술고", "JHLFC U18", "경희고", "동북고", "배재고",
+    "상문고", "서울공고", "용문고", "중대부고", "풋볼A U18", "FC서울 U18 서울오산고",
     # [인천]
-    "부평고", "강화스포츠클럽U18", "인천남고", "인천유나이티드 U18", "대건고",
+    "부평고", "강화스포츠클럽U18", "인천남고", "인천유나이티드 U18 대건고",
     # [경기]
     "HSFA U18", "수원공고", "광문고", "안양공고", "고양고", "평택JFC U18",
     "의정부G스포츠클럽 U18", "FC KHT 일동 U18", "용호고", "광주시G스포츠클럽 U18",
     "SC북내 U18", "수원고", "용인TAESUNGFC U18", "와이엠율면FC U18", "평택진위FC U18",
-    "삼일공고", "안산FC U18", "화성서부 U18", "화성시 U18", "계명고", "청운고", "통진고", "갑천고",
+    "삼일공고", "안산FC U18", "화성서부 U18", "화성시 U18", "계명고", "청운고", "통진고",
     "포천시민축구단 U18", "의정부광동 U18", "초지고", "구리고", "부천SC", "안성 U18", "용인FC U18",
     "FC안양 U18", "김포FC U18", "부천FC1995 U18", "안산그리너스FC U18", "화성FC U18",
-    "청주대성고", "용인양지FC U18", "김포축구센터 U18", "DHFC U18", "수원삼성 U18", "매탄고",
-    "성남FC U18", "풍생고", "뉴양동FC U18", "능곡고", "이천제일고", "경희FC U18", "GS경수클럽 U18",
-    "김영권축구클럽 U18", "의왕시축구협회 U18", "FC광명시민", "서해고", "AEGISFC U18",
-    "부천중동FC U18", "HR축구센터 U18", "경기김포축구센터 U18",
+    "용인양지FC U18", "김포축구센터 U18", "DHFC U18", "수원삼성 U18 매탄고", "성남FC U18 풍생고",
+    "뉴양동FC U18", "능곡고", "이천제일고", "경희FC U18", "GS경수클럽 U18", "김영권축구클럽 U18",
+    "의왕시축구협회 U18", "FC광명시민 U18", "서해고", "AEGISFC U18", "부천중동FC U18",
+    "HR축구센터 U18", "경기김포축구센터 U18", "남양주U18", "수원FC U18",
     # [강원]
-    "강릉문성고", "강릉중앙고", "춘천시민축구단 U18", "상지대관령고", "주천고", "미래고",
+    "강릉문성고", "강릉중앙고", "춘천시민축구단 U18", "상지대관령고", "주천고", "미래고", "강원FC U18 강릉제일고",
     # [충북]
-    "충주상고", "제천제일고", "충주충원고",
-    # [충남]
+    "충주상고", "제천제일고", "충주충원고", "청주대성고",
+    # [충남·대전]
     "신평고", "천안제일고", "천안시티FC U18", "예산삽교FC U18", "서산FC U18",
-    "서산시체육회 U18", "천안축구센터 U18",
-    # [대전]
-    "대전하나시티즌 U18", "충남기계공고",
+    "서산시체육회 U18", "천안축구센터 U18", "대전하나시티즌 U18 충남기계공고", "충남아산FC U18",
     # [세종]
-    "미래FC U18", "GEUMSANINSAMFC U18",
+    "미래FC U18",
     # [전북]
-    "군산제일고", "전주공고", "고창북고", "이리고", "전북현대 U18", "전주영생고",
+    "군산제일고", "전주공고", "고창북고", "이리고", "전북현대 U18 전주영생고",
     "정읍신태인축구센터 U18", "새만금FC U18",
-    # [전남]
-    "목포공고", "영광FC U18", "순천FC U18", "전남드래곤즈 U18", "광양제철고", "여수해양FC U18",
-    # [광주]
-    "광주FC U18", "금호고",
+    # [전남·광주]
+    "목포공고", "영광FC U18", "순천FC U18", "전남드래곤즈 U18 광양제철고", "여수해양FC U18",
+    "강진군청자FC", "광주FC U18 금호고",
     # [대구]
-    "대륜고", "대구공고", "대구FC U18", "현풍고",
+    "대륜고", "대구공고", "대구청구고", "대구FC U18 현풍고",
     # [경북]
-    "자연과학고", "영덕FC U18", "예일메디텍고", "고령FC", "포항스틸러스 U18", "포철고",
-    "김천상무FC U18", "경북미용예술고", "글로벌선진고", "경북관광비즈니스고", "영천JWFC U18",
+    "자연과학고", "영덕FC U18", "예일메디텍고", "고령FC", "포항스틸러스 U18 포철고",
+    "김천상무FC U18 경북미용예술고", "글로벌선진고", "경북관광비즈니스고", "영천JWFC U18",
     "신라고", "영덕고", "경주정보고",
-    # [부산]
-    "부경고SC U18", "기장FC U18", "동래고", "부산정보고SC U18", "부산아이파크 U18",
-    "개성고", "경남공고SC U18", "SC동아 U18", "부산유나이티드 U18", "동명FC U18",
-    # [울산]
-    "학성고FC U18", "울산HD U18", "현대고",
+    # [부산·울산]
+    "부경고SC U18", "기장FC U18", "동래고", "부산정보고SC U18", "부산아이파크 U18 개성고",
+    "경남공고SC U18", "SC동아 U18", "부산유나이티드 U18", "동명FC U18", "학성고FC U18", "울산HD U18 현대고",
     # [경남]
-    "함양FC U18", "보물섬남해스포츠클럽 U18", "창선", "합천스포츠클럽FC U18",
-    "거창FC U18", "진주외고", "창녕고", "철성고", "거제고", "마산공고", "범어고", "통영고",
-    "김해월스포츠 U18", "경남FC U18", "진주고",
+    "함양FC U18", "보물섬남해스포츠클럽 U18 창선", "합천스포츠클럽FC U18", "거창FC U18",
+    "진주외고 U18", "창녕고", "철성고", "거제고", "마산공고", "범어고", "통영고",
+    "김해월스포츠 U18", "경남FC U18 진주고",
     # [제주]
     "대기고", "오현고", "제주SK U18", "제주제일고", "제주중앙고", "서귀포고"
 ]
@@ -662,7 +657,7 @@ menu = st.sidebar.radio("이동할 메뉴", [
 ])
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (팀명 자동완성/선택 기능 적용)
+# 1. 🏟️ 현장 경기 관찰 메모 (팀명 검색 및 자동 필터링 기능 적용)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -677,22 +672,32 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     st.write("---")
 
     col_t1, col_t2 = st.columns(2)
+    
+    # 유사한 팀명 필터링을 위한 함수
+    def team_search_input(label, key_prefix):
+        typed_query = st.text_input(label, placeholder="팀명을 입력하세요 (예: 영등포)", key=f"{key_prefix}_query")
+        matched_teams = []
+        if typed_query.strip():
+            q = typed_query.strip().lower()
+            matched_teams = [t for t in OFFICIAL_HIGH_SCHOOL_TEAMS if q in t.lower()]
+            
+            # 검색어가 있는데 일치하는 팀이 리스트에 없으면 그대로 직접 입력한 것으로 처리
+            if not matched_teams:
+                matched_teams = [typed_query.strip()]
+        else:
+            matched_teams = OFFICIAL_HIGH_SCHOOL_TEAMS
+
+        selected_team = st.selectbox("선택 또는 유사 팀", options=matched_teams, key=f"{key_prefix}_select", label_visibility="collapsed")
+        return selected_team
+
     with col_t1:
-        # 💡 st.selectbox를 활용해 공식 팀 목록에서 검색 및 자동완성 선택 가능
-        home_team_options = [""] + OFFICIAL_HIGH_SCHOOL_TEAMS
-        home_team_selected = st.selectbox("🏠 홈팀 명*", options=home_team_options, index=0, key="select_home_team_name", placeholder="팀명을 검색하세요")
-        # 직접 입력도 가능하도록 보조 텍스트 입력창 제공 (선택사항)
-        home_team_custom = st.text_input("직접 입력 (리스트에 없는 경우)", value="", placeholder="리스트에 없는 팀명 직접 입력", key="input_home_custom")
-        home_team = home_team_custom.strip() if home_team_custom.strip() else home_team_selected
-        
+        st.markdown("🏠 **홈팀 명***")
+        home_team = team_search_input("🏠 홈팀 명*", "home_team")
         home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="home_form")
         
     with col_t2:
-        away_team_options = [""] + OFFICIAL_HIGH_SCHOOL_TEAMS
-        away_team_selected = st.selectbox("✈️ 어웨이팀 명*", options=away_team_options, index=0, key="select_away_team_name", placeholder="팀명을 검색하세요")
-        away_team_custom = st.text_input("직접 입력 (리스트에 없는 경우)", value="", placeholder="리스트에 없는 팀명 직접 입력", key="input_away_custom")
-        away_team = away_team_custom.strip() if away_team_custom.strip() else away_team_selected
-        
+        st.markdown("✈️ **어웨이팀 명***")
+        away_team = team_search_input("✈️ 어웨이팀 명*", "away_team")
         away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="away_form")
 
     st.write("---")
@@ -808,7 +813,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     st.write("")
     if st.button("💾 현장 메모 저장하기", type="primary", use_container_width=True):
         if not home_team.strip() or not away_team.strip():
-            st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다. 팀 이름을 선택하거나 입력해 주세요.")
+            st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다. 팀 이름을 입력해 주세요.")
         else:
             with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
                 home_valid_positions = [pos for row in formation_layouts[home_formation] for pos in row['positions']]
@@ -1253,7 +1258,7 @@ elif menu == "📂 경기관찰선수리스트":
             
             f_col1, f_col2 = st.columns([2, 2])
             with f_col1:
-                search_p = st.text_input("🔍 선수 검색 (팀명, 등번호, 포지션 등)", placeholder="예: 영등포공고, 7번 등", key="obs_p_search")
+                search_p = st.text_input("🔍 선수 검색 (팀명, 등번호, 포지션 등)", placeholder="예: 영등포, 7번 등", key="obs_p_search")
             with f_col2:
                 all_years = sorted(obs_df["연도"].unique(), reverse=True)
                 selected_year = st.selectbox("📅 연도 필터", options=["전체"] + list(all_years), key="obs_year_filter")
