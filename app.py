@@ -667,8 +667,11 @@ display_logo()
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 사이드바 설정
+# 사이드바 설정 (메뉴 선택 상태를 session_state로 관리)
 # ----------------------------------------------------
+if "menu_selection" not in st.session_state:
+    st.session_state["menu_selection"] = "🏟️ 현장 경기 관찰 메모"
+
 st.sidebar.title("📌 메뉴")
 
 if st.sidebar.button("🔄 앱 새로고침 (실시간 동기화)", use_container_width=True, type="secondary"):
@@ -676,17 +679,21 @@ if st.sidebar.button("🔄 앱 새로고침 (실시간 동기화)", use_containe
 
 st.sidebar.markdown("---")
 
-menu = st.sidebar.radio("이동할 메뉴", [
+menu_options = [
     "🏟️ 현장 경기 관찰 메모", 
     "📂 경기 일지 조회", 
     "📂 경기관찰선수리스트", 
     "선수 등록", 
     "🔍 선수 검색 및 관찰일지 조회", 
     "🗑️ 데이터 삭제"
-])
+]
+
+current_menu_index = menu_options.index(st.session_state["menu_selection"]) if st.session_state["menu_selection"] in menu_options else 0
+
+menu = st.sidebar.radio("이동할 메뉴", menu_options, index=current_menu_index, key="menu_selection")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (홈/어웨이 좌우 2열 동시 배치)
+# 1. 🏟️ 현장 경기 관찰 메모
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -773,7 +780,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         st.write("")
         return team_entered_numbers
 
-    # 🎯 홈팀과 어웨이팀이 모바일에서도 좌우 2열로 나란히 표시되도록 배치
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
         home_numbers = render_team_interactive_grid(home_team, home_formation, "home")
@@ -1218,11 +1224,11 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트
+# 3. 📂 경기관찰선수리스트 (선택 시 정식 등록 연동 버튼 추가)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기관찰 선수 리스트")
-    st.caption("현장 경기 관찰 메모에서 **직접 체크하고 세부 메모를 남긴 선수들**의 누적 기록입니다. 표에서 **선수를 클릭**하면 그동안 보았던 모든 경기 내용과 메모를 확인할 수 있습니다.")
+    st.caption("현장 경기 관찰 메모에서 직접 체크하고 세부 메모를 남긴 선수들의 누적 기록입니다. 표에서 **선수를 클릭**하면 상세 이력 확인 및 **[정식 선수 등록]**으로 바로 연결할 수 있습니다.")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
@@ -1278,7 +1284,7 @@ elif menu == "📂 경기관찰선수리스트":
                             if match_num:
                                 num_part = match_num.group(1).strip()
                         else:
-                            team_name = re.sub(r'\[.*?\]', '', cleaned_header).strip()
+                            team_name = re.sub(r'\(.*?\)', '', cleaned_header).strip()
                             match_num = re.search(r'(\d+)번?', cleaned_header)
                             if match_num:
                                 num_part = match_num.group(1).strip()
@@ -1362,7 +1368,18 @@ elif menu == "📂 경기관찰선수리스트":
                 p_pos = selected_player_summary["포지션"]
 
                 st.write("---")
-                st.markdown(f"### ⚽ [{p_team}] 포지션: {p_pos} / 등번호: {p_num}번 — 상세 관찰 이력")
+                
+                # 🎯 [핵심 기능] 선택한 선수를 정식 선수 등록으로 연동하는 버튼 영역
+                reg_action_col1, reg_action_col2 = st.columns([3, 1])
+                with reg_action_col1:
+                    st.markdown(f"### ⚽ [{p_team}] 등번호: {p_num}번 — 상세 관찰 이력")
+                with reg_action_col2:
+                    st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+                    if st.button("📋 이 선수를 정식 선수로 등록", type="primary", use_container_width=True, key="btn_go_register_player"):
+                        st.session_state["prefill_team"] = p_team
+                        st.session_state["prefill_back_num"] = p_num
+                        st.session_state["menu_selection"] = "선수 등록"
+                        st.rerun()
 
                 player_history = obs_df[(obs_df["팀명"] == p_team) & (obs_df["등번호"] == p_num)].sort_values(by="경기날짜", ascending=False)
 
@@ -1381,10 +1398,10 @@ elif menu == "📂 경기관찰선수리스트":
                         </div>
                         """, unsafe_allow_html=True)
             else:
-                st.info("💡 위 목록 표에서 상세 관찰 내용을 확인할 **선수 행을 클릭**하세요.")
+                st.info("💡 위 목록 표에서 상세 관찰 내용을 확인하거나 **정식 선수로 등록할 선수를 행 클릭**하세요.")
 
 # ----------------------------------------------------
-# 4. 선수 등록
+# 4. 선수 등록 (연동된 팀명 및 등번호 자동 입력 반영)
 # ----------------------------------------------------
 elif menu == "선수 등록":
     st.header("📋 신규 관찰 선수 등록")
@@ -1394,16 +1411,21 @@ elif menu == "선수 등록":
         st.balloons()
         st.session_state["reg_success_msg"] = None
 
+    # 세션 상태에 저장된 연동 데이터 가져오기
+    default_team_val = st.session_state.pop("prefill_team", "")
+    default_num_val = st.session_state.pop("prefill_back_num", "")
+
     with st.form("player_reg_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
             name = st.text_input("선수명*")
-            team = st.text_input("현재 소속팀")
+            team = st.text_input("현재 소속팀", value=default_team_val)
             position = st.selectbox("포지션", options=POSITION_OPTIONS)
             status = st.selectbox("진행 상태", STATUS_OPTIONS)
             
             back_num_options = [""] + [str(i) for i in range(1, 100)]
-            back_num_val = st.selectbox("등번호", options=back_num_options, index=0, placeholder="등번호 선택")
+            num_index = back_num_options.index(default_num_val) if default_num_val in back_num_options else 0
+            back_num_val = st.selectbox("등번호", options=back_num_options, index=num_index, placeholder="등번호 선택")
 
         with col2:
             birth_date = st.date_input("생년월일 선택*", value=datetime(2005, 1, 1), min_value=datetime(1980, 1, 1), max_value=datetime.today())
