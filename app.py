@@ -642,11 +642,11 @@ current_menu_index = menu_options.index(st.session_state["menu_selection"]) if s
 menu = st.sidebar.radio("이동할 메뉴", menu_options, index=current_menu_index, key="menu_selection")
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모
+# 1. 🏟️ 현장 경기 관찰 메모 (등록된 선수 자동 연동 기능 포함)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("포메이션 진형 모양 그대로 배치된 입력 칸을 터치하여 등번호를 바로 기입하세요.")
+    st.caption("포메이션 진형 모양 그대로 배치된 입력 칸을 터치하여 등번호를 바로 기입하세요. 이미 등록된 선수의 번호를 적으면 해당 선수의 관찰일지에도 자동으로 누적됩니다.")
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
@@ -791,7 +791,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         if not home_team.strip() or not away_team.strip():
             st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다. 팀 이름을 입력해 주세요.")
         else:
-            with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
+            with st.spinner("구글 시트에 현장 메모를 저장 및 기존 선수 일지 연동 중..."):
                 home_valid_positions = [pos for row in formation_layouts[home_formation] for pos in row['positions']]
                 away_valid_positions = [pos for row in formation_layouts[away_formation] for pos in row['positions']]
 
@@ -806,6 +806,27 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     player_notes_formatted = "\n\n⭐ [선수별 집중 관찰 메모]\n"
                     for p_label, p_note in player_specific_memos.items():
                         player_notes_formatted += f"- {p_label}:\n  {p_note}\n"
+
+                        # 🎯 [자동 연동 로직] 이미 정식 등록된 선수 중 소속팀과 등번호가 일치하면 관찰일지에 자동 누적
+                        try:
+                            parts_lbl = p_label.split(" | ")
+                            target_team = parts_lbl[0].strip()
+                            num_match = re.search(r'(\d+)번?', parts_lbl[1])
+                            if num_match:
+                                target_num = num_match.group(1).strip()
+                                
+                                match_idx = df[(df["소속팀"].str.contains(target_team, na=False)) & 
+                                               (df["등번호"].str.strip() == target_num) & 
+                                               (df["진행 상태"] != "현장 관찰 메모 (임시)")].index
+                                               
+                                if len(match_idx) > 0:
+                                    idx = match_idx[0]
+                                    old_eval = str(df.loc[idx, "종합 평가"])
+                                    today_str = str(match_date)
+                                    new_added_memo = f"\n\n[{today_str} 현장 관찰 자동 연동 ({tournament_name or '일반경기'} - {home_team} vs {away_team})]\n{p_note.strip()}"
+                                    df.loc[idx, "종합 평가"] = (old_eval + new_added_memo).strip()
+                        except Exception as e:
+                            print(f"선수 자동 연동 중 예외 발생: {e}")
 
                 t_name_prefix = f"[{tournament_name}] " if tournament_name.strip() else ""
                 timestamp_id = datetime.now().strftime('%H%M%S')
@@ -843,7 +864,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                         if f"away_{p}" in st.session_state:
                             del st.session_state[f"away_{p}"]
                     
-                    st.success("🎉 현장 경기 관찰 메모가 구글 시트 맨 위에 성공적으로 저장되었습니다!")
+                    st.success("🎉 현장 경기 관찰 메모 저장 및 기존 등록 선수 관찰일지 자동 연동 완료!")
                     st.balloons()
 
 # ----------------------------------------------------
@@ -1102,7 +1123,7 @@ elif menu == "📂 경기 일지 조회":
                                 st.rerun()
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (위젯 충돌 방지 플래그 적용)
+# 3. 📂 경기관찰선수리스트
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기관찰 선수 리스트")
@@ -1228,7 +1249,6 @@ elif menu == "📂 경기관찰선수리스트":
 
                 st.write("---")
                 
-                # 🎯 [핵심 수정] 위젯 충돌을 막기 위해 redirect_to_menu 플래그를 사용하고 rerun 호출
                 reg_action_col1, reg_action_col2 = st.columns([3, 1])
                 with reg_action_col1:
                     st.markdown(f"### ⚽ [{p_team}] 등번호: {p_num}번 — 상세 관찰 이력")
@@ -1267,7 +1287,7 @@ elif menu == "📂 경기관찰선수리스트":
                 st.info("💡 위 목록 표에서 상세 관찰 내용을 확인하거나 **[선수등록]** 버튼을 누르면 팀명, 등번호와 함께 **관찰 메모가 종합평가 칸에 자동으로 세팅**됩니다.")
 
 # ----------------------------------------------------
-# 4. 선수 등록 (관찰 메모 자동 연동 반영)
+# 4. 선수 등록
 # ----------------------------------------------------
 elif menu == "선수 등록":
     st.header("📋 신규 관찰 선수 등록")
@@ -1277,7 +1297,6 @@ elif menu == "선수 등록":
         st.balloons()
         st.session_state["reg_success_msg"] = None
 
-    # 연동된 데이터 가져오기
     default_team_val = st.session_state.pop("prefill_team", "")
     default_num_val = st.session_state.pop("prefill_back_num", "")
     default_overall_val = st.session_state.pop("prefill_overall", "")
@@ -1308,8 +1327,6 @@ elif menu == "선수 등록":
         st.subheader("📝 관찰 리포트 / 첫 메모")
         pros = st.text_area("장점 및 주요 특기")
         cons = st.text_area("보완점 및 약점")
-        
-        # 🎯 현장 관찰 메모에서 넘어온 누적 관찰 메모가 종합 평가 칸에 기본값으로 세팅됨
         overall = st.text_area("종합 평가 / 코멘트", value=default_overall_val, height=150)
         
         submitted = st.form_submit_button("💾 선수 데이터 저장", type="primary", use_container_width=True)
