@@ -374,7 +374,7 @@ def generate_pdf_report(player_data):
     weight_val = f"{player_data.get('체중(kg)')}kg" if player_data.get('체중(kg)') else "미입력"
     
     profile_data = [
-        [Paragraph("선수명", table_label), Paragraph(f"<b>{player_data.get('선수명', '-')}</b>", table_value), Paragraph("포지션 / 등번호", table_label), Paragraph(f"<b>{player_data.get('포지션', '-')} / {player_data.get('등번호', '-')}번</b>", table_value)],
+        [Paragraph("선수명", table_label), Paragraph(f"<b>{player_data.get('선수명', '-')}</b>", table_value), Paragraph("포지션 / 등번호", table_label), Paragraph(f"<b>{player_data.get('선수명', '-')} / {player_data.get('등번호', '-')}번</b>", table_value)],
         [Paragraph("현재 소속팀", table_label), Paragraph(f"{curr_team}", table_value), Paragraph("진행 상태", table_label), Paragraph(f"<font color='#2563EB'><b>{player_data.get('진행 상태', '-')}</b></font>", table_value)],
         [Paragraph("소속팀 이력", table_label), Paragraph(f"{full_team}", table_value), Paragraph("주발", table_label), Paragraph(f"{player_data.get('주발', '-')}", table_value)],
         [Paragraph("생년월일 (나이)", table_label), Paragraph(f"{player_data.get('생년월일', '-')} ({player_data.get('만 나이', '-')})", table_value), Paragraph("피지컬 (신장/체중)", table_label), Paragraph(f"{player_data.get('신장(cm)', '-')}cm / {weight_val}", table_value)],
@@ -867,7 +867,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (등번호 변경 기능 포함)
+# 2. 📂 경기 일지 조회
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 경기일지리스트 및 추가수정")
@@ -1315,7 +1315,7 @@ elif menu == "📂 경기관찰선수리스트":
                     st.markdown(f"### ⚽ [{p_team}] 등번호: {p_num}번 — 상세 관찰 이력")
                 with reg_action_col2:
                     st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
-                    btn_label = "📋 정보 수정/확인" if is_already_registered else "📋 선수등록"
+                    btn_label = "🔍 선수 정보 및 일지 확인" if is_already_registered else "📋 선수등록"
                     if st.button(btn_label, type="primary", use_container_width=True, key="btn_go_register_player"):
                         player_history = obs_df[(obs_df["팀명"] == p_team) & (obs_df["등번호"] == p_num)].sort_values(by="경기날짜", ascending=False)
                         
@@ -1323,10 +1323,14 @@ elif menu == "📂 경기관찰선수리스트":
                         for _, h_row in player_history.iterrows():
                             compiled_memo_text += f"\n📅 일자: {h_row['경기날짜']} | 대회/경기: {h_row['대회/경기명']}\n- 메모: {h_row['관찰메모']}\n"
 
-                        st.session_state["prefill_team"] = p_team
-                        st.session_state["prefill_back_num"] = p_num
-                        st.session_state["prefill_overall"] = compiled_memo_text.strip()
-                        st.session_state["redirect_to_menu"] = "선수 등록"
+                        if is_already_registered:
+                            st.session_state["live_search_input"] = f"{p_team} {p_num}"
+                            st.session_state["redirect_to_menu"] = "🔍 선수 검색 및 관찰일지 조회"
+                        else:
+                            st.session_state["prefill_team"] = p_team
+                            st.session_state["prefill_back_num"] = p_num
+                            st.session_state["prefill_overall"] = compiled_memo_text.strip()
+                            st.session_state["redirect_to_menu"] = "선수 등록"
                         st.rerun()
 
                 player_history = obs_df[(obs_df["팀명"] == p_team) & (obs_df["등번호"] == p_num)].sort_values(by="경기날짜", ascending=False)
@@ -1346,7 +1350,7 @@ elif menu == "📂 경기관찰선수리스트":
                         </div>
                         """, unsafe_allow_html=True)
             else:
-                st.info("💡 위 목록 표에서 상세 관찰 내용을 확인하거나 **[선수등록]** 버튼을 누르면 팀명, 등번호와 함께 **관찰 메모가 종합평가 칸에 자동으로 세팅**됩니다.")
+                st.info("💡 위 목록 표에서 상세 관찰 내용을 확인하거나 버튼을 누르면 해당 메뉴로 즉시 이동합니다.")
 
 # ----------------------------------------------------
 # 4. 선수 등록
@@ -1413,7 +1417,7 @@ elif menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 5. 🔍 선수 검색 및 관찰일지 조회 (NameError 수정 완료)
+# 5. 🔍 선수 검색 및 관찰일지 조회
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
     st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
