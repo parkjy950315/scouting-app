@@ -1097,7 +1097,7 @@ elif menu == "📂 경기 일지 조회":
                                 st.rerun()
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (선수 등록 연동 시 관찰 메모 자동 융합 로직 탑재)
+# 3. 📂 경기관찰선수리스트 (선수 등록 연동 시 관찰 메모 자동 융합 및 rerun 처리)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기관찰 선수 리스트")
@@ -1205,7 +1205,14 @@ elif menu == "📂 경기관찰선수리스트":
             display_summary_df = filtered_summary[["팀명", "포지션", "등번호", "누적경기수"]].copy()
             display_summary_df.columns = ["소속 팀명", "포지션", "등번호", "누적 관찰 경기 수"]
 
-            obs_selection = st.dataframe(display_summary_df, use_container_width=True, selection_mode="single-row", on_select="rerun", height=400)
+            def highlight_frequent_memo(row):
+                if row.get("누적 관찰 경기 수", 0) >= 3:
+                    return ['background-color: #d1fae5; color: #065f46; font-weight: bold;'] * len(row)
+                return [''] * len(row)
+
+            styled_summary_df = display_summary_df.style.apply(highlight_frequent_memo, axis=1)
+
+            obs_selection = st.dataframe(styled_summary_df, use_container_width=True, selection_mode="single-row", on_select="rerun", height=400)
             selected_obs_rows = obs_selection.selection.rows if hasattr(obs_selection, "selection") else []
 
             if selected_obs_rows:
@@ -1216,14 +1223,13 @@ elif menu == "📂 경기관찰선수리스트":
 
                 st.write("---")
                 
-                # 🎯 [핵심] 선수등록 버튼 클릭 시 해당 선수의 모든 누적 관찰 메모를 하나의 문자열로 취합하여 세션에 담고 메뉴 전환
+                # 🎯 [핵심] 선수등록 버튼 클릭 시 세션 저장 후 즉시 st.rerun() 호출하여 위젯 충돌 원천 방지
                 reg_action_col1, reg_action_col2 = st.columns([3, 1])
                 with reg_action_col1:
                     st.markdown(f"### ⚽ [{p_team}] 등번호: {p_num}번 — 상세 관찰 이력")
                 with reg_action_col2:
                     st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
                     if st.button("📋 선수등록", type="primary", use_container_width=True, key="btn_go_register_player"):
-                        # 해당 선수의 모든 관찰 메모를 취합
                         player_history = obs_df[(obs_df["팀명"] == p_team) & (obs_df["등번호"] == p_num)].sort_values(by="경기날짜", ascending=False)
                         
                         compiled_memo_text = f"[현장 관찰 누적 기록 연동]\n- 포지션: {p_pos} / 등번호: {p_num}번\n"
@@ -1298,7 +1304,7 @@ elif menu == "선수 등록":
         pros = st.text_area("장점 및 주요 특기")
         cons = st.text_area("보완점 및 약점")
         
-        # 🎯 현장 관찰 메모에서 넘어온 내용이 있으면 종합 평가 칸에 기본값으로 세팅
+        # 🎯 현장 관찰 메모에서 넘어온 누적 관찰 메모가 종합 평가 칸에 기본값으로 세팅됨
         overall = st.text_area("종합 평가 / 코멘트", value=default_overall_val, height=150)
         
         submitted = st.form_submit_button("💾 선수 데이터 저장", type="primary", use_container_width=True)
