@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 최적화 스타일 설정
+# 📱 PC & 모바일 반응형 최적화 스타일 설정 (헤더 폰트 크기 조정)
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -71,7 +71,7 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 모바일 환경 레이아웃 밀림 방지 및 그라운드 짤림 방지 */
+    /* 모바일 환경 레이아웃 밀림 방지 및 폰트 크기 세밀 최적화 */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 290px !important;
@@ -86,9 +86,15 @@ st.markdown("""
             font-size: 17px !important;
         }
         h1 {
-            font-size: 20px !important;
+            font-size: 19px !important;
             margin-top: 5px !important;
-            margin-bottom: 15px !important;
+            margin-bottom: 12px !important;
+        }
+        h2 {
+            font-size: 17px !important;
+            margin-top: 8px !important;
+            margin-bottom: 10px !important;
+            word-break: keep-all !important;
         }
         h3 {
             font-size: 14px !important;
@@ -645,7 +651,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
 
         display_t_name = team_name if team_name else ""
-        # 💡 요청하신 대로 깔끔하게 "[팀명] 등번호 기입"으로 변경
         st.markdown(f"**⚡ {display_t_name} 등번호 기입**")
         
         for row in layout:
@@ -669,7 +674,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         st.write("")
         return team_entered_numbers
 
-    # 💡 요청하신 대로 "홈팀/어웨이팀 라인업"으로 변경
     display_home_header = f"🏠 {home_team.strip()} 라인업" if home_team.strip() else "🏠 홈팀 라인업"
     display_away_header = f"✈️ {away_team.strip()} 라인업" if away_team.strip() else "✈️ 어웨이팀 라인업"
 
@@ -683,7 +687,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    # 💡 요청하신 대로 "선수 메모"로 변경
     st.subheader("⭐ 선수 메모")
     st.caption("위 포메이션에 등번호를 입력하면 아래에 해당 포지션들이 자동으로 활성화됩니다. 메모할 포지션을 체크하세요!")
 
@@ -725,7 +728,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.info("💡 어웨이팀 포메이션 칸에 등번호를 입력해 주세요.")
 
     st.write("---")
-    # 💡 요청하신 대로 "종합 메모"로 변경
     st.subheader("📋 종합 메모")
     general_memo = st.text_area(
         "경기 전체 흐름 및 총평", 
@@ -800,10 +802,11 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (기존 메모 연동 및 깔끔한 포지션별 체크박스 수정 기능)
+# 2. 📂 경기 일지 조회 (깔끔하게 단축된 제목 및 글자 크기 조정)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
-    st.header("📂 현장 경기 관찰 일지 모음 및 추가 수정")
+    # 💡 요청하신 대로 헤더 제목 문구 단축 및 모바일 글자 크기 최적화 반영
+    st.header("📂 경기일지리스트 및 추가수정")
     st.caption("작성된 현장 경기 일지를 조회하고, 하단에서 기존 메모를 불러와 깔끔하게 이어서 작성하거나 수정할 수 있습니다.")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
