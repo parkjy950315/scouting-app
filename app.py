@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 최적화 스타일 설정 (모바일 밀림 방지 및 폰트 반응형 최적화)
+# 📱 PC & 모바일 최적화 스타일 및 숫자패드 강제 제어 CSS
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -59,6 +59,12 @@ st.markdown("""
         border-radius: 12px;
         background-color: rgba(255, 255, 255, 0.08);
         cursor: pointer;
+    }
+    
+    /* 등번호 입력란 모바일 터치 시 숫자 키패드 즉시 호출 */
+    .num-keypad-input input {
+        inputmode: numeric !important;
+        -webkit-user-select: auto !important;
     }
     
     /* 모바일 환경 레이아웃 밀림 방지 및 폰트 크기 최적화 */
@@ -81,7 +87,8 @@ st.markdown("""
             margin-bottom: 15px !important;
         }
         h3 {
-            font-size: 15px !important;
+            font-size: 14px !important;
+            word-break: keep-all !important;
         }
         /* 컬럼들을 강제로 가로 배치 유지 및 여백 밀림 방지 */
         [data-testid="stHorizontalBlock"] {
@@ -539,9 +546,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         for pos in valid_positions:
             key_name = f"{prefix}_{pos}"
             val = st.session_state.get(key_name, "")
-            nums_dict[pos] = val
-            if val.strip():
-                team_entered_numbers[pos] = val.strip()
+            nums_dict[pos] = str(val) if val is not None else ""
+            if str(val).strip():
+                team_entered_numbers[pos] = str(val).strip()
 
         render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
 
@@ -554,36 +561,31 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             for idx, pos in enumerate(row['positions']):
                 key_name = f"{prefix}_{pos}"
                 with cols[idx]:
-                    # 💡 모바일에서 숫자 키패드가 바로 뜨도록 inputmode="numeric" 패턴이 적용된 text_input 사용 (자유로운 번호/교체 기입 지원)
+                    # 💡 스마트폰 터치 시 즉각 숫자 키패드가 노출되도록 HTML 내장 스크립트와 st.text_input 조합
+                    st.markdown("<div class='num-keypad-input'>", unsafe_allow_html=True)
                     val = st.text_input(
                         f"{pos}", 
                         value=st.session_state.get(key_name, ""), 
                         key=key_name, 
-                        placeholder="번호",
-                        help="숫자 입력"
+                        placeholder="번호"
                     )
-                    if val.strip():
-                        team_entered_numbers[pos] = val.strip()
+                    st.markdown("</div>", unsafe_allow_html=True)
+                    if str(val).strip():
+                        team_entered_numbers[pos] = str(val).strip()
 
         st.write("")
         return team_entered_numbers
 
-    # 💡 모바일 글씨 밀림 방지를 위해 마크다운과 스타일이 깨지지 않도록 컬럼 헤더 스타일 조정
-    st.markdown("""
-        <style>
-        h3 {
-            font-size: 1.15rem !important;
-            word-break: keep-all;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    # 입력한 홈팀명, 어웨이팀명을 바탕으로 제목 자동 변경 (없을 경우 기본값 표기)
+    display_home_header = f"🏠 {home_team.strip()} 그라운드 및 등번호" if home_team.strip() else "🏠 홈팀 그라운드 및 등번호"
+    display_away_header = f"✈️ {away_team.strip()} 그라운드 및 등번호" if away_team.strip() else "✈️ 어웨이팀 그라운드 및 등번호"
 
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
-        st.markdown("### 🏠 홈팀 그라운드 및 등번호")
+        st.markdown(f"### {display_home_header}")
         home_numbers = render_team_interactive_grid(home_team, home_formation, "home")
     with pitch_col2:
-        st.markdown("### ✈️ 어웨이팀 그라운드 및 등번호")
+        st.markdown(f"### {display_away_header}")
         away_numbers = render_team_interactive_grid(away_team, away_formation, "away")
 
     st.write("---")
@@ -591,15 +593,15 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     st.subheader("⭐ 시각화 포지션별 집중 관찰 메모")
     st.caption("위 그라운드 포메이션에 등번호를 입력하면 아래에 해당 포지션들이 자동으로 활성화됩니다. 메모할 포지션을 체크하세요!")
 
-    h_display_label = home_team if home_team else "홈팀"
-    a_display_label = away_team if away_team else "어웨이팀"
+    h_display_label = home_team.strip() if home_team.strip() else "홈팀"
+    a_display_label = away_team.strip() if away_team.strip() else "어웨이팀"
 
     player_specific_memos = {}
 
     memo_col_h, memo_col_a = st.columns(2)
 
     with memo_col_h:
-        st.markdown(f"**🏠 홈팀 ({h_display_label}) 포지션별 메모**")
+        st.markdown(f"**🏠 {h_display_label} 포지션별 메모**")
         active_home_pos = {pos: num for pos, num in home_numbers.items() if num}
         if active_home_pos:
             for pos, num in active_home_pos.items():
@@ -614,7 +616,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.info("💡 홈팀 포메이션 칸에 등번호를 입력해 주세요.")
 
     with memo_col_a:
-        st.markdown(f"**✈️ 어웨이팀 ({a_display_label}) 포지션별 메모**")
+        st.markdown(f"**✈️ {a_display_label} 포지션별 메모**")
         active_away_pos = {pos: num for pos, num in away_numbers.items() if num}
         if active_away_pos:
             for pos, num in active_away_pos.items():
@@ -890,7 +892,7 @@ elif menu == "📂 경기 일지 조회":
                             edit_memo_col_h, edit_memo_col_a = st.columns(2)
 
                             with edit_memo_col_h:
-                                st.markdown(f"**🏠 홈팀 ({h_team_name}) 포지션별 메모**")
+                                st.markdown(f"**🏠 {h_team_name} 포지션별 메모**")
                                 if home_nums:
                                     for pos, num in home_nums.items():
                                         chk_key = f"edit_chk_home_{target_memo_idx}_{pos}"
@@ -915,7 +917,7 @@ elif menu == "📂 경기 일지 조회":
                                     st.info("등록된 홈팀 등번호가 없습니다.")
 
                             with edit_memo_col_a:
-                                st.markdown(f"**✈️ 어웨이팀 ({a_team_name}) 포지션별 메모**")
+                                st.markdown(f"**✈️ {a_team_name} 포지션별 메모**")
                                 if away_nums:
                                     for pos, num in away_nums.items():
                                         chk_key = f"edit_chk_away_{target_memo_idx}_{pos}"
