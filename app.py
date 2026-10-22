@@ -899,7 +899,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (작성일자 기준 내림차순 최신순 정렬 적용)
+# 2. 📂 경기 일지 조회 (작성 순서 역순 + 작성일자 최신순 복합 정렬 적용)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 경기일지리스트 및 추가수정")
@@ -913,11 +913,14 @@ elif menu == "📂 경기 일지 조회":
         tab_view, tab_delete = st.tabs(["📋 일지 목록 조회 및 이어서 수정", "🗑️ 일지 일괄 삭제"])
 
         with tab_view:
-            # 🎯 [최신순 정렬 적용] 작성일자 기준 내림차순(ascending=False) 정렬
-            if "작성일자" in memo_df.columns:
-                memo_df_sorted = memo_df.sort_values(by="작성일자", ascending=False).reset_index(drop=True)
-            else:
-                memo_df_sorted = memo_df.copy()
+            # 🎯 [완벽한 최신순 정렬] 원본 데이터프레임의 행 순서(시트에 쌓인 순서)를 역순으로 뒤집고, 
+            # 작성일자 기준으로도 내림차순 정렬하여 오늘 작성한 것이 무조건 맨 위로 오게끔 보장
+            memo_df_sorted = memo_df.iloc[::-1].reset_index(drop=True)
+            if "작성일자" in memo_df_sorted.columns:
+                memo_df_sorted["_temp_idx"] = memo_df_sorted.index
+                memo_df_sorted = memo_df_sorted.sort_values(by=["작성일자", "_temp_idx"], ascending=[False, False]).reset_index(drop=True)
+                if "_temp_idx" in memo_df_sorted.columns:
+                    memo_df_sorted = memo_df_sorted.drop(columns=["_temp_idx"])
 
             sc_col1, sc_col2 = st.columns([3, 1])
             with sc_col1:
@@ -1181,7 +1184,12 @@ elif menu == "📂 경기 일지 조회":
             st.subheader("🗑️ 경기 일지 다중 선택 및 일괄 삭제")
             st.caption("표에서 **삭제할 일지들을 여러 개 선택(다중 클릭)**한 뒤, 하단의 삭제 버튼을 누르세요.")
 
-            memo_df_del = memo_df.sort_values(by="작성일자", ascending=False).reset_index(drop=True) if "작성일자" in memo_df.columns else memo_df.copy()
+            memo_df_del = memo_df.iloc[::-1].reset_index(drop=True)
+            if "작성일자" in memo_df_del.columns:
+                memo_df_del["_temp_idx"] = memo_df_del.index
+                memo_df_del = memo_df_del.sort_values(by=["작성일자", "_temp_idx"], ascending=[False, False]).reset_index(drop=True)
+                if "_temp_idx" in memo_df_del.columns:
+                    memo_df_del = memo_df_del.drop(columns=["_temp_idx"])
             
             display_del_df = memo_df_del[["작성일자", "소속팀", "장점/특기"]].copy()
             display_del_df["장점/특기"] = display_del_df["장점/특기"].apply(parse_clean_tournament)
