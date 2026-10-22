@@ -40,15 +40,15 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 최적화 스타일 설정 (모바일에서도 입력칸이 세로로 찌그러지지 않고 가로 배치되도록 강제)
+# 📱 PC & 모바일 최적화 스타일 설정 (모바일 밀림 방지 및 폰트 반응형 최적화)
 # ----------------------------------------------------
 st.markdown("""
     <style>
     .block-container {
-        padding-top: 2.5rem !important;
+        padding-top: 2rem !important;
         padding-bottom: 3rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
     }
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 2.5rem !important;
@@ -61,7 +61,7 @@ st.markdown("""
         cursor: pointer;
     }
     
-    /* 모바일 환경에서도 st.columns가 세로로 떨어지지 않고 그라운드처럼 가로 나열되도록 유지 */
+    /* 모바일 환경 레이아웃 밀림 방지 및 폰트 크기 최적화 */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 290px !important;
@@ -76,14 +76,18 @@ st.markdown("""
             font-size: 17px !important;
         }
         h1 {
-            font-size: 22px !important;
+            font-size: 20px !important;
             margin-top: 5px !important;
             margin-bottom: 15px !important;
         }
-        /* 컬럼들을 강제로 가로 배치 유지 및 패딩 조절 */
+        h3 {
+            font-size: 15px !important;
+        }
+        /* 컬럼들을 강제로 가로 배치 유지 및 여백 밀림 방지 */
         [data-testid="stHorizontalBlock"] {
             flex-direction: row !important;
             flex-wrap: nowrap !important;
+            gap: 6px !important;
         }
         [data-testid="stHorizontalBlock"] > div {
             flex: 1 !important;
@@ -544,24 +548,35 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         display_t_name = team_name if team_name else "입력 대기중인 팀"
         st.markdown(f"**⚡ {display_t_name} 포메이션 진형별 등번호 직접 입력**")
         
-        # 💡 모바일에서도 세로로 깨지지 않고 시각화 그라운드처럼 라인별 가로 칸 배치 유지
         for row in layout:
             st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 6px; margin-bottom: 2px;'>{row['line']}</div>", unsafe_allow_html=True)
             cols = st.columns(len(row['positions']))
             for idx, pos in enumerate(row['positions']):
                 key_name = f"{prefix}_{pos}"
                 with cols[idx]:
+                    # 💡 모바일에서 숫자 키패드가 바로 뜨도록 inputmode="numeric" 패턴이 적용된 text_input 사용 (자유로운 번호/교체 기입 지원)
                     val = st.text_input(
                         f"{pos}", 
                         value=st.session_state.get(key_name, ""), 
                         key=key_name, 
-                        placeholder="번호"
+                        placeholder="번호",
+                        help="숫자 입력"
                     )
                     if val.strip():
                         team_entered_numbers[pos] = val.strip()
 
         st.write("")
         return team_entered_numbers
+
+    # 💡 모바일 글씨 밀림 방지를 위해 마크다운과 스타일이 깨지지 않도록 컬럼 헤더 스타일 조정
+    st.markdown("""
+        <style>
+        h3 {
+            font-size: 1.15rem !important;
+            word-break: keep-all;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
@@ -1365,7 +1380,7 @@ elif menu == "🗑️ 데이터 삭제":
                                 st.rerun()
                 with c_no:
                     if st.button("❌ 아니오 (취소)", use_container_width=True):
-                        st.session_state[confirm_key]= False
+                        st.session_state[confirm_key] = False
                         st.rerun()
         else:
             if "confirm_delete_mode" in st.session_state:
