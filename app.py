@@ -7,6 +7,12 @@ import os
 import base64
 from datetime import datetime
 
+# 연관검색어 드롭다운을 위한 외부 라이브러리 (pip install streamlit-searchbox 필요)
+try:
+    from streamlit_searchbox import st_searchbox
+except ImportError:
+    st.error("⚠️ 'streamlit-searchbox' 라이브러리가 설치되지 않았습니다. 터미널에서 'pip install streamlit-searchbox'를 실행해 주세요.")
+
 # PDF 생성을 위한 reportlab 라이브러리 및 폰트 등록 모듈
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
@@ -73,6 +79,19 @@ OFFICIAL_HIGH_SCHOOL_TEAMS = [
     # [제주]
     "대기고", "오현고", "제주SK U18", "제주제일고", "제주중앙고", "서귀포고"
 ]
+
+# ----------------------------------------------------
+# 🔍 실시간 연관검색어 필터링 함수 (네이버 스타일)
+# ----------------------------------------------------
+def search_team_autocomplete(search_term: str):
+    if not search_term or not search_term.strip():
+        return OFFICIAL_HIGH_SCHOOL_TEAMS
+    q = search_term.strip().lower()
+    matches = [t for t in OFFICIAL_HIGH_SCHOOL_TEAMS if q in t.lower()]
+    # 검색어와 정확히 일치하지 않는 신규 입력 팀도 선택할 수 있도록 맨 위에 추가
+    if search_term.strip() not in matches:
+        matches.insert(0, search_term.strip())
+    return matches
 
 # ----------------------------------------------------
 # 🔤 PDF 한글 폰트 자동 등록 함수
@@ -657,7 +676,7 @@ menu = st.sidebar.radio("이동할 메뉴", [
 ])
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (단일 검색창 + 실시간 유사팀 버튼 클릭 방식)
+# 1. 🏟️ 현장 경기 관찰 메모 (네이버 스타일 드롭다운 검색 적용)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -673,43 +692,24 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     col_t1, col_t2 = st.columns(2)
 
-    # 🔍 실시간 단일 검색창 기반 팀명 선택 함수
-    def single_team_search_box(label, key_prefix):
-        selected_key = f"selected_team_{key_prefix}"
-        if selected_key not in st.session_state:
-            st.session_state[selected_key] = ""
-
-        input_val = st.text_input(
-            label, 
-            value=st.session_state[selected_key],
-            placeholder="팀명을 입력하세요 (예: 서울, 영등포)", 
-            key=f"input_{key_prefix}"
-        )
-        st.session_state[selected_key] = input_val
-
-        # 타이핑한 내용이 있을 경우, 실시간으로 포함된 팀들을 아래에 나열
-        if input_val.strip():
-            q = input_val.strip().lower()
-            matched_teams = [t for t in OFFICIAL_HIGH_SCHOOL_TEAMS if q in t.lower()]
-
-            if matched_teams and input_val not in matched_teams:
-                st.caption("💡 아래에서 팀을 선택하거나 계속 입력하세요:")
-                # 버튼들을 가로로 깔끔하게 나열
-                btn_cols = st.columns(min(len(matched_teams), 3))
-                for idx, team_candidate in enumerate(matched_teams[:6]): # 최대 6개까지 표시
-                    with btn_cols[idx % 3]:
-                        if st.button(f"⚽ {team_candidate}", key=f"btn_{key_prefix}_{team_candidate}_{idx}"):
-                            st.session_state[selected_key] = team_candidate
-                            st.rerun()
-
-        return st.session_state[selected_key]
-
     with col_t1:
-        home_team = single_team_search_box("🏠 홈팀 명*", "home")
+        st.markdown("🏠 **홈팀 명***")
+        selected_home = st_searchbox(
+            search_function=search_team_autocomplete,
+            placeholder="팀명을 입력하세요 (예: 서울, 영등포)",
+            key="home_team_searchbox"
+        )
+        home_team = selected_home if selected_home else ""
         home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="home_form")
         
     with col_t2:
-        away_team = single_team_search_box("✈️ 어웨이팀 명*", "away")
+        st.markdown("✈️ **어웨이팀 명***")
+        selected_away = st_searchbox(
+            search_function=search_team_autocomplete,
+            placeholder="팀명을 입력하세요 (예: 서울, 영등포)",
+            key="away_team_searchbox"
+        )
+        away_team = selected_away if selected_away else ""
         away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="away_form")
 
     st.write("---")
@@ -884,8 +884,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                         if f"away_{p}" in st.session_state:
                             del st.session_state[f"away_{p}"]
                     
-                    st.session_state["selected_team_home"] = ""
-                    st.session_state["selected_team_away"] = ""
                     st.success("🎉 현장 경기 관찰 메모가 구글 시트에 성공적으로 저장되었습니다!")
                     st.balloons()
 
