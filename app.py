@@ -1220,7 +1220,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (최신순 정렬 적용)
+# 3. 📂 경기관찰선수리스트 (최신 경기날짜 및 누적관찰수 기준 최신순 정렬 적용)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기관찰 선수 리스트")
@@ -1309,11 +1309,12 @@ elif menu == "📂 경기관찰선수리스트":
         else:
             obs_df = pd.DataFrame(obs_players_data)
             
-            # 선수별 누적 관찰 횟수 및 팀명, 포지션, 등번호 집계
+            # 🎯 [최신순 정렬 적용] 선수별 집계 시 '가장 최근 경기날짜(max)'와 '누적 경기수(count)'를 함께 추출
             summary_df = obs_df.groupby("player_id").agg(
                 팀명=("팀명", "first"),
                 포지션=("포지션", "first"),
                 등번호=("등번호", "first"),
+                최근경기날짜=("경기날짜", "max"),
                 누적경기수=("경기날짜", "count")
             ).reset_index()
 
@@ -1332,7 +1333,8 @@ elif menu == "📂 경기관찰선수리스트":
                     filtered_summary["포지션"].str.lower().str.contains(q, na=False)
                 ]
 
-            filtered_summary = filtered_summary.sort_values(by="누적경기수", ascending=False).reset_index(drop=True)
+            # 🎯 [최신순 정렬 적용] 가장 최근 경기 날짜가 최신인 순서대로(내림차순) 메인 리스트 정렬
+            filtered_summary = filtered_summary.sort_values(by="최근경기날짜", ascending=False).reset_index(drop=True)
 
             st.write("")
             st.markdown(f"**📌 총 {len(filtered_summary)}명의 관찰 선수가 집계되었습니다.** (조회할 선수를 **클릭**하세요)")
@@ -1366,7 +1368,7 @@ elif menu == "📂 경기관찰선수리스트":
                 st.write("---")
                 st.markdown(f"### ⚽ [{p_team}] 포지션: {p_pos} / 등번호: {p_num}번 — 상세 관찰 이력")
 
-                # 🎯 [최신순 정렬 적용] 경기날짜 기준 내림차순(ascending=False) 정렬
+                # 해당 선수의 상세 관찰 이력도 최신순(내림차순) 정렬
                 player_history = obs_df[(obs_df["팀명"] == p_team) & (obs_df["등번호"] == p_num)].sort_values(by="경기날짜", ascending=False)
 
                 for _, h_row in player_history.iterrows():
