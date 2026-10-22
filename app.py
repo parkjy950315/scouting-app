@@ -651,13 +651,13 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             if val_str.strip():
                 team_entered_numbers[pos] = val_str.strip()
 
-        # 1. 먼저 포메이션 시각화 그라운드를 렌더링
+        # 1. 포메이션 시각화 그라운드 렌더링
         render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
         
-        # 2. 그라운드 아래, 등번호 입력 칸 바로 위에 팀명 부제목 배치
+        # 2. 그라운드 아래, 등번호 입력 칸 바로 위에 팀명만 부제목으로 표시
         display_sub_name = team_name.strip() if team_name.strip() else ("홈팀" if prefix == "home" else "어웨이팀")
         prefix_icon = "🏠" if prefix == "home" else "✈️"
-        st.markdown(f"**{prefix_icon} {display_sub_name} 등번호 기입**")
+        st.markdown(f"**{prefix_icon} {display_sub_name}**")
 
         for row in layout:
             st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 6px; margin-bottom: 2px;'>{row['line']}</div>", unsafe_allow_html=True)
