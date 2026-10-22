@@ -106,7 +106,6 @@ def search_team_autocomplete(search_term: str):
         return OFFICIAL_HIGH_SCHOOL_TEAMS
     q = search_term.strip().lower()
     matches = [t for t in OFFICIAL_HIGH_SCHOOL_TEAMS if q in t.lower()]
-    # 검색어와 정확히 일치하지 않는 신규 팀도 선택할 수 있도록 맨 위에 추가
     if search_term.strip() not in matches:
         matches.insert(0, search_term.strip())
     return matches
@@ -714,7 +713,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         st.markdown("🏠 **홈팀 명***")
         selected_home = st_searchbox(
             search_function=search_team_autocomplete,
-            placeholder="팀명을 입력하세요 (예: 서울, 고려대, 아주대)",
+            placeholder="팀명을 입력하세요",
             key="home_team_searchbox"
         )
         home_team = selected_home if selected_home else ""
@@ -724,7 +723,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         st.markdown("✈️ **어웨이팀 명***")
         selected_away = st_searchbox(
             search_function=search_team_autocomplete,
-            placeholder="팀명을 입력하세요 (예: 서울, 고려대, 아주대)",
+            placeholder="팀명을 입력하세요",
             key="away_team_searchbox"
         )
         away_team = selected_away if selected_away else ""
