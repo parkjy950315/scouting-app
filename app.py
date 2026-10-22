@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 최적화 스타일 설정 (헤더 폰트 크기 조정)
+# 📱 PC & 모바일 반응형 최적화 스타일 설정
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -628,6 +628,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
+    # 💡 요청하신 주 제목: "⚡ 등번호 입력"
+    st.subheader("⚡ 등번호 입력")
+
     def render_team_interactive_grid(team_name, formation_name, prefix):
         layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
         team_entered_numbers = {}
@@ -649,9 +652,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 team_entered_numbers[pos] = val_str.strip()
 
         render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
-
-        display_t_name = team_name if team_name else ""
-        st.markdown(f"**⚡ {display_t_name} 등번호 기입**")
         
         for row in layout:
             st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 6px; margin-bottom: 2px;'>{row['line']}</div>", unsafe_allow_html=True)
@@ -674,15 +674,16 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         st.write("")
         return team_entered_numbers
 
-    display_home_header = f"🏠 {home_team.strip()} 라인업" if home_team.strip() else "🏠 홈팀 라인업"
-    display_away_header = f"✈️ {away_team.strip()} 라인업" if away_team.strip() else "✈️ 어웨이팀 라인업"
+    # 💡 포메이션 바로 위에 입력된 홈/어웨이팀 명 기입 부제목
+    display_home_sub = f"🏠 {home_team.strip()}" if home_team.strip() else "🏠 홈팀"
+    display_away_sub = f"✈️ {away_team.strip()}" if away_team.strip() else "✈️ 어웨이팀"
 
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
-        st.markdown(f"### {display_home_header}")
+        st.markdown(f"**{display_home_sub}**")
         home_numbers = render_team_interactive_grid(home_team, home_formation, "home")
     with pitch_col2:
-        st.markdown(f"### {display_away_header}")
+        st.markdown(f"**{display_away_sub}**")
         away_numbers = render_team_interactive_grid(away_team, away_formation, "away")
 
     st.write("---")
@@ -802,10 +803,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (깔끔하게 단축된 제목 및 글자 크기 조정)
+# 2. 📂 경기 일지 조회
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
-    # 💡 요청하신 대로 헤더 제목 문구 단축 및 모바일 글자 크기 최적화 반영
     st.header("📂 경기일지리스트 및 추가수정")
     st.caption("작성된 현장 경기 일지를 조회하고, 하단에서 기존 메모를 불러와 깔끔하게 이어서 작성하거나 수정할 수 있습니다.")
 
