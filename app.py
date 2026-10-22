@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 최적화 스타일 설정
+# 📱 PC & 모바일 반응형 최적화 스타일 설정 (모바일 짤림 방지 및 가독성 향상)
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -71,7 +71,7 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 모바일 환경 레이아웃 밀림 방지 및 폰트 크기 최적화 */
+    /* 모바일 환경 레이아웃 밀림 방지 및 그라운드 짤림 방지 */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 290px !important;
@@ -94,7 +94,7 @@ st.markdown("""
             font-size: 14px !important;
             word-break: keep-all !important;
         }
-        /* 컬럼들을 강제로 가로 배치 유지 및 여백 밀림 방지 */
+        /* 컬럼들을 강제로 가로 배치 유지 및 여백 최소화 */
         [data-testid="stHorizontalBlock"] {
             flex-direction: row !important;
             flex-wrap: nowrap !important;
@@ -456,37 +456,126 @@ formation_layouts = {
     ]
 }
 
-# ⚽ 포메이션별 라인 피치 렌더러 (LCB, RCB 적용)
+# ⚽ 모바일/PC 반응형 그라운드 피치 렌더러 (미디어쿼리로 폰에서 원 크기 자동 조절 및 번호 강조)
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     display_team_name = team_name if team_name else "팀명 미입력"
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
     
     rows_html = ""
     for row in layout:
-        rows_html += f"<div style='color:#e2e8f0; font-weight:600; font-size:8.5px; letter-spacing: 1px; margin-bottom:2px; text-transform: uppercase; text-align: center;'>📍 {row['line']}</div>"
-        rows_html += "<div style='display: flex; justify-content: center; gap: 5px; margin-bottom: 5px; flex-wrap: nowrap; width: 100%;'>"
+        rows_html += f"<div style='color:#e2e8f0; font-weight:600; font-size:8px; letter-spacing: 0.5px; margin-bottom:1px; text-transform: uppercase; text-align: center;'>📍 {row['line']}</div>"
+        rows_html += "<div class='pitch-row'>"
         for pos in row['positions']:
             assigned_num = num_dict.get(pos, "")
             display_num = assigned_num if assigned_num else "-"
             rows_html += f"""
-            <div style="background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%); color: white; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; width: 34px; height: 34px; min-width: 34px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.3);">
-                <span style="font-size: 6px; color: #fecaca; font-weight: 700; line-height: 1.1;">{pos}</span>
-                <span style="font-size: 9.5px; color: #ffffff; font-weight: 900; line-height: 1.1;">{display_num}</span>
+            <div class="player-node">
+                <span class="pos-text">{pos}</span>
+                <span class="num-text">{display_num}</span>
             </div>
             """
         rows_html += "</div>"
 
     complete_html = f"""
-    <div style="background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 10px 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.1); margin-bottom: 15px; width: 100%; box-sizing: border-box; font-family: sans-serif;">
-        <div style="text-align: center; color: #38bdf8; font-weight: 800; font-size: 11.5px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 3px;">
-            🏟️ {display_team_name} <span style="color: #cbd5e1; font-size: 9.5px; font-weight: normal;">({formation_name})</span>
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        .pitch-container {{
+            background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 14px;
+            padding: 8px 4px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25), inset 0 0 15px rgba(255,255,255,0.1);
+            margin-bottom: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            font-family: sans-serif;
+        }}
+        .pitch-header {{
+            text-align: center;
+            color: #38bdf8;
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            padding-bottom: 2px;
+        }}
+        .pitch-row {{
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin-bottom: 3px;
+            flex-wrap: nowrap;
+            width: 100%;
+        }}
+        .player-node {{
+            background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.95);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+        }}
+        .pos-text {{
+            font-size: 6px;
+            color: #fecaca;
+            font-weight: 700;
+            line-height: 1;
+        }}
+        .num-text {{
+            font-size: 11px;
+            color: #ffffff;
+            font-weight: 900;
+            line-height: 1.1;
+        }}
+        
+        /* 스마트폰 화면에서는 5명이 들어가는 5백/3-5-2 라인도 잘리지 않도록 원 크기와 간격을 컴팩트하게 조절 */
+        @media (max-width: 500px) {{
+            .pitch-container {{
+                padding: 6px 2px;
+            }}
+            .pitch-row {{
+                gap: 2px;
+                margin-bottom: 2px;
+            }}
+            .player-node {{
+                width: 29px;
+                height: 29px;
+                min-width: 29px;
+                border-width: 1.5px;
+            }}
+            .pos-text {{
+                font-size: 5px;
+            }}
+            .num-text {{
+                font-size: 9.5px;
+            }}
+        }}
+    </style>
+    </head>
+    <body>
+        <div class="pitch-container">
+            <div class="pitch-header">
+                🏟️ {display_team_name} <span style="color: #cbd5e1; font-size: 9px; font-weight: normal;">({formation_name})</span>
+            </div>
+            {rows_html}
         </div>
-        {rows_html}
-    </div>
+    </body>
+    </html>
     """
     
     import streamlit.components.v1 as components
-    components.html(complete_html, height=410, scrolling=False)
+    # 4-2-3-1이나 5백 등 라인이 많은 포메이션도 길어지지 않게 컴팩트한 고정 높이 적용
+    components.html(complete_html, height=360, scrolling=False)
 
 display_logo()
 
@@ -566,7 +655,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             for idx, pos in enumerate(row['positions']):
                 key_name = f"{prefix}_{pos}"
                 with cols[idx]:
-                    # 💡 모바일 터치 시 '숫자 키패드'가 강제 활성화되도록 st.number_input 적용
+                    # 💡 모바일 터치 시 즉각 숫자 키패드가 노출되는 number_input
                     val_num = st.number_input(
                         f"{pos}", 
                         min_value=0, 
