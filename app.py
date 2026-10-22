@@ -1220,7 +1220,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (요청사항 반영: 팀명, 포지션, 번호, 누적 경기수 + 클릭 시 상세 메모)
+# 3. 📂 경기관찰선수리스트 (팀명 정제 및 깔끔한 출력 반영)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기관찰 선수 리스트")
@@ -1268,6 +1268,13 @@ elif menu == "📂 경기관찰선수리스트":
                         else:
                             team_name = header_line
                             
+                        # 🧹 [핵심 수정] 팀명에 섞여 들어간 불필요한 메타 정보나 잔여 텍스트 정제
+                        team_name = re.sub(r'\(.*?\)', '', team_name).strip()
+                        team_name = team_name.replace("[홈]", "").replace("[어웨이]", "").strip()
+                        if " vs " in team_name:
+                            # 만약 대진 전체가 팀명 칸에 들어갔을 경우 첫 번째 팀을 추출하거나 정리
+                            team_name = team_name.split(" vs ")[0].strip()
+
                         obs_players_data.append({
                             "연도": year_str,
                             "경기날짜": match_date,
