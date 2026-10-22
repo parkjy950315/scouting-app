@@ -803,7 +803,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     text_key = f"text_memo_home_{pos}"
                     note_val = st.text_area(f"[{pos}] {num}번 세부 관찰 기록", placeholder=f"[{pos}] {num}번 선수의 플레이 장점, 특징 등을 적어주세요...", key=text_key, height=90)
                     if note_val.strip():
-                        player_specific_memos[f"[홈] {h_display_label} - [{pos}] {num}번"] = note_val.strip()
+                        # 🎯 [핵심 수정] 저장될 때 팀명이 깔끔하게 들어가도록 명확히 구조화
+                        player_specific_memos[f"{h_display_label.strip()} | [{pos}] {num}번"] = note_val.strip()
         else:
             st.info("💡 홈팀 포메이션 칸에 등번호를 입력해 주세요.")
 
@@ -818,7 +819,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     text_key = f"text_memo_away_{pos}"
                     note_val = st.text_area(f"[{pos}] {num}번 세부 관찰 기록", placeholder=f"[{pos}] {num}번 선수의 플레이 장점, 특징 등을 적어주세요...", key=text_key, height=90)
                     if note_val.strip():
-                        player_specific_memos[f"[어웨이] {a_display_label} - [{pos}] {num}번"] = note_val.strip()
+                        # 🎯 [핵심 수정] 저장될 때 팀명이 깔끔하게 들어가도록 명확히 구조화
+                        player_specific_memos[f"{a_display_label.strip()} | [{pos}] {num}번"] = note_val.strip()
         else:
             st.info("💡 어웨이팀 포메이션 칸에 등번호를 입력해 주세요.")
 
@@ -1100,7 +1102,7 @@ elif menu == "📂 경기 일지 조회":
                                 if home_nums:
                                     for pos, num in home_nums.items():
                                         chk_key = f"edit_chk_home_{target_memo_idx}_{pos}"
-                                        p_label_key = f"[홈] {h_team_name} - [{pos}] {num}번"
+                                        p_label_key = f"{h_team_name} | [{pos}] {num}번"
                                         
                                         has_old_note = p_label_key in existing_player_notes or any(p_label_key in l for l in existing_player_notes.split("\n"))
                                         
@@ -1108,7 +1110,7 @@ elif menu == "📂 경기 일지 조회":
                                         
                                         default_note_val = ""
                                         for key_str, val_str in parsed_pos_memos.items():
-                                            if pos in key_str and num in key_str and "홈" in key_str:
+                                            if pos in key_str and num in key_str and h_team_name in key_str:
                                                 default_note_val = val_str
                                                 break
 
@@ -1125,7 +1127,7 @@ elif menu == "📂 경기 일지 조회":
                                 if away_nums:
                                     for pos, num in away_nums.items():
                                         chk_key = f"edit_chk_away_{target_memo_idx}_{pos}"
-                                        p_label_key = f"[어웨이] {a_team_name} - [{pos}] {num}번"
+                                        p_label_key = f"{a_team_name} | [{pos}] {num}번"
                                         
                                         has_old_note = p_label_key in existing_player_notes or any(p_label_key in l for l in existing_player_notes.split("\n"))
                                         
@@ -1133,7 +1135,7 @@ elif menu == "📂 경기 일지 조회":
                                         
                                         default_note_val = ""
                                         for key_str, val_str in parsed_pos_memos.items():
-                                            if pos in key_str and num in key_str and "어웨이" in key_str:
+                                            if pos in key_str and num in key_str and a_team_name in key_str:
                                                 default_note_val = val_str
                                                 break
 
@@ -1220,7 +1222,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (팀명, 포지션, 등번호 정확한 파싱 및 집계)
+# 3. 📂 경기관찰선수리스트 (강력하고 유연한 정규식 파싱 적용)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기관찰 선수 리스트")
@@ -1258,20 +1260,39 @@ elif menu == "📂 경기관찰선수리스트":
                         pos_part = ""
                         num_part = ""
                         
-                        # 🎯 [핵심 수정] header_line 형식 예: "[홈] 보인고 - [CB] 5번" 또는 "[어웨이] 보인고 - [CF] 9번"
-                        if " - [" in header_line:
-                            team_raw, rest = header_line.split(" - [", 1)
-                            # 팀명 정제 ([홈], [어웨이] 및 공백 제거)
-                            team_name = re.sub(r'\[.*?\]', '', team_raw).strip()
-                            
-                            if "]" in rest:
-                                pos_raw, num_raw = rest.split("]", 1)
-                                pos_part = pos_raw.strip()
-                                num_part = num_raw.strip().replace("번", "")
+                        # 🎯 [강력한 파싱 로직] 다양한 형식의 헤더 문자열에서 팀명, 포지션, 등번호를 완벽하게 추출
+                        # 예시 형식: "보인고 | [CB] 5번" 또는 "[홈] 보인고 - [CB] 5번" 등
+                        cleaned_header = re.sub(r'\[홈\]|\[어웨이\]', '', header_line).strip()
+                        
+                        if " | " in cleaned_header:
+                            t_part, rest = cleaned_header.split(" | ", 1)
+                            team_name = t_part.strip()
+                            if "[" in rest and "]" in rest:
+                                match_pos = re.search(r'\[(.*?)\]', rest)
+                                if match_pos:
+                                    pos_part = match_pos.group(1).strip()
+                                match_num = re.search(r'(\d+)번?', rest)
+                                if match_num:
+                                    num_part = match_num.group(1).strip()
+                        elif " - [" in cleaned_header:
+                            t_part, rest = cleaned_header.split(" - [", 1)
+                            team_name = t_part.strip()
+                            match_pos = re.search(r'^(.*?\])', '[' + rest)
+                            if match_pos:
+                                pos_part = match_pos.group(1).replace('[', '').replace(']', '').strip()
+                            match_num = re.search(r'(\d+)번?', rest)
+                            if match_num:
+                                num_part = match_num.group(1).strip()
                         else:
-                            team_name = re.sub(r'\[.*?\]', '', header_line).strip()
-                            
-                        # 추가 정제: 소속팀명에 혹시라도 딸려 들어온 괄호나 잔여 문자 제거
+                            # 기본 폴백 추출
+                            team_name = re.sub(r'\[.*?\]', '', cleaned_header).strip()
+                            match_num = re.search(r'(\d+)번?', cleaned_header)
+                            if match_num:
+                                num_part = match_num.group(1).strip()
+                            match_pos = re.search(r'(GK|CB|LCB|RCB|LB|RB|MF|LW|RW|CF)', cleaned_header)
+                            if match_pos:
+                                pos_part = match_pos.group(1).strip()
+
                         team_name = re.sub(r'\(.*?\)', '', team_name).strip()
 
                         if team_name and num_part:
@@ -1280,7 +1301,7 @@ elif menu == "📂 경기관찰선수리스트":
                                 "경기날짜": match_date,
                                 "대회/경기명": match_title,
                                 "팀명": team_name,
-                                "포지션": pos_part,
+                                "포지션": pos_part if pos_part else "미지정",
                                 "등번호": num_part,
                                 "관찰메모": memo_content,
                                 "player_id": f"{team_name} | {num_part}번"
