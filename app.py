@@ -803,7 +803,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     text_key = f"text_memo_home_{pos}"
                     note_val = st.text_area(f"[{pos}] {num}번 세부 관찰 기록", placeholder=f"[{pos}] {num}번 선수의 플레이 장점, 특징 등을 적어주세요...", key=text_key, height=90)
                     if note_val.strip():
-                        # 🎯 [핵심 수정] 저장될 때 팀명이 깔끔하게 들어가도록 명확히 구조화
                         player_specific_memos[f"{h_display_label.strip()} | [{pos}] {num}번"] = note_val.strip()
         else:
             st.info("💡 홈팀 포메이션 칸에 등번호를 입력해 주세요.")
@@ -819,7 +818,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     text_key = f"text_memo_away_{pos}"
                     note_val = st.text_area(f"[{pos}] {num}번 세부 관찰 기록", placeholder=f"[{pos}] {num}번 선수의 플레이 장점, 특징 등을 적어주세요...", key=text_key, height=90)
                     if note_val.strip():
-                        # 🎯 [핵심 수정] 저장될 때 팀명이 깔끔하게 들어가도록 명확히 구조화
                         player_specific_memos[f"{a_display_label.strip()} | [{pos}] {num}번"] = note_val.strip()
         else:
             st.info("💡 어웨이팀 포메이션 칸에 등번호를 입력해 주세요.")
@@ -1222,7 +1220,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (강력하고 유연한 정규식 파싱 적용)
+# 3. 📂 경기관찰선수리스트 (최신순 정렬 적용)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기관찰 선수 리스트")
@@ -1260,8 +1258,6 @@ elif menu == "📂 경기관찰선수리스트":
                         pos_part = ""
                         num_part = ""
                         
-                        # 🎯 [강력한 파싱 로직] 다양한 형식의 헤더 문자열에서 팀명, 포지션, 등번호를 완벽하게 추출
-                        # 예시 형식: "보인고 | [CB] 5번" 또는 "[홈] 보인고 - [CB] 5번" 등
                         cleaned_header = re.sub(r'\[홈\]|\[어웨이\]', '', header_line).strip()
                         
                         if " | " in cleaned_header:
@@ -1284,7 +1280,6 @@ elif menu == "📂 경기관찰선수리스트":
                             if match_num:
                                 num_part = match_num.group(1).strip()
                         else:
-                            # 기본 폴백 추출
                             team_name = re.sub(r'\[.*?\]', '', cleaned_header).strip()
                             match_num = re.search(r'(\d+)번?', cleaned_header)
                             if match_num:
@@ -1371,7 +1366,7 @@ elif menu == "📂 경기관찰선수리스트":
                 st.write("---")
                 st.markdown(f"### ⚽ [{p_team}] 포지션: {p_pos} / 등번호: {p_num}번 — 상세 관찰 이력")
 
-                # 해당 선수의 모든 관찰 기록 필터링
+                # 🎯 [최신순 정렬 적용] 경기날짜 기준 내림차순(ascending=False) 정렬
                 player_history = obs_df[(obs_df["팀명"] == p_team) & (obs_df["등번호"] == p_num)].sort_values(by="경기날짜", ascending=False)
 
                 for _, h_row in player_history.iterrows():
