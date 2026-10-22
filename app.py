@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 최적화 스타일 설정
+# 📱 PC & 모바일 최적화 스타일 설정 (모바일에서도 입력칸이 세로로 찌그러지지 않고 가로 배치되도록 강제)
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -61,6 +61,7 @@ st.markdown("""
         cursor: pointer;
     }
     
+    /* 모바일 환경에서도 st.columns가 세로로 떨어지지 않고 그라운드처럼 가로 나열되도록 유지 */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 290px !important;
@@ -78,6 +79,15 @@ st.markdown("""
             font-size: 22px !important;
             margin-top: 5px !important;
             margin-bottom: 15px !important;
+        }
+        /* 컬럼들을 강제로 가로 배치 유지 및 패딩 조절 */
+        [data-testid="stHorizontalBlock"] {
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+        }
+        [data-testid="stHorizontalBlock"] > div {
+            flex: 1 !important;
+            min-width: 0 !important;
         }
     }
     @media (min-width: 769px) {
@@ -534,8 +544,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         display_t_name = team_name if team_name else "입력 대기중인 팀"
         st.markdown(f"**⚡ {display_t_name} 포메이션 진형별 등번호 직접 입력**")
         
+        # 💡 모바일에서도 세로로 깨지지 않고 시각화 그라운드처럼 라인별 가로 칸 배치 유지
         for row in layout:
-            st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 4px;'>{row['line']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 6px; margin-bottom: 2px;'>{row['line']}</div>", unsafe_allow_html=True)
             cols = st.columns(len(row['positions']))
             for idx, pos in enumerate(row['positions']):
                 key_name = f"{prefix}_{pos}"
@@ -578,7 +589,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         if active_home_pos:
             for pos, num in active_home_pos.items():
                 chk_key = f"chk_memo_home_{pos}"
-                # 깔끔한 포맷 적용 ([포지션] 번호번 메모)
                 is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", key=chk_key)
                 if is_checked:
                     text_key = f"text_memo_home_{pos}"
@@ -663,7 +673,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     "장점/특기": f"대회: {tournament_name} / 홈: {home_formation} vs 어웨이: {away_formation}",
                     "보완점/단점": "",
                     "종합 평가": memo_overall,
-                    "작성일자": str(date_input_val := str(match_date))
+                    "작성일자": str(match_date)
                 }
 
                 updated_df = pd.DataFrame([new_memo_data]) if df.empty else pd.concat([df, pd.DataFrame([new_memo_data])], ignore_index=True)
@@ -873,7 +883,6 @@ elif menu == "📂 경기 일지 조회":
                                         
                                         has_old_note = p_label_key in existing_player_notes or any(p_label_key in l for l in existing_player_notes.split("\n"))
                                         
-                                        # 깔끔하게 [포지션] 번호번 메모 형식 적용
                                         is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", value=has_old_note, key=chk_key)
                                         
                                         default_note_val = ""
@@ -1356,7 +1365,7 @@ elif menu == "🗑️ 데이터 삭제":
                                 st.rerun()
                 with c_no:
                     if st.button("❌ 아니오 (취소)", use_container_width=True):
-                        st.session_state[confirm_key] = False
+                        st.session_state[confirm_key]= False
                         st.rerun()
         else:
             if "confirm_delete_mode" in st.session_state:
