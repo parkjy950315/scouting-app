@@ -688,7 +688,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    st.subheader("⭐ 선수 메모")
+    # 💡 1. 선수 메모 제목 크기 키움 (## 적용)
+    st.markdown("## ⭐ 선수 메모")
     st.caption("위 포메이션에 등번호를 입력하면 아래에 해당 포지션들이 자동으로 활성화됩니다. 메모할 포지션을 체크하세요!")
 
     h_display_label = home_team.strip() if home_team.strip() else "홈팀"
@@ -698,8 +699,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     memo_col_h, memo_col_a = st.columns(2)
 
+    # 💡 2. 팀명만 나오게 부제목 수정
     with memo_col_h:
-        st.markdown(f"**🏠 {h_display_label} 포지션별 메모**")
+        st.markdown(f"**🏠 {h_display_label}**")
         active_home_pos = {pos: num for pos, num in home_numbers.items() if num}
         if active_home_pos:
             for pos, num in active_home_pos.items():
@@ -714,7 +716,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.info("💡 홈팀 포메이션 칸에 등번호를 입력해 주세요.")
 
     with memo_col_a:
-        st.markdown(f"**✈️ {a_display_label} 포지션별 메모**")
+        st.markdown(f"**✈️ {a_display_label}**")
         active_away_pos = {pos: num for pos, num in away_numbers.items() if num}
         if active_away_pos:
             for pos, num in active_away_pos.items():
@@ -990,7 +992,7 @@ elif menu == "📂 경기 일지 조회":
                             edit_memo_col_h, edit_memo_col_a = st.columns(2)
 
                             with edit_memo_col_h:
-                                st.markdown(f"**🏠 {h_team_name} 포지션별 메모**")
+                                st.markdown(f"**🏠 {h_team_name}**")
                                 if home_nums:
                                     for pos, num in home_nums.items():
                                         chk_key = f"edit_chk_home_{target_memo_idx}_{pos}"
@@ -1015,7 +1017,7 @@ elif menu == "📂 경기 일지 조회":
                                     st.info("등록된 홈팀 등번호가 없습니다.")
 
                             with edit_memo_col_a:
-                                st.markdown(f"**✈️ {a_team_name} 포지션별 메모**")
+                                st.markdown(f"**✈️ {a_team_name}**")
                                 if away_nums:
                                     for pos, num in away_nums.items():
                                         chk_key = f"edit_chk_away_{target_memo_idx}_{pos}"
