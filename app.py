@@ -899,7 +899,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (표 구성 완벽 정돈)
+# 2. 📂 경기 일지 조회
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 경기일지리스트 및 추가수정")
@@ -949,7 +949,6 @@ elif menu == "📂 경기 일지 조회":
             if filtered_memo_df.empty:
                 st.warning("🔍 검색 조건에 일치하는 경기 일지가 없습니다.")
             else:
-                # 🎯 [핵심 수정] 사용자가 원하시는 깔끔하고 정돈된 3열(작성일자, 경기 대진, 대회명) 구조로 명확히 고정
                 display_memo_df = filtered_memo_df[["작성일자", "소속팀", "장점/특기"]].copy()
                 
                 def parse_clean_tournament(val):
@@ -1183,7 +1182,6 @@ elif menu == "📂 경기 일지 조회":
 
             memo_df_del = memo_df.sort_values(by="작성일자", ascending=False).reset_index(drop=True) if "작성일자" in memo_df.columns else memo_df.copy()
             
-            # 🎯 [핵심 수정] 삭제 탭의 표도 동일하게 깔끔한 3열 구조로 고정
             display_del_df = memo_df_del[["작성일자", "소속팀", "장점/특기"]].copy()
             display_del_df["장점/특기"] = display_del_df["장점/특기"].apply(parse_clean_tournament)
             display_del_df.columns = ["작성일자", "경기 대진 (팀 VS 팀)", "대회명"]
@@ -1222,11 +1220,11 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트
+# 3. 📂 경기관찰선수리스트 (요청사항 반영: 팀명, 포지션, 번호, 누적 경기수 + 클릭 시 상세 메모)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기관찰 선수 리스트")
-    st.caption("현장 경기 관찰 메모에서 **직접 체크하고 세부 메모를 남긴 선수들**의 데이터를 팀별·연도별로 모아서 보여줍니다. (✨ 연간 3회 이상 메모된 선수는 연두색으로 하이라이트됩니다)")
+    st.caption("현장 경기 관찰 메모에서 **직접 체크하고 세부 메모를 남긴 선수들**의 누적 기록입니다. 표에서 **선수를 클릭**하면 그동안 보았던 모든 경기 내용과 메모를 확인할 수 있습니다.")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
@@ -1278,7 +1276,7 @@ elif menu == "📂 경기관찰선수리스트":
                             "포지션": pos_part,
                             "등번호": num_part,
                             "관찰메모": memo_content,
-                            "player_id": f"{team_name}_{num_part}"
+                            "player_id": f"{team_name} | {num_part}번"
                         })
                 except Exception:
                     pass
@@ -1288,43 +1286,82 @@ elif menu == "📂 경기관찰선수리스트":
         else:
             obs_df = pd.DataFrame(obs_players_data)
             
-            freq_df = obs_df.groupby(["연도", "player_id"]).size().reset_index(name="메모횟수")
-            obs_df = obs_df.merge(freq_df, on=["연도", "player_id"], how="left")
-            
+            # 선수별 누적 관찰 횟수 및 최신 소속팀/포지션 집계
+            summary_df = obs_df.groupby("player_id").agg(
+                팀명=("팀명", "first"),
+                포지션=("포지션", "first"),
+                등번호=("등번호", "first"),
+                누적경기수=("경기날짜", "count")
+            ).reset_index()
+
             f_col1, f_col2 = st.columns([2, 2])
             with f_col1:
-                search_p = st.text_input("🔍 선수 검색 (팀명, 등번호, 포지션 등)", placeholder="예: 영등포, 고려대, 7번 등", key="obs_p_search")
+                search_p = st.text_input("🔍 선수 검색 (팀명, 등번호 등)", placeholder="예: 보인고, 7번 등", key="obs_p_search")
             with f_col2:
-                all_years = sorted(obs_df["연도"].unique(), reverse=True)
-                selected_year = st.selectbox("📅 연도 필터", options=["전체"] + list(all_years), key="obs_year_filter")
+                st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
 
-            filtered_obs_df = obs_df.copy()
+            filtered_summary = summary_df.copy()
             if search_p.strip():
                 q = search_p.strip().lower()
-                filtered_obs_df = filtered_obs_df[
-                    filtered_obs_df["팀명"].str.lower().str.contains(q, na=False) |
-                    filtered_obs_df["등번호"].str.lower().str.contains(q, na=False) |
-                    filtered_obs_df["포지션"].str.lower().str.contains(q, na=False) |
-                    filtered_obs_df["관찰메모"].str.lower().str.contains(q, na=False) |
-                    filtered_obs_df["대회/경기명"].str.lower().str.contains(q, na=False)
+                filtered_summary = filtered_summary[
+                    filtered_summary["팀명"].str.lower().str.contains(q, na=False) |
+                    filtered_summary["등번호"].str.lower().str.contains(q, na=False) |
+                    filtered_summary["포지션"].str.lower().str.contains(q, na=False)
                 ]
-            if selected_year != "전체":
-                filtered_obs_df = filtered_obs_df[filtered_obs_df["연도"] == selected_year]
 
-            filtered_obs_df = filtered_obs_df.sort_values(by="경기날짜", ascending=False).reset_index(drop=True)
+            filtered_summary = filtered_summary.sort_values(by="누적경기수", ascending=False).reset_index(drop=True)
 
             st.write("")
-            st.markdown(f"**📌 총 {len(filtered_obs_df)}건의 관찰 선수 메모가 집계되었습니다.** (연간 3회 이상 메모된 선수는 연두색 표시)")
+            st.markdown(f"**📌 총 {len(filtered_summary)}명의 관찰 선수가 집계되었습니다.** (조회할 선수를 **클릭**하세요)")
 
-            display_obs_df = filtered_obs_df[["연도", "경기날짜", "대회/경기명", "팀명", "포지션", "등번호", "메모횟수", "관찰메모"]].copy()
+            display_summary_df = filtered_summary[["팀명", "포지션", "등번호", "누적경기수"]].copy()
+            display_summary_df.columns = ["소속 팀명", "포지션", "등번호", "누적 관찰 경기 수"]
 
             def highlight_frequent_memo(row):
-                if row.get("메모횟수", 0) >= 3:
+                if row.get("누적 관찰 경기 수", 0) >= 3:
                     return ['background-color: #d1fae5; color: #065f46; font-weight: bold;'] * len(row)
                 return [''] * len(row)
 
-            styled_obs_df = display_obs_df.style.apply(highlight_frequent_memo, axis=1)
-            st.dataframe(styled_obs_df, use_container_width=True, height=500)
+            styled_summary_df = display_summary_df.style.apply(highlight_frequent_memo, axis=1)
+            
+            obs_selection = st.dataframe(
+                styled_summary_df,
+                use_container_width=True,
+                selection_mode="single-row",
+                on_select="rerun",
+                height=400
+            )
+
+            selected_obs_rows = obs_selection.selection.rows if hasattr(obs_selection, "selection") else []
+
+            if selected_obs_rows:
+                selected_player_summary = filtered_summary.iloc[selected_obs_rows[0]]
+                p_team = selected_player_summary["팀명"]
+                p_num = selected_player_summary["등번호"]
+                p_pos = selected_player_summary["포지션"]
+
+                st.write("---")
+                st.markdown(f"### ⚽ [{p_team}] 포지션: {p_pos} / 등번호: {p_num}번 — 상세 관찰 이력")
+
+                # 해당 선수의 모든 관찰 기록 필터링
+                player_history = obs_df[(obs_df["팀명"] == p_team) & (obs_df["등번호"] == p_num)].sort_values(by="경기날짜", ascending=False)
+
+                for _, h_row in player_history.iterrows():
+                    match_box_title = h_row["대회/경기명"]
+                    match_date_val = h_row["경기날짜"]
+                    pos_val = h_row["포지션"]
+                    memo_val = h_row["관찰메모"]
+
+                    with st.container():
+                        st.markdown(f"""
+                        <div style="background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 10px 14px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #e2e8f0;">
+                            <div style="font-weight: bold; color: #1e293b; font-size: 14px;">📅 경기일자: {match_date_val} | 대회/경기: {match_box_title}</div>
+                            <div style="color: #475569; font-size: 13px; margin-top: 4px;"><b>포지션:</b> {pos_val}번 포지션</div>
+                            <div style="color: #334155; font-size: 13.5px; margin-top: 8px; white-space: pre-wrap; background: white; padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1;">{memo_val if memo_val else '작성된 세부 메모가 없습니다.'}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+            else:
+                st.info("💡 위 목록 표에서 상세 관찰 내용을 확인할 **선수 행을 클릭**하세요.")
 
 # ----------------------------------------------------
 # 4. 선수 등록
@@ -1687,9 +1724,9 @@ elif menu == "🗑️ 데이터 삭제":
                     if st.button("✅ 예, 삭제합니다", type="primary", use_container_width=True):
                         with st.spinner("구글 시트에서 선택된 데이터를 영구 삭제하는 중..."):
                             updated_df = df.drop(del_selected_rows).reset_index(drop=True)
-                            if save_data_to_save := save_data_to_sheet(updated_df):
+                            if save_data_to_sheet(updated_df):
                                 st.session_state[cf_key] = False
-                                st.success(f"총 {selected_count}명의 선수 데이터가 성공적으로 영구 삭제되었습니다!")
+                                st.success(f"총 {selected_count}명의 선수별 데이터가 성공적으로 영구 삭제되었습니다!")
                                 st.rerun()
                 with c_no:
                     if st.button("❌ 아니오 (취소)", use_container_width=True):
