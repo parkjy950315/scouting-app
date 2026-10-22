@@ -131,7 +131,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 최적화 스타일 설정
+# 📱 PC & 모바일 반응형 최적화 스타일 설정 (2열 정렬 유지)
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -189,12 +189,16 @@ st.markdown("""
             font-size: 14px !important;
             word-break: keep-all !important;
         }
-        [data-testid="stHorizontalBlock"] {
-            flex-wrap: wrap !important;
+        /* 모바일에서도 홈/어웨이가 좌/우 2열로 나란히 표시되도록 가로줄바꿈 방지 */
+        .side-by-side-row {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 10px !important;
+            width: 100% !important;
         }
-        [data-testid="stHorizontalBlock"] > div {
-            flex: 1 1 100% !important;
-            min-width: 100% !important;
+        .side-by-side-row > div {
+            flex: 1 !important;
+            min-width: 0 !important;
         }
     }
     @media (min-width: 769px) {
@@ -691,7 +695,7 @@ menu = st.sidebar.radio("이동할 메뉴", [
 ])
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (네이버 스타일 드롭다운 검색 적용)
+# 1. 🏟️ 현장 경기 관찰 메모 (홈/어웨이 2열 좌/우 동시 배치 원상복구)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -778,6 +782,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         st.write("")
         return team_entered_numbers
 
+    # 🎯 [핵심] 홈팀과 어웨이팀 포메이션 시각화 및 등번호 입력 칸을 2열 나란히 동시 배치
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
         home_numbers = render_team_interactive_grid(home_team, home_formation, "home")
@@ -903,7 +908,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (표 레이아웃 깔끔 개편)
+# 2. 📂 경기 일지 조회 (표 직관적 개편 유지)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 경기일지리스트 및 추가수정")
@@ -953,13 +958,9 @@ elif menu == "📂 경기 일지 조회":
             if filtered_memo_df.empty:
                 st.warning("🔍 검색 조건에 일치하는 경기 일지가 없습니다.")
             else:
-                # 🎯 중복 열 제거 및 대회명만 깔끔하게 정돈된 표 생성
                 display_memo_df = filtered_memo_df[["작성일자", "선수명", "장점/특기"]].copy()
-                
-                # 팀 대진명 깔끔하게 파싱 (대회명 대괄호 및 타임스탬프 제거)
                 display_memo_df["선수명"] = display_memo_df["선수명"].apply(lambda x: re.sub(r'\[.*?\]\s*', '', re.sub(r' \(타임:\d+\)', '', str(x))).strip())
                 
-                # 대회 정보열에서 '대회:' 글자나 포메이션 텍스트 지우고 깔끔한 대회명만 추출
                 def parse_clean_tournament(val):
                     val_str = str(val)
                     if "대회:" in val_str:
