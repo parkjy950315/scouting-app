@@ -598,6 +598,7 @@ st.sidebar.markdown("---")
 menu = st.sidebar.radio("이동할 메뉴", [
     "🏟️ 현장 경기 관찰 메모", 
     "📂 경기 일지 조회", 
+    "📂 경기관찰선수리스트", 
     "선수 등록", 
     "🔍 선수 검색 및 관찰일지 조회", 
     "🗑️ 데이터 삭제"
@@ -826,7 +827,6 @@ elif menu == "📂 경기 일지 조회":
 
             sc_col1, sc_col2 = st.columns([3, 1])
             with sc_col1:
-                # 💡 검색 라벨 및 placeholder 수정 반영
                 search_query = st.text_input("🔍 검색", placeholder="팀명, 대회명", key="memo_search_box")
             with sc_col2:
                 available_months = ["전체"]
@@ -1117,7 +1117,117 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 선수 등록
+# 3. 📂 경기관찰선수리스트
+# ----------------------------------------------------
+elif menu == "📂 경기관찰선수리스트":
+    st.header("📂 경기관찰 선수 리스트")
+    st.caption("현장 경기 관찰 메모에서 **직접 체크하고 세부 메모를 남긴 선수들**의 데이터를 팀별·연도별로 모아서 보여줍니다. (✨ 연간 3회 이상 메모된 선수는 연두색으로 하이라이트됩니다)")
+
+    memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
+
+    if memo_df.empty:
+        st.info("저장된 경기 관찰 일지가 없습니다. [🏟️ 현장 경기 관찰 메모]에서 선수를 메모해 보세요!")
+    else:
+        # 데이터 파싱하여 개별 선수 메모 리스트 구성
+        obs_players_data = []
+        for _, row in memo_df.iterrows():
+            match_date = row.get("작성일자", "")
+            year_str = str(match_date)[:4] if len(str(match_date)) >= 4 else str(datetime.today().year)
+            raw_content = row.get("종합 평가", "")
+            match_title = re.sub(r' \(타임:\d+\)', '', str(row.get("선수명", "")))
+            
+            if "⭐ [선수별 집중 관찰 메모]" in raw_content:
+                try:
+                    parts = raw_content.split("⭐ [선수별 집중 관찰 메모]")
+                    notes_block = parts[1].split("📝 [경기 전체 총평]")[0] if "📝 [경기 전체 총평]" in parts[1] else parts[1]
+                    
+                    entries = notes_block.split("\n- ")
+                    for entry in entries:
+                        if not entry.strip():
+                            continue
+                        lines = entry.strip().split("\n")
+                        header_line = lines[0].replace("- ", "").strip()
+                        memo_content = "\n".join([l.strip() for l in lines[1:]]).strip()
+                        
+                        if header_line.endswith(":"):
+                            header_line = header_line[:-1].strip()
+                            
+                        team_name = ""
+                        pos_part = ""
+                        num_part = ""
+                        
+                        if " - [" in header_line:
+                            team_raw, rest = header_line.split(" - [", 1)
+                            team_name = re.sub(r'\[.*?\]', '', team_raw).strip()
+                            if "]" in rest:
+                                pos_raw, num_raw = rest.split("]", 1)
+                                pos_part = pos_raw.strip()
+                                num_part = num_raw.strip().replace("번", "")
+                        else:
+                            team_name = header_line
+                            
+                        obs_players_data.append({
+                            "연도": year_str,
+                            "경기날짜": match_date,
+                            "대회/경기명": match_title,
+                            "팀명": team_name,
+                            "포지션": pos_part,
+                            "등번호": num_part,
+                            "관찰메모": memo_content,
+                            "player_id": f"{team_name}_{num_part}"
+                        })
+                except Exception:
+                    pass
+
+        if not obs_players_data:
+            st.info("💡 현장 경기 관찰 메모에서 작성된 **선수별 집중 메모**가 아직 없습니다.")
+        else:
+            obs_df = pd.DataFrame(obs_players_data)
+            
+            # 연도별, 선수별 메모 횟수 계산
+            freq_df = obs_df.groupby(["연도", "player_id"]).size().reset_index(name="메모횟수")
+            obs_df = obs_df.merge(freq_df, on=["연도", "player_id"], how="left")
+            
+            # 상단 필터
+            f_col1, f_col2 = st.columns([2, 2])
+            with f_col1:
+                search_p = st.text_input("🔍 선수 검색 (팀명, 등번호, 포지션 등)", placeholder="예: 안산, 7번, CF 등", key="obs_p_search")
+            with f_col2:
+                all_years = sorted(obs_df["연도"].unique(), reverse=True)
+                selected_year = st.selectbox("📅 연도 필터", options=["전체"] + list(all_years), key="obs_year_filter")
+
+            filtered_obs_df = obs_df.copy()
+            if search_p.strip():
+                q = search_p.strip().lower()
+                filtered_obs_df = filtered_obs_df[
+                    filtered_obs_df["팀명"].str.lower().str.contains(q, na=False) |
+                    filtered_obs_df["등번호"].str.lower().str.contains(q, na=False) |
+                    filtered_obs_df["포지션"].str.lower().str.contains(q, na=False) |
+                    filtered_obs_df["관찰메모"].str.lower().str.contains(q, na=False) |
+                    filtered_obs_df["대회/경기명"].str.lower().str.contains(q, na=False)
+                ]
+            if selected_year != "전체":
+                filtered_obs_df = filtered_obs_df[filtered_obs_df["연도"] == selected_year]
+
+            filtered_obs_df = filtered_obs_df.sort_values(by="경기날짜", ascending=False).reset_index(drop=True)
+
+            st.write("")
+            st.markdown(f"**📌 총 {len(filtered_obs_df)}건의 관찰 선수 메모가 집계되었습니다.** (연간 3회 이상 메모된 선수는 연두색 표시)")
+
+            # 화면에 보여줄 컬럼 정리
+            display_obs_df = filtered_obs_df[["연도", "경기날짜", "대회/경기명", "팀명", "포지션", "등번호", "메모횟수", "관찰메모"]].copy()
+
+            # 연도별 3회 이상 메모된 선수 행 배경색 스타일링 함수
+            def highlight_frequent_memo(row):
+                if row.get("메모횟수", 0) >= 3:
+                    return ['background-color: #d1fae5; color: #065f46; font-weight: bold;'] * len(row)
+                return [''] * len(row)
+
+            styled_obs_df = display_obs_df.style.apply(highlight_frequent_memo, axis=1)
+            st.dataframe(styled_obs_df, use_container_width=True, height=500)
+
+# ----------------------------------------------------
+# 4. 선수 등록
 # ----------------------------------------------------
 elif menu == "선수 등록":
     st.header("📋 신규 관찰 선수 등록")
@@ -1176,7 +1286,7 @@ elif menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 4. 🔍 선수 검색 및 관찰일지 조회
+# 5. 🔍 선수 검색 및 관찰일지 조회
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
     st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
@@ -1436,7 +1546,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
             st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 관찰일지와 PDF 다운로드 버튼, 수정/삭제 폼이 나타납니다.")
 
 # ----------------------------------------------------
-# 5. 데이터 삭제
+# 6. 데이터 삭제
 # ----------------------------------------------------
 elif menu == "🗑️ 데이터 삭제":
     st.header("🗑️ 선수 데이터 삭제")
