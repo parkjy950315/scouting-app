@@ -867,7 +867,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회
+# 2. 📂 경기 일지 조회 (등번호 변경 기능 포함)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 경기일지리스트 및 추가수정")
@@ -1030,22 +1030,56 @@ elif menu == "📂 경기 일지 조회":
                                     parsed_pos_memos[header_part.strip()] = content_part.strip()
 
                         st.markdown("---")
-                        with st.expander("✏️ 포메이션별 선수 체크 및 기존 메모 이어서 수정·추가하기", expanded=True):
+                        with st.expander("✏️ 포메이션별 등번호 수정 및 선수 메모 이어서 수정·추가하기", expanded=True):
+                            st.caption("포메이션 포지션별 등번호를 변경하거나 추가하면 저장 시 메타데이터와 메모 제목에 즉시 반영됩니다.")
+                            
+                            edit_home_nums = {}
+                            edit_away_nums = {}
+
+                            ed_col_h, ed_col_a = st.columns(2)
+                            with ed_col_h:
+                                st.markdown(f"**🏠 홈팀: {h_team_name} ({home_form})**")
+                                h_layout = formation_layouts.get(home_form, formation_layouts["4-3-3"])
+                                for row in h_layout:
+                                    st.markdown(f"<div style='font-size: 10px; font-weight: bold; color: #64748B; margin-top: 4px;'>{row['line']}</div>", unsafe_allow_html=True)
+                                    cols_h = st.columns(len(row['positions']))
+                                    for idx, pos in enumerate(row['positions']):
+                                        old_num = home_nums.get(pos, "")
+                                        with cols_h[idx]:
+                                            new_n = st.text_input(f"{pos}", value=old_num, key=f"edit_h_num_{target_memo_idx}_{pos}", placeholder="번호")
+                                            if new_n.strip():
+                                                edit_home_nums[pos] = new_n.strip()
+
+                            with ed_col_a:
+                                st.markdown(f"**✈️ 어웨이팀: {a_team_name} ({away_form})**")
+                                a_layout = formation_layouts.get(away_form, formation_layouts["4-3-3"])
+                                for row in a_layout:
+                                    st.markdown(f"<div style='font-size: 10px; font-weight: bold; color: #64748B; margin-top: 4px;'>{row['line']}</div>", unsafe_allow_html=True)
+                                    cols_a = st.columns(len(row['positions']))
+                                    for idx, pos in enumerate(row['positions']):
+                                        old_num = away_nums.get(pos, "")
+                                        with cols_a[idx]:
+                                            new_n = st.text_input(f"{pos}", value=old_num, key=f"edit_a_num_{target_memo_idx}_{pos}", placeholder="번호")
+                                            if new_n.strip():
+                                                edit_away_nums[pos] = new_n.strip()
+
+                            st.write("")
+                            st.markdown("#### 📝 선수별 메모 수정")
                             edit_player_specific_memos = {}
                             edit_memo_col_h, edit_memo_col_a = st.columns(2)
 
                             with edit_memo_col_h:
                                 st.markdown(f"**🏠 {h_team_name}**")
-                                if home_nums:
-                                    for pos, num in home_nums.items():
+                                if edit_home_nums:
+                                    for pos, num in edit_home_nums.items():
                                         chk_key = f"edit_chk_home_{target_memo_idx}_{pos}"
                                         p_label_key = f"{h_team_name} | [{pos}] {num}번"
-                                        has_old_note = p_label_key in existing_player_notes or any(p_label_key in l for l in existing_player_notes.split("\n"))
+                                        has_old_note = any(pos in k and num in k and h_team_name in k for k in parsed_pos_memos.keys())
                                         is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", value=has_old_note, key=chk_key)
                                         
                                         default_note_val = ""
                                         for key_str, val_str in parsed_pos_memos.items():
-                                            if pos in key_str and num in key_str and h_team_name in key_str:
+                                            if pos in key_str and h_team_name in key_str:
                                                 default_note_val = val_str
                                                 break
 
@@ -1057,16 +1091,16 @@ elif menu == "📂 경기 일지 조회":
 
                             with edit_memo_col_a:
                                 st.markdown(f"**✈️ {a_team_name}**")
-                                if away_nums:
-                                    for pos, num in away_nums.items():
+                                if edit_away_nums:
+                                    for pos, num in edit_away_nums.items():
                                         chk_key = f"edit_chk_away_{target_memo_idx}_{pos}"
                                         p_label_key = f"{a_team_name} | [{pos}] {num}번"
-                                        has_old_note = p_label_key in existing_player_notes or any(p_label_key in l for l in existing_player_notes.split("\n"))
+                                        has_old_note = any(pos in k and num in k and a_team_name in k for k in parsed_pos_memos.keys())
                                         is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", value=has_old_note, key=chk_key)
                                         
                                         default_note_val = ""
                                         for key_str, val_str in parsed_pos_memos.items():
-                                            if pos in key_str and num in key_str and a_team_name in key_str:
+                                            if pos in key_str and a_team_name in key_str:
                                                 default_note_val = val_str
                                                 break
 
@@ -1078,23 +1112,38 @@ elif menu == "📂 경기 일지 조회":
 
                             edit_general_input = st.text_area("📋 종합 메모 수정 및 이어쓰기", value=existing_general_memo, key=f"edit_general_memo_{target_memo_idx}", height=140)
 
-                            if st.button("💾 메모 및 총평 수정·추가 반영하기", type="primary", use_container_width=True, key=f"btn_save_all_memo_edit_{target_memo_idx}"):
+                            if st.button("💾 등번호 및 메모 수정·추가 반영하기", type="primary", use_container_width=True, key=f"btn_save_all_memo_edit_{target_memo_idx}"):
                                 with st.spinner("업데이트 중..."):
-                                    meta_part = raw_content.split("⭐ [선수별 집중 관찰 메모]")[0] if "⭐ [선수별 집중 관찰 메모]" in raw_content else raw_content.split("📝 [경기 전체 총평]")[0]
+                                    home_num_str = ", ".join([f"{pos}:{num}" for pos, num in edit_home_nums.items()]) if edit_home_nums else "없음"
+                                    away_num_str = ", ".join([f"{pos}:{num}" for pos, num in edit_away_nums.items()]) if edit_away_nums else "없음"
+
+                                    meta_date_line = raw_content.split("\n")[0] if "\n" in raw_content else f"📅 일자: {match_date_str}"
+                                    new_meta_part = (
+                                        f"{meta_date_line}\n"
+                                        f"[META_HOME_FORM:{home_form}]\n"
+                                        f"[META_HOME_NUMS:{home_num_str}]\n"
+                                        f"[META_AWAY_FORM:{away_form}]\n"
+                                        f"[META_AWAY_NUMS:{away_num_str}]\n\n"
+                                        f"🏠 [홈팀: {h_team_name}] 포메이션: {home_form}\n"
+                                        f"- 포지션별 등번호: {home_num_str.replace(':', ': ')}\n\n"
+                                        f"✈️ [어웨이팀: {a_team_name}] 포메이션: {away_form}\n"
+                                        f"- 포지션별 등번호: {away_num_str.replace(':', ': ')}"
+                                    )
+
                                     new_notes_str = ""
                                     for p_label, p_note in edit_player_specific_memos.items():
                                         new_notes_str += f"- {p_label}:\n  {p_note}\n"
 
                                     player_notes_section = f"\n\n⭐ [선수별 집중 관찰 메모]\n{new_notes_str.strip()}" if new_notes_str.strip() else ""
                                     general_section = f"\n\n📝 [경기 전체 총평]\n{edit_general_input.strip()}"
-                                    new_full_content = f"{meta_part}{player_notes_section}{general_section}"
+                                    new_full_content = f"{new_meta_part}{player_notes_section}{general_section}"
 
                                     records = df.to_dict('records')
                                     records[target_memo_idx]["종합 평가"] = new_full_content
                                     updated_df = pd.DataFrame(records).astype(str)
 
                                     if save_data_to_sheet(updated_df):
-                                        st.success("🎉 업데이트 완료!")
+                                        st.success("🎉 등번호 및 경기 메모 업데이트 완료!")
                                         st.rerun()
 
         with tab_delete:
@@ -1122,7 +1171,7 @@ elif menu == "📂 경기 일지 조회":
                                 st.rerun()
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (정식 등록 여부 배지 및 버튼 표시 기능 추가)
+# 3. 📂 경기관찰선수리스트
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기관찰 선수 리스트")
@@ -1246,7 +1295,6 @@ elif menu == "📂 경기관찰선수리스트":
                 p_num = selected_player_summary["등번호"]
                 p_pos = selected_player_summary["포지션"]
 
-                # 🎯 [핵심 기능] 정식 선수DB에 이미 등록되어 있는지 확인
                 registered_match = df[(df["소속팀"].str.contains(p_team, na=False)) & 
                                       (df["등번호"].str.strip() == p_num) & 
                                       (df["진행 상태"] != "현장 관찰 메모 (임시)")]
@@ -1257,7 +1305,6 @@ elif menu == "📂 경기관찰선수리스트":
 
                 st.write("---")
                 
-                # 🎯 등록 여부에 따른 상단 배지 및 알림 안내
                 if is_already_registered:
                     st.success(f"✅ **[정식 등록된 선수]** 이 선수는 이미 선수DB에 **'{reg_player_name}'** (상태: {reg_player_status})으로 등록되어 있습니다. (현장 메모는 해당 선수 일지에 자동 누적되었습니다!)")
                 else:
@@ -1325,7 +1372,7 @@ elif menu == "선수 등록":
             status = st.selectbox("진행 상태", STATUS_OPTIONS)
             
             back_num_options = [""] + [str(i) for i in range(1, 100)]
-            num_index = back_num_options.index(default_num_val) if default_num_val in back_num_options else 0
+            num_index = back_num_options.index(str(default_num_val)) if str(default_num_val) in back_num_options else 0
             back_num_val = st.selectbox("등번호", options=back_num_options, index=num_index, placeholder="등번호 선택")
 
         with col2:
@@ -1366,7 +1413,7 @@ elif menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 5. 🔍 선수 검색 및 관찰일지 조회
+# 5. 🔍 선수 검색 및 관찰일지 조회 (NameError 수정 완료)
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
     st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
@@ -1491,10 +1538,11 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                         default_status = str(p.get("진행 상태", STATUS_OPTIONS[0]))
                         status_index = STATUS_OPTIONS.index(default_status) if default_status in STATUS_OPTIONS else 0
                         edit_status = st.selectbox("진행 상태", STATUS_OPTIONS, index=status_index, key=f"inline_edit_status_{target_idx}")
+                        
                         cur_num = str(p.get("등번호", "")).strip()
                         back_num_options = [""] + [str(i) for i in range(1, 100)]
                         num_idx = back_num_options.index(cur_num) if cur_num in back_num_options else 0
-                        edit_back_num = st.selectbox("등번호", options=back_num_options, index=num_index, key=f"inline_edit_num_{target_idx}")
+                        edit_back_num = st.selectbox("등번호", options=back_num_options, index=num_idx, key=f"inline_edit_num_{target_idx}")
 
                     with col_e2:
                         default_birth = parse_date(p.get("생년월일"))
