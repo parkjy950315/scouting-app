@@ -161,7 +161,7 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 🎯 핵심: 모바일(화면 좁은 기기)에서도 홈/어웨이 입력 영역이 세로로 깨지지 않고 좌우 2열로 나란히 유지되도록 강제 설정 */
+    /* 모바일에서도 홈/어웨이 입력 영역이 세로로 깨지지 않고 좌우 2열로 나란히 유지되도록 강제 설정 */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 290px !important;
@@ -191,7 +191,6 @@ st.markdown("""
             word-break: keep-all !important;
         }
         
-        /* Streamlit 기본 컬럼 레이아웃이 모바일에서 세로로 쌓이는 현상을 강제로 좌우 2열 나란히 배치로 변경 */
         div[data-testid="stHorizontalBlock"] {
             display: flex !important;
             flex-direction: row !important;
@@ -900,7 +899,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회 (표 직관적 개편 유지)
+# 2. 📂 경기 일지 조회 (표 구성 완벽 정돈)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 경기일지리스트 및 추가수정")
@@ -950,8 +949,8 @@ elif menu == "📂 경기 일지 조회":
             if filtered_memo_df.empty:
                 st.warning("🔍 검색 조건에 일치하는 경기 일지가 없습니다.")
             else:
-                display_memo_df = filtered_memo_df[["작성일자", "선수명", "장점/특기"]].copy()
-                display_memo_df["선수명"] = display_memo_df["선수명"].apply(lambda x: re.sub(r'\[.*?\]\s*', '', re.sub(r' \(타임:\d+\)', '', str(x))).strip())
+                # 🎯 [핵심 수정] 사용자가 원하시는 깔끔하고 정돈된 3열(작성일자, 경기 대진, 대회명) 구조로 명확히 고정
+                display_memo_df = filtered_memo_df[["작성일자", "소속팀", "장점/특기"]].copy()
                 
                 def parse_clean_tournament(val):
                     val_str = str(val)
@@ -1184,8 +1183,8 @@ elif menu == "📂 경기 일지 조회":
 
             memo_df_del = memo_df.sort_values(by="작성일자", ascending=False).reset_index(drop=True) if "작성일자" in memo_df.columns else memo_df.copy()
             
-            display_del_df = memo_df_del[["작성일자", "선수명", "장점/특기"]].copy()
-            display_del_df["선수명"] = display_del_df["선수명"].apply(lambda x: re.sub(r'\[.*?\]\s*', '', re.sub(r' \(타임:\d+\)', '', str(x))).strip())
+            # 🎯 [핵심 수정] 삭제 탭의 표도 동일하게 깔끔한 3열 구조로 고정
+            display_del_df = memo_df_del[["작성일자", "소속팀", "장점/특기"]].copy()
             display_del_df["장점/특기"] = display_del_df["장점/특기"].apply(parse_clean_tournament)
             display_del_df.columns = ["작성일자", "경기 대진 (팀 VS 팀)", "대회명"]
 
@@ -1688,7 +1687,7 @@ elif menu == "🗑️ 데이터 삭제":
                     if st.button("✅ 예, 삭제합니다", type="primary", use_container_width=True):
                         with st.spinner("구글 시트에서 선택된 데이터를 영구 삭제하는 중..."):
                             updated_df = df.drop(del_selected_rows).reset_index(drop=True)
-                            if save_data_to_sheet(updated_df):
+                            if save_data_to_save := save_data_to_sheet(updated_df):
                                 st.session_state[cf_key] = False
                                 st.success(f"총 {selected_count}명의 선수 데이터가 성공적으로 영구 삭제되었습니다!")
                                 st.rerun()
