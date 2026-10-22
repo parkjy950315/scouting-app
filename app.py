@@ -688,7 +688,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    # 💡 1. 선수 메모 제목 크기 키움 (## 적용)
     st.markdown("## ⭐ 선수 메모")
     st.caption("위 포메이션에 등번호를 입력하면 아래에 해당 포지션들이 자동으로 활성화됩니다. 메모할 포지션을 체크하세요!")
 
@@ -699,7 +698,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     memo_col_h, memo_col_a = st.columns(2)
 
-    # 💡 2. 팀명만 나오게 부제목 수정
     with memo_col_h:
         st.markdown(f"**🏠 {h_display_label}**")
         active_home_pos = {pos: num for pos, num in home_numbers.items() if num}
@@ -731,12 +729,15 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.info("💡 어웨이팀 포메이션 칸에 등번호를 입력해 주세요.")
 
     st.write("---")
+    
+    # 💡 종합 메모 부제목 라벨 제거 및 입력창 placeholder 예시 변경
     st.subheader("📋 종합 메모")
     general_memo = st.text_area(
-        "경기 전체 흐름 및 총평", 
-        placeholder="[예시]\n- 전반전 탐색전 이후 후반 난타전 양상\n- 양팀 전술적 움직임 및 세트피스 분석 등",
+        "", 
+        placeholder="[예시]\n- 교체선수\n- 경기양상\n- 스코어\n- 등",
         key="general_match_memo_input",
-        height=140
+        height=140,
+        label_visibility="collapsed"
     )
 
     st.write("")
@@ -1043,7 +1044,7 @@ elif menu == "📂 경기 일지 조회":
 
                             st.write("")
                             edit_general_input = st.text_area(
-                                "📋 경기 전체 총평 수정 및 이어쓰기",
+                                "📋 종합 메모 수정 및 이어쓰기",
                                 value=existing_general_memo,
                                 key=f"edit_general_memo_{target_memo_idx}",
                                 height=140
