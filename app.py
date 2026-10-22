@@ -131,7 +131,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 최적화 스타일 설정 (2열 정렬 유지)
+# 📱 모바일에서도 홈/어웨이 2열(좌우) 배치가 깨지지 않도록 강제하는 CSS 설정
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -161,6 +161,7 @@ st.markdown("""
         font-weight: bold !important;
     }
 
+    /* 🎯 핵심: 모바일(화면 좁은 기기)에서도 홈/어웨이 입력 영역이 세로로 깨지지 않고 좌우 2열로 나란히 유지되도록 강제 설정 */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 290px !important;
@@ -189,25 +190,16 @@ st.markdown("""
             font-size: 14px !important;
             word-break: keep-all !important;
         }
-        /* 모바일에서도 홈/어웨이가 좌/우 2열로 나란히 표시되도록 가로줄바꿈 방지 */
-        .side-by-side-row {
+        
+        /* Streamlit 기본 컬럼 레이아웃이 모바일에서 세로로 쌓이는 현상을 강제로 좌우 2열 나란히 배치로 변경 */
+        div[data-testid="stHorizontalBlock"] {
             display: flex !important;
             flex-direction: row !important;
-            gap: 10px !important;
-            width: 100% !important;
+            flex-wrap: nowrap !important;
         }
-        .side-by-side-row > div {
-            flex: 1 !important;
+        div[data-testid="stHorizontalBlock"] > div {
+            flex: 1 1 50% !important;
             min-width: 0 !important;
-        }
-    }
-    @media (min-width: 769px) {
-        [data-testid="stSidebar"] {
-            min-width: 260px;
-            max-width: 300px;
-        }
-        [data-testid="stSidebar"] .stRadio label p {
-            font-size: 15px !important;
         }
     }
     </style>
@@ -695,7 +687,7 @@ menu = st.sidebar.radio("이동할 메뉴", [
 ])
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (홈/어웨이 2열 좌/우 동시 배치 원상복구)
+# 1. 🏟️ 현장 경기 관찰 메모 (홈/어웨이 좌우 2열 동시 배치)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
@@ -782,7 +774,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         st.write("")
         return team_entered_numbers
 
-    # 🎯 [핵심] 홈팀과 어웨이팀 포메이션 시각화 및 등번호 입력 칸을 2열 나란히 동시 배치
+    # 🎯 홈팀과 어웨이팀이 모바일에서도 좌우 2열로 나란히 표시되도록 배치
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
         home_numbers = render_team_interactive_grid(home_team, home_formation, "home")
