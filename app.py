@@ -40,7 +40,7 @@ def register_korean_font():
     return 'Helvetica'
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 최적화 스타일 설정 (모바일 짤림 방지 및 가독성 향상)
+# 📱 PC & 모바일 반응형 최적화 스타일 설정
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -456,7 +456,7 @@ formation_layouts = {
     ]
 }
 
-# ⚽ 모바일/PC 반응형 그라운드 피치 렌더러 (미디어쿼리로 폰에서 원 크기 자동 조절 및 번호 강조)
+# ⚽ 모바일/PC 반응형 그라운드 피치 렌더러
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     display_team_name = team_name if team_name else "팀명 미입력"
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
@@ -538,7 +538,6 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
             line-height: 1.1;
         }}
         
-        /* 스마트폰 화면에서는 5명이 들어가는 5백/3-5-2 라인도 잘리지 않도록 원 크기와 간격을 컴팩트하게 조절 */
         @media (max-width: 500px) {{
             .pitch-container {{
                 padding: 6px 2px;
@@ -574,7 +573,6 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     """
     
     import streamlit.components.v1 as components
-    # 4-2-3-1이나 5백 등 라인이 많은 포메이션도 길어지지 않게 컴팩트한 고정 높이 적용
     components.html(complete_html, height=360, scrolling=False)
 
 display_logo()
@@ -646,8 +644,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
         render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
 
-        display_t_name = team_name if team_name else "입력 대기중인 팀"
-        st.markdown(f"**⚡ {display_t_name} 포메이션 진형별 등번호 직접 입력**")
+        display_t_name = team_name if team_name else ""
+        # 💡 요청하신 대로 깔끔하게 "[팀명] 등번호 기입"으로 변경
+        st.markdown(f"**⚡ {display_t_name} 등번호 기입**")
         
         for row in layout:
             st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 6px; margin-bottom: 2px;'>{row['line']}</div>", unsafe_allow_html=True)
@@ -655,7 +654,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             for idx, pos in enumerate(row['positions']):
                 key_name = f"{prefix}_{pos}"
                 with cols[idx]:
-                    # 💡 모바일 터치 시 즉각 숫자 키패드가 노출되는 number_input
                     val_num = st.number_input(
                         f"{pos}", 
                         min_value=0, 
@@ -671,9 +669,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         st.write("")
         return team_entered_numbers
 
-    # 입력한 홈팀명, 어웨이팀명을 바탕으로 제목 자동 변경
-    display_home_header = f"🏠 {home_team.strip()} 그라운드 및 등번호" if home_team.strip() else "🏠 홈팀 그라운드 및 등번호"
-    display_away_header = f"✈️ {away_team.strip()} 그라운드 및 등번호" if away_team.strip() else "✈️ 어웨이팀 그라운드 및 등번호"
+    # 💡 요청하신 대로 "홈팀/어웨이팀 라인업"으로 변경
+    display_home_header = f"🏠 {home_team.strip()} 라인업" if home_team.strip() else "🏠 홈팀 라인업"
+    display_away_header = f"✈️ {away_team.strip()} 라인업" if away_team.strip() else "✈️ 어웨이팀 라인업"
 
     pitch_col1, pitch_col2 = st.columns(2)
     with pitch_col1:
@@ -685,8 +683,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    st.subheader("⭐ 시각화 포지션별 집중 관찰 메모")
-    st.caption("위 그라운드 포메이션에 등번호를 입력하면 아래에 해당 포지션들이 자동으로 활성화됩니다. 메모할 포지션을 체크하세요!")
+    # 💡 요청하신 대로 "선수 메모"로 변경
+    st.subheader("⭐ 선수 메모")
+    st.caption("위 포메이션에 등번호를 입력하면 아래에 해당 포지션들이 자동으로 활성화됩니다. 메모할 포지션을 체크하세요!")
 
     h_display_label = home_team.strip() if home_team.strip() else "홈팀"
     a_display_label = away_team.strip() if away_team.strip() else "어웨이팀"
@@ -726,7 +725,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             st.info("💡 어웨이팀 포메이션 칸에 등번호를 입력해 주세요.")
 
     st.write("---")
-    st.subheader("📋 경기 전체 총평 및 핵심 메모")
+    # 💡 요청하신 대로 "종합 메모"로 변경
+    st.subheader("📋 종합 메모")
     general_memo = st.text_area(
         "경기 전체 흐름 및 총평", 
         placeholder="[예시]\n- 전반전 탐색전 이후 후반 난타전 양상\n- 양팀 전술적 움직임 및 세트피스 분석 등",
