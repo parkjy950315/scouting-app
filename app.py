@@ -13,6 +13,11 @@ from datetime import datetime
 if "menu_selection" not in st.session_state:
     st.session_state["menu_selection"] = "🏟️ 현장 경기 관찰 메모"
 
+# 메뉴 이동 예약 플래그가 있으면 라디오 버튼 생성 전에 미리 반영
+if "redirect_to_menu" in st.session_state:
+    st.session_state["menu_selection"] = st.session_state["redirect_to_menu"]
+    del st.session_state["redirect_to_menu"]
+
 # 연관검색어 드롭다운을 위한 외부 라이브러리
 try:
     from streamlit_searchbox import st_searchbox
@@ -614,7 +619,7 @@ display_logo()
 st.title("⚽ 선수 스카우팅 관리 시스템")
 
 # ----------------------------------------------------
-# 📌 사이드바 설정 (라디오 버튼 생성 전에 세션 상태 값으로 색인 계산)
+# 📌 사이드바 설정 (라디오 버튼 생성)
 # ----------------------------------------------------
 st.sidebar.title("📌 메뉴")
 
@@ -1097,7 +1102,7 @@ elif menu == "📂 경기 일지 조회":
                                 st.rerun()
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (선수 등록 연동 시 관찰 메모 자동 융합 및 rerun 처리)
+# 3. 📂 경기관찰선수리스트 (위젯 충돌 방지 플래그 적용)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기관찰 선수 리스트")
@@ -1223,7 +1228,7 @@ elif menu == "📂 경기관찰선수리스트":
 
                 st.write("---")
                 
-                # 🎯 [핵심] 선수등록 버튼 클릭 시 세션 저장 후 즉시 st.rerun() 호출하여 위젯 충돌 원천 방지
+                # 🎯 [핵심 수정] 위젯 충돌을 막기 위해 redirect_to_menu 플래그를 사용하고 rerun 호출
                 reg_action_col1, reg_action_col2 = st.columns([3, 1])
                 with reg_action_col1:
                     st.markdown(f"### ⚽ [{p_team}] 등번호: {p_num}번 — 상세 관찰 이력")
@@ -1239,7 +1244,7 @@ elif menu == "📂 경기관찰선수리스트":
                         st.session_state["prefill_team"] = p_team
                         st.session_state["prefill_back_num"] = p_num
                         st.session_state["prefill_overall"] = compiled_memo_text.strip()
-                        st.session_state["menu_selection"] = "선수 등록"
+                        st.session_state["redirect_to_menu"] = "선수 등록"
                         st.rerun()
 
                 player_history = obs_df[(obs_df["팀명"] == p_team) & (obs_df["등번호"] == p_num)].sort_values(by="경기날짜", ascending=False)
