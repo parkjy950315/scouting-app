@@ -899,7 +899,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     st.balloons()
 
 # ----------------------------------------------------
-# 2. 📂 경기 일지 조회
+# 2. 📂 경기 일지 조회 (작성일자 기준 내림차순 최신순 정렬 적용)
 # ----------------------------------------------------
 elif menu == "📂 경기 일지 조회":
     st.header("📂 경기일지리스트 및 추가수정")
@@ -913,6 +913,7 @@ elif menu == "📂 경기 일지 조회":
         tab_view, tab_delete = st.tabs(["📋 일지 목록 조회 및 이어서 수정", "🗑️ 일지 일괄 삭제"])
 
         with tab_view:
+            # 🎯 [최신순 정렬 적용] 작성일자 기준 내림차순(ascending=False) 정렬
             if "작성일자" in memo_df.columns:
                 memo_df_sorted = memo_df.sort_values(by="작성일자", ascending=False).reset_index(drop=True)
             else:
@@ -1309,7 +1310,7 @@ elif menu == "📂 경기관찰선수리스트":
         else:
             obs_df = pd.DataFrame(obs_players_data)
             
-            # 🎯 [최신순 정렬 적용] 선수별 집계 시 '가장 최근 경기날짜(max)'와 '누적 경기수(count)'를 함께 추출
+            # 선수별 집계 시 '가장 최근 경기날짜(max)'와 '누적 경기수(count)'를 함께 추출
             summary_df = obs_df.groupby("player_id").agg(
                 팀명=("팀명", "first"),
                 포지션=("포지션", "first"),
@@ -1333,7 +1334,7 @@ elif menu == "📂 경기관찰선수리스트":
                     filtered_summary["포지션"].str.lower().str.contains(q, na=False)
                 ]
 
-            # 🎯 [최신순 정렬 적용] 가장 최근 경기 날짜가 최신인 순서대로(내림차순) 메인 리스트 정렬
+            # 가장 최근 경기 날짜가 최신인 순서대로(내림차순) 메인 리스트 정렬
             filtered_summary = filtered_summary.sort_values(by="최근경기날짜", ascending=False).reset_index(drop=True)
 
             st.write("")
