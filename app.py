@@ -26,12 +26,12 @@ except ImportError:
 
 # PDF 생성을 위한 reportlab 라이브러리 및 폰트 등록 모듈
 from reportlab.lib.pagesizes import letter, A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.ttffonts import TTFont
 
 # 페이지 기본 설정
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
@@ -219,6 +219,7 @@ GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1WSbVkwCr5Dv5hN3zU0Bw
 GOOGLE_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxTTvgJqNnmBxwuCGvT3agMEo0_0Fon0JGWdREyR7usEIu4Mfw9M1lq66njtr8S_cbP/exec"
 
 STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완료", "계약 검토", "보류 / 제외"]
+AGENCY_STATUS_OPTIONS = ["소속 선수 (Active Client)", "계약 협상 중", "이전 소속 선수"]
 POSITION_OPTIONS = ["GK", "CB", "LCB", "RCB", "LB", "RB", "MF", "LW", "RW", "CF"]
 
 def display_logo():
@@ -363,7 +364,7 @@ def generate_pdf_report(player_data):
     table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=8.5, leading=11, alignment=0, textColor=colors.HexColor('#64748B'))
     table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=PRIMARY_COLOR)
 
-    header_data = [[Paragraph("<b>SMC SCOUTING REPORT</b>", title_style), Paragraph(f"<b>발급일:</b> {datetime.today().strftime('%Y-%m-%d')}", header_date)]]
+    header_data = [[Paragraph("<b>SMC AGENCY PROFILE & REPORT</b>", title_style), Paragraph(f"<b>발급일:</b> {datetime.today().strftime('%Y-%m-%d')}", header_date)]]
     header_table = Table(header_data, colWidths=[350, 170])
     header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('BOTTOMPADDING', (0,0), (-1,-1), 6)]))
     story.append(header_table)
@@ -378,7 +379,7 @@ def generate_pdf_report(player_data):
         [Paragraph("현재 소속팀", table_label), Paragraph(f"{curr_team}", table_value), Paragraph("진행 상태", table_label), Paragraph(f"<font color='#2563EB'><b>{player_data.get('진행 상태', '-')}</b></font>", table_value)],
         [Paragraph("소속팀 이력", table_label), Paragraph(f"{full_team}", table_value), Paragraph("주발", table_label), Paragraph(f"{player_data.get('주발', '-')}", table_value)],
         [Paragraph("생년월일 (나이)", table_label), Paragraph(f"{player_data.get('생년월일', '-')} ({player_data.get('만 나이', '-')})", table_value), Paragraph("피지컬 (신장/체중)", table_label), Paragraph(f"{player_data.get('신장(cm)', '-')}cm / {weight_val}", table_value)],
-        [Paragraph("최근 관찰일자", table_label), Paragraph(f"{player_data.get('작성일자', '-')}", table_value), Paragraph("문서 보안", table_label), Paragraph("CONFIDENTIAL", table_value)]
+        [Paragraph("최근 업데이트", table_label), Paragraph(f"{player_data.get('작성일자', '-')}", table_value), Paragraph("문서 보안", table_label), Paragraph("CONFIDENTIAL", table_value)]
     ]
     
     profile_table = Table(profile_data, colWidths=[90, 170, 90, 170])
@@ -391,7 +392,7 @@ def generate_pdf_report(player_data):
 
     def add_modern_card(title, content, accent_hex):
         story.append(Spacer(1, 4))
-        cleaned_content = str(content).replace('\n', '<br/>') if content and str(content).strip() else "작성된 관찰 내용이 없습니다."
+        cleaned_content = str(content).replace('\n', '<br/>') if content and str(content).strip() else "작성된 내용이 없습니다."
         card_data = [[Paragraph(f"<b>{title}</b>", section_title_style)], [Paragraph(cleaned_content, body_style)]]
         card_table = Table(card_data, colWidths=[520])
         card_table.setStyle(TableStyle([
@@ -404,7 +405,7 @@ def generate_pdf_report(player_data):
 
     add_modern_card("장점 및 주요 특기 (PROS)", player_data.get('장점/특기', ''), '#2563EB')
     add_modern_card("보완점 및 약점 (CONS)", player_data.get('보완점/단점', ''), '#D97706')
-    add_modern_card("스카우터 종합 평가 및 코멘트 (OVERALL EVALUATION)", player_data.get('종합 평가', ''), '#475569')
+    add_modern_card("종합 평가 및 에이전시 코멘트 (EVALUATION)", player_data.get('종합 평가', ''), '#475569')
 
     doc.build(story)
     buffer.seek(0)
@@ -634,6 +635,7 @@ menu_options = [
     "📂 경기관찰선수리스트", 
     "선수 등록", 
     "🔍 선수 검색 및 관찰일지 조회", 
+    "🏢 소속 선수 관리",
     "🗑️ 데이터 삭제"
 ]
 
@@ -1324,7 +1326,6 @@ elif menu == "📂 경기관찰선수리스트":
                             compiled_memo_text += f"\n📅 일자: {h_row['경기날짜']} | 대회/경기: {h_row['대회/경기명']}\n- 메모: {h_row['관찰메모']}\n"
 
                         if is_already_registered:
-                            # 🎯 [수정됨] 팀명과 등번호 모두 검색되도록 키워드 조합 전달
                             st.session_state["live_search_input"] = f"{p_team} {p_num}"
                             st.session_state["redirect_to_menu"] = "🔍 선수 검색 및 관찰일지 조회"
                         else:
@@ -1418,7 +1419,7 @@ elif menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 5. 🔍 선수 검색 및 관찰일지 조회 (다중 키워드 검색 적용 완료)
+# 5. 🔍 선수 검색 및 관찰일지 조회
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
     st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
@@ -1452,7 +1453,6 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
         
         filtered_df = official_df.copy()
         if search_term:
-            # 🎯 [핵심 수정] 띄어쓰기 단위로 키워드를 쪼개어 각각 모두 포함하는지 검사 (예: "보인고 5" 입력 시 '보인고'와 '5' 둘 다 포함된 행 검색)
             keywords = search_term.strip().split()
             for kw in keywords:
                 filtered_df = filtered_df[
@@ -1559,7 +1559,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                         age_full_str, age_year_str = calculate_age(edit_birth_date)
                         default_foot = str(p.get("주발", "오른발"))
                         foot_options = ["오른발", "왼발", "양발"]
-                        foot_index = foot_options.index(default_foot) if default_foot in foot_options else 0
+                        foot_index = foot_options.index(default_foot) if foot_options in foot_options else 0
                         edit_foot = st.selectbox("주발", foot_options, index=foot_index, key=f"inline_edit_foot_{target_idx}")
                         edit_date = st.date_input("관찰 작성일자", value=datetime.today(), key=f"inline_edit_date_{target_idx}")
                         
@@ -1608,7 +1608,184 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                                 st.rerun()
 
 # ----------------------------------------------------
-# 6. 데이터 삭제
+# 6. 🏢 소속 선수 관리 (프로필 생성 및 수정)
+# ----------------------------------------------------
+elif menu == "🏢 소속 선수 관리":
+    st.header("🏢 에이전시 소속 선수 관리 및 프로필 생성")
+    st.caption("우리 회사와 계약된 소속 선수들의 프로필을 관리하고, 구단 제안용 공식 CV(프로필)를 생성·수정할 수 있습니다.")
+
+    agency_df = df[df["진행 상태"].isin(AGENCY_STATUS_OPTIONS) | (df["진행 상태"] == "소속 선수 (Active Client)")].copy().reset_index(drop=True)
+    
+    tab_agency_list, tab_agency_reg = st.tabs(["📋 소속 선수 프로필 조회 및 수정", "➕ 신규 소속 선수 프로필 생성"])
+
+    with tab_agency_list:
+        if df.empty or len(df[df["진행 상태"].isin(AGENCY_STATUS_OPTIONS) | (df["진행 상태"] == "소속 선수 (Active Client)")]) == 0:
+            st.info("💡 등록된 소속 선수가 없습니다. 우측 탭('신규 소속 선수 프로필 생성')에서 선수를 등록해 주세요.")
+        else:
+            active_agency_df = df[df["진행 상태"].isin(AGENCY_STATUS_OPTIONS) | (df["진행 상태"] == "소속 선수 (Active Client)")].copy().reset_index(drop=True)
+            
+            search_agency = st.text_input("🔍 소속 선수 검색 (선수명, 팀명 등)", key="agency_search_box")
+            if search_agency.strip():
+                q = search_agency.strip().lower()
+                active_agency_df = active_agency_df[
+                    active_agency_df["선수명"].str.lower().str.contains(q, na=False) |
+                    active_agency_df["소속팀"].str.lower().str.contains(q, na=False)
+                ]
+
+            st.subheader("📋 소속 선수 목록 (수정할 선수를 **클릭**하세요)")
+            disp_agency_df = active_agency_df[["선수명", "소속팀", "포지션", "등번호", "주발", "진행 상태"]].copy()
+            
+            agency_selection = st.dataframe(disp_agency_df, use_container_width=True, selection_mode="single-row", on_select="rerun")
+            selected_agency_rows = agency_selection.selection.rows if hasattr(agency_selection, "selection") else []
+
+            if selected_agency_rows:
+                selected_ag_row = active_agency_df.iloc[selected_agency_rows[0]]
+                ag_indices = df[(df["선수명"] == selected_ag_row["선수명"]) & (df["생년월일"] == selected_ag_row["생년월일"])].index
+
+                if len(ag_indices) > 0:
+                    ag_target_idx = ag_indices[0]
+                    p_ag = df.loc[ag_target_idx]
+                    curr_team, past_team = parse_team_info(p_ag.get('소속팀', ''))
+
+                    st.write("---")
+                    ag_h1, ag_h2 = st.columns([3, 1])
+                    with ag_h1:
+                        st.markdown(f"### ⚽ [{p_ag.get('진행 상태', '소속 선수')}] {p_ag.get('선수명', '')} 프로필 카드")
+                    with ag_h2:
+                        try:
+                            pdf_bytes = generate_pdf_report(p_ag)
+                            filename = f"{p_ag.get('선수명', '선수')}_공식프로필.pdf"
+                            b64 = base64.b64encode(pdf_bytes.getvalue()).decode()
+                            dl_html = f"""
+                            <div style="display: flex; flex-direction: column; width: 100%;">
+                                <a href="data:application/octet-stream;base64,{b64}" download="{filename}" 
+                                   style="background-color: #2563EB; color: white; padding: 10px 16px; text-align: center; 
+                                          text-decoration: none; display: inline-block; font-size: 14px; font-weight: bold; 
+                                          border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%;">
+                                    📄 공식 프로필 PDF 다운로드
+                                </a>
+                            </div>
+                            """
+                            st.markdown(dl_html, unsafe_allow_html=True)
+                        except Exception as e:
+                            st.error(f"PDF 생성 오류: {e}")
+
+                    ac1, ac2, ac3, ac4 = st.columns(4)
+                    ac1.metric("현재 소속팀 / 등번호", f"{curr_team} / {p_ag.get('등번호', '-')}번")
+                    ac2.metric("포지션 / 주발", f"{p_ag.get('포지션', '-')} / {p_ag.get('주발', '-')}")
+                    ac3.metric("나이", f"{p_ag.get('만 나이', '-')}")
+                    ac4.metric("신장 / 체중", f"{p_ag.get('신장(cm)', '-')}cm / {p_ag.get('체중(kg)', '-')}kg")
+
+                    st.write("---")
+                    with st.expander(f"✏️ [{p_ag.get('선수명', '')}] 소속 선수 프로필 수정 폼", expanded=True):
+                        with st.form(f"agency_edit_form_{ag_target_idx}"):
+                            ec1, ec2 = st.columns(2)
+                            with ec1:
+                                ag_edit_name = st.text_input("선수명", value=str(p_ag.get("선수명", "")))
+                                ag_edit_team = st.text_input("현재 소속팀", value=curr_team)
+                                ag_pos_idx = POSITION_OPTIONS.index(str(p_ag.get("포지션", "MF"))) if str(p_ag.get("포지션", "MF")) in POSITION_OPTIONS else 4
+                                ag_edit_pos = st.selectbox("포지션", POSITION_OPTIONS, index=ag_pos_idx)
+                                ag_stat_idx = AGENCY_STATUS_OPTIONS.index("소속 선수 (Active Client)") # Default fallback
+                                if str(p_ag.get("진행 상태")) in AGENCY_STATUS_OPTIONS:
+                                    ag_stat_idx = AGENCY_STATUS_OPTIONS.index(str(p_ag.get("진행 상태")))
+                                ag_edit_status = st.selectbox("계약/소속 상태", AGENCY_STATUS_OPTIONS, index=ag_stat_idx)
+                                
+                                num_opts = [""] + [str(i) for i in range(1, 100)]
+                                cur_n = str(p_ag.get("등번호", "")).strip()
+                                n_idx = num_opts.index(cur_n) if cur_n in num_opts else 0
+                                ag_edit_num = st.selectbox("등번호", options=num_opts, index=n_idx)
+
+                            with ec2:
+                                ag_edit_birth = st.date_input("생년월일", value=parse_date(p_ag.get("생년월일")))
+                                f_opts = ["오른발", "왼발", "양발"]
+                                f_idx = f_opts.index(str(p_ag.get("주발", "오른발"))) if str(p_ag.get("주발", "오른발")) in f_opts else 0
+                                ag_edit_foot = st.selectbox("주발", f_opts, index=f_idx)
+                                
+                                hw_c1, hw_c2 = st.columns(2)
+                                with hw_c1:
+                                    ag_edit_h = st.text_input("신장 (cm)", value=str(p_ag.get("신장(cm)", "")))
+                                with hw_c2:
+                                    ag_edit_w = st.text_input("체중 (kg)", value=str(p_ag.get("체중(kg)", "")))
+
+                            st.subheader("📝 프로필 내용 및 코멘트 수정")
+                            ag_edit_pros = st.text_area("장점 및 주요 특기", value=str(p_ag.get("장점/특기", "")))
+                            ag_edit_cons = st.text_area("보완점 및 약점", value=str(p_ag.get("보완점/단점", "")))
+                            ag_edit_overall = st.text_area("종합 평가 및 에이전시 코멘트", value=str(p_ag.get("종합 평가", "")))
+
+                            ag_submitted = st.form_submit_button("💾 소속 선수 프로필 업데이트", type="primary", use_container_width=True)
+                            if ag_submitted:
+                                full_age, year_age = calculate_age(ag_edit_birth)
+                                raw_old_t = str(p_ag.get("소속팀", "")).strip()
+                                final_t_str = f"{ag_edit_team.strip()} (전: {curr_team})" if curr_team != ag_edit_team.strip() and "(전:" not in raw_old_t else raw_old_t
+
+                                records = df.to_dict('records')
+                                records[ag_target_idx] = {
+                                    "선수명": ag_edit_name.strip(), "소속팀": final_t_str,
+                                    "등번호": str(ag_edit_num), "포지션": ag_edit_pos,
+                                    "생년월일": str(ag_edit_birth), "만 나이": full_age,
+                                    "연 나이": year_age, "주발": ag_edit_foot,
+                                    "신장(cm)": ag_edit_h.strip(), "체중(kg)": ag_edit_w.strip(),
+                                    "진행 상태": ag_edit_status, "장점/특기": ag_edit_pros.strip(),
+                                    "보완점/단점": ag_edit_cons.strip(), "종합 평가": ag_edit_overall.strip(),
+                                    "작성일자": str(datetime.today().date())
+                                }
+                                if save_data_to_sheet(pd.DataFrame(records).astype(str)):
+                                    st.success("🎉 소속 선수 프로필이 성공적으로 수정되었습니다!")
+                                    st.rerun()
+
+    with tab_agency_reg:
+        st.subheader("➕ 새로운 소속 선수 프로필 등록")
+        st.caption("신규 계약한 소속 선수의 프로필을 생성합니다.")
+
+        with st.form("new_agency_profile_form", clear_on_submit=True):
+            nc1, nc2 = st.columns(2)
+            with nc1:
+                n_name = st.text_input("선수명*")
+                n_team = st.text_input("현재 소속팀")
+                n_pos = st.selectbox("포지션", options=POSITION_OPTIONS, key="new_ag_pos")
+                n_status = st.selectbox("계약 상태", options=AGENCY_STATUS_OPTIONS, key="new_ag_stat")
+                
+                n_num_opts = [""] + [str(i) for i in range(1, 100)]
+                n_num = st.selectbox("등번호", options=n_num_opts, key="new_ag_num")
+
+            with nc2:
+                n_birth = st.date_input("생년월일*", value=datetime(2005, 1, 1), min_value=datetime(1980, 1, 1), max_value=datetime.today(), key="new_ag_birth")
+                n_foot = st.selectbox("주발", ["오른발", "왼발", "양발"], key="new_ag_foot")
+                
+                nhw1, nhw2 = st.columns(2)
+                with nhw1:
+                    n_height = st.text_input("신장 (cm)", value="175", key="new_ag_h")
+                with nhw2:
+                    n_weight = st.text_input("체중 (kg)", value="70", key="new_ag_w")
+
+            st.subheader("📝 프로필 상세 리포트")
+            n_pros = st.text_area("장점 및 주요 특기", key="new_ag_pros")
+            n_cons = st.text_area("보완점 및 약점", key="new_ag_cons")
+            n_overall = st.text_area("종합 평가 및 에이전시 코멘트", key="new_ag_overall", height=120)
+
+            n_submitted = st.form_submit_button("💾 신규 소속 선수 프로필 생성", type="primary", use_container_width=True)
+            if n_submitted:
+                if not n_name.strip():
+                    st.error("선수명은 필수 입력 항목입니다.")
+                else:
+                    full_age, year_age = calculate_age(n_birth)
+                    with st.spinner("구글 시트에 소속 선수 프로필 생성 중..."):
+                        new_ag_data = {
+                            "선수명": n_name.strip(), "소속팀": n_team.strip(), "등번호": str(n_num),
+                            "포지션": n_pos, "생년월일": str(n_birth),
+                            "만 나이": full_age, "연 나이": year_age, "주발": n_foot,
+                            "신장(cm)": n_height.strip(), "체중(kg)": n_weight.strip(),
+                            "진행 상태": n_status, "장점/특기": n_pros.strip(),
+                            "보완점/단점": n_cons.strip(), "종합 평가": n_overall.strip(),
+                            "작성일자": str(datetime.today().date())
+                        }
+                        updated_df = pd.DataFrame([new_ag_data]) if df.empty else pd.concat([pd.DataFrame([new_ag_data]), df], ignore_index=True)
+                        if save_data_to_sheet(updated_df):
+                            st.success(f"🎉 '{n_name.strip()}' 소속 선수 프로필이 성공적으로 생성되었습니다!")
+                            st.balloons()
+
+# ----------------------------------------------------
+# 7. 데이터 삭제
 # ----------------------------------------------------
 elif menu == "🗑️ 데이터 삭제":
     st.header("🗑️ 선수 데이터 삭제")
