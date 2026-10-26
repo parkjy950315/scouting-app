@@ -668,7 +668,7 @@ elif menu == "📂 경기 일지 조회":
             else:
                 display_memo_df = filtered_memo_df[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
                 display_memo_df["선수명"] = display_memo_df["선수명"].apply(lambda x: re.sub(r' \(타임:\d+\)', '', str(x)))
-                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
+                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 오웨이", "대회 정보"]
 
                 memo_selection = st.dataframe(
                     display_memo_df,
@@ -771,7 +771,6 @@ elif menu == "📂 경기 일지 조회":
                             for line in note_lines:
                                 if ":" in line:
                                     header_part, content_part = line.split(":", 1)
-                                    # 앞뒤 불필요한 점이나 기호 깔끔하게 제거
                                     clean_header = header_part.strip().lstrip("-•* ").strip()
                                     clean_content_val = content_part.strip().lstrip("-•* ").strip()
                                     parsed_pos_memos[clean_header] = clean_content_val
@@ -923,7 +922,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (팀명 검색 + 3회 이상 초록색 박스 하이라이트 복원)
+# 3. 📂 경기관찰선수리스트 (팀명 검색 + 3회 이상 초록색 박스 + 선수 선택 기능 추가)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기 관찰 선수 리스트")
@@ -994,7 +993,50 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = obs_df.groupby(["팀명", "등번호", "포지션"]).size().reset_index(name="관찰횟수")
                 grouped = grouped.sort_values(by="관찰횟수", ascending=False).reset_index(drop=True)
 
-                st.markdown("### 📊 팀별 관찰 선수 요약 및 횟수")
+                # 선택하기 쉽도록 테이블 형태로 변환하여 보여주기
+                st.markdown("### 📊 관찰 선수 요약 목록 (상세 내역을 보려면 아래 표에서 **선수 행을 클릭**하세요)")
+                
+                display_obs_table = grouped.copy()
+                display_obs_table.columns = ["소속 팀명", "등번호", "포지션", "누적 관찰 횟수"]
+
+                obs_selection = st.dataframe(
+                    display_obs_table,
+                    use_container_width=True,
+                    selection_mode="single-row",
+                    on_select="rerun",
+                    key="observed_player_table_selection"
+                )
+
+                selected_obs_rows = obs_selection.selection.rows if hasattr(obs_selection, "selection") else []
+
+                # 만약 특정 선수를 클릭해서 선택했다면 해당 선수가 관찰된 경기 히스토리 카드 출력
+                if selected_obs_rows:
+                    sel_row = grouped.iloc[selected_obs_rows[0]]
+                    sel_team = sel_row["팀명"]
+                    sel_num = sel_row["등번호"]
+                    sel_pos = sel_row["포지션"]
+
+                    st.write("---")
+                    st.markdown(f"### 🎯 선택한 선수 관찰 경기 기록: [{sel_team}] {sel_num} ({sel_pos})")
+                    
+                    selected_player_history = obs_df[(obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num) & (obs_df["포지션"] == sel_pos)]
+                    selected_player_history = selected_player_history.sort_values(by="관찰일자", ascending=False)
+
+                    for _, h_row in selected_player_history.iterrows():
+                        card_html = f"""
+                        <div style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                            <div style="font-weight: bold; color: #1e293b; font-size: 14px; margin-bottom: 4px;">
+                                📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']}
+                            </div>
+                            <div style="color: #334155; font-size: 13px;">
+                                📝 <b>관찰 메모:</b> {h_row['메모내용']}
+                            </div>
+                        </div>
+                        """
+                        st.markdown(card_html, unsafe_allow_html=True)
+
+                st.write("---")
+                st.markdown("### 🔥 전체 관찰 선수 카드 모음")
                 
                 for _, g_row in grouped.iterrows():
                     g_team = g_row["팀명"]
