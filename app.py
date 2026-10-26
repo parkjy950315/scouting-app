@@ -7,37 +7,8 @@ import os
 import base64
 from datetime import datetime
 
-# PDF 생성을 위한 reportlab 라이브러리 및 폰트 등록 모듈
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
-from reportlab.pdfgen import canvas
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttffonts import TTFont
-
 # 페이지 기본 설정
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
-
-# ----------------------------------------------------
-# 🔤 PDF 한글 폰트 자동 등록 함수
-# ----------------------------------------------------
-def register_korean_font():
-    font_path = "NanumGothic.ttf"
-    if not os.path.exists(font_path):
-        try:
-            font_url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Regular.ttf"
-            r = requests.get(font_url)
-            if r.status_code == 200:
-                with open(font_path, "wb") as f:
-                    f.write(r.content)
-        except Exception:
-            pass
-            
-    if os.path.exists(font_path):
-        pdfmetrics.registerFont(TTFont('NanumGothic', font_path))
-        return 'NanumGothic'
-    return 'Helvetica'
 
 # ----------------------------------------------------
 # 📱 PC & 모바일 반응형 최적화 스타일 설정
@@ -255,161 +226,6 @@ def parse_team_info(team_str):
         past_teams = "(전:" + parts[1]
         return current_team, past_teams
     return team_str, ""
-
-# ----------------------------------------------------
-# 📄 PDF 보고서 생성 함수 (선수용)
-# ----------------------------------------------------
-def generate_pdf_report(player_data):
-    korean_font = register_korean_font()
-    
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer, 
-        pagesize=A4, 
-        rightMargin=36, 
-        leftMargin=36, 
-        topMargin=36, 
-        bottomMargin=36
-    )
-    story = []
-    
-    PRIMARY_COLOR = colors.HexColor('#0F172A')
-    TEXT_COLOR = colors.HexColor('#334155')
-    BG_LIGHT = colors.HexColor('#F8FAFC')
-    BORDER_COLOR = colors.HexColor('#CBD5E1')
-
-    title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=16, leading=20, alignment=0, textColor=PRIMARY_COLOR)
-    header_date = ParagraphStyle('HeaderDate', fontName=korean_font, fontSize=8.5, leading=11, alignment=2, textColor=colors.HexColor('#64748B'))
-    
-    section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=10, leading=14, alignment=0, textColor=PRIMARY_COLOR)
-    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, alignment=0, textColor=TEXT_COLOR)
-    
-    table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=8.5, leading=11, alignment=0, textColor=colors.HexColor('#64748B'))
-    table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=PRIMARY_COLOR)
-
-    header_data = [
-        [Paragraph("<b>SMC SCOUTING REPORT</b>", title_style), Paragraph(f"<b>발급일:</b> {datetime.today().strftime('%Y-%m-%d')}", header_date)]
-    ]
-    header_table = Table(header_data, colWidths=[350, 170])
-    header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('BOTTOMPADDING', (0,0), (-1,-1), 6)]))
-    story.append(header_table)
-    story.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY_COLOR, spaceAfter=12))
-
-    curr_team, past_team = parse_team_info(player_data.get('소속팀', ''))
-    full_team = f"{curr_team} {past_team}".strip()
-    weight_val = f"{player_data.get('체중(kg)')}kg" if player_data.get('체중(kg)') else "미입력"
-    
-    profile_data = [
-        [Paragraph("선수명", table_label), Paragraph(f"<b>{player_data.get('선수명', '-')}</b>", table_value), Paragraph("포지션 / 등번호", table_label), Paragraph(f"<b>{player_data.get('포지션', '-')} / {player_data.get('등번호', '-')}번</b>", table_value)],
-        [Paragraph("현재 소속팀", table_label), Paragraph(f"{curr_team}", table_value), Paragraph("진행 상태", table_label), Paragraph(f"<font color='#2563EB'><b>{player_data.get('진행 상태', '-')}</b></font>", table_value)],
-        [Paragraph("소속팀 이력", table_label), Paragraph(f"{full_team}", table_value), Paragraph("주발", table_label), Paragraph(f"{player_data.get('주발', '-')}", table_value)],
-        [Paragraph("생년월일 (나이)", table_label), Paragraph(f"{player_data.get('생년월일', '-')} ({player_data.get('만 나이', '-')})", table_value), Paragraph("피지컬 (신장/체중)", table_label), Paragraph(f"{player_data.get('신장(cm)', '-')}cm / {weight_val}", table_value)],
-        [Paragraph("최근 관찰일자", table_label), Paragraph(f"{player_data.get('작성일자', '-')}", table_value), Paragraph("문서 보안", table_label), Paragraph("CONFIDENTIAL", table_value)]
-    ]
-    
-    profile_table = Table(profile_data, colWidths=[90, 170, 90, 170])
-    profile_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT), ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 6), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
-    ]))
-    story.append(profile_table)
-    story.append(Spacer(1, 14))
-
-    def add_modern_card(title, content, accent_hex):
-        story.append(Spacer(1, 4))
-        cleaned_content = str(content).replace('\n', '<br/>') if content and str(content).strip() else "작성된 관찰 내용이 없습니다."
-        card_data = [[Paragraph(f"<b>{title}</b>", section_title_style)], [Paragraph(cleaned_content, body_style)]]
-        card_table = Table(card_data, colWidths=[520])
-        card_table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F1F5F9')), ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#FFFFFF')),
-            ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR), ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(accent_hex)),
-            ('TOPPADDING', (0,0), (-1,-1), 7), ('BOTTOMPADDING', (0,0), (-1,-1), 7), ('LEFTPADDING', (0,0), (-1,-1), 12), ('RIGHTPADDING', (0,0), (-1,-1), 12)
-        ]))
-        story.append(card_table)
-        story.append(Spacer(1, 8))
-
-    add_modern_card("장점 및 주요 특기 (PROS)", player_data.get('장점/특기', ''), '#2563EB')
-    add_modern_card("보완점 및 약점 (CONS)", player_data.get('보완점/단점', ''), '#D97706')
-    add_modern_card("스카우터 종합 평가 및 코멘트 (OVERALL EVALUATION)", player_data.get('종합 평가', ''), '#475569')
-
-    story.append(Spacer(1, 8))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER_COLOR, spaceAfter=6))
-    footer_style = ParagraphStyle('FooterStyle', fontName=korean_font, fontSize=8, leading=10, alignment=1, textColor=colors.HexColor('#94A3B8'))
-    story.append(Paragraph("SUNGMUN COMPANY — Professional Player Scouting Database System", footer_style))
-
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
-
-# ----------------------------------------------------
-# 📄 경기 관찰 일지용 PDF 보고서 생성 함수
-# ----------------------------------------------------
-def generate_pdf_report_for_memo(row_data):
-    korean_font = register_korean_font()
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
-    story = []
-    
-    PRIMARY_COLOR = colors.HexColor('#0F172A')
-    TEXT_COLOR = colors.HexColor('#334155')
-    BG_LIGHT = colors.HexColor('#F8FAFC')
-    BORDER_COLOR = colors.HexColor('#CBD5E1')
-
-    title_style = ParagraphStyle('TitleStyle', fontName=korean_font, fontSize=15, leading=18, alignment=0, textColor=PRIMARY_COLOR)
-    header_date = ParagraphStyle('HeaderDate', fontName=korean_font, fontSize=8.5, leading=11, alignment=2, textColor=colors.HexColor('#64748B'))
-    section_title_style = ParagraphStyle('SectionTitle', fontName=korean_font, fontSize=10, leading=14, alignment=0, textColor=PRIMARY_COLOR)
-    body_style = ParagraphStyle('BodyStyle', fontName=korean_font, fontSize=9.5, leading=14, alignment=0, textColor=TEXT_COLOR)
-    table_label = ParagraphStyle('TableLabel', fontName=korean_font, fontSize=8.5, leading=11, alignment=0, textColor=colors.HexColor('#64748B'))
-    table_value = ParagraphStyle('TableValue', fontName=korean_font, fontSize=9, leading=12, alignment=0, textColor=PRIMARY_COLOR)
-
-    raw_match_title = row_data.get('선수명', '경기 기록')
-    match_title = re.sub(r' \(타임:\d+\)', '', str(raw_match_title))
-    match_date = row_data.get('작성일자', '-')
-    match_teams = row_data.get('소속팀', '-')
-
-    header_data = [[Paragraph(f"<b>SMC MATCH REPORT</b>", title_style), Paragraph(f"<b>관찰일자:</b> {match_date}", header_date)]]
-    header_table = Table(header_data, colWidths=[350, 170])
-    header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('BOTTOMPADDING', (0,0), (-1,-1), 6)]))
-    story.append(header_table)
-    story.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY_COLOR, spaceAfter=12))
-
-    profile_data = [
-        [Paragraph("경기/대회명", table_label), Paragraph(f"<b>{match_title}</b>", table_value)],
-        [Paragraph("대진 정보", table_label), Paragraph(f"{match_teams}", table_value)],
-        [Paragraph("기록 분류", table_label), Paragraph("현장 경기 관찰 일지 (CONFIDENTIAL)", table_value)]
-    ]
-    
-    profile_table = Table(profile_data, colWidths=[100, 420])
-    profile_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT), ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 6), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
-    ]))
-    story.append(profile_table)
-    story.append(Spacer(1, 14))
-
-    def add_modern_card(title, content, accent_hex):
-        story.append(Spacer(1, 4))
-        cleaned_content = str(content).replace('\n', '<br/>') if content and str(content).strip() else "작성된 내용이 없습니다."
-        card_data = [[Paragraph(f"<b>{title}</b>", section_title_style)], [Paragraph(cleaned_content, body_style)]]
-        card_table = Table(card_data, colWidths=[520])
-        card_table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F1F5F9')), ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#FFFFFF')),
-            ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR), ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(accent_hex)),
-            ('TOPPADDING', (0,0), (-1,-1), 7), ('BOTTOMPADDING', (0,0), (-1,-1), 7), ('LEFTPADDING', (0,0), (-1,-1), 12), ('RIGHTPADDING', (0,0), (-1,-1), 12)
-        ]))
-        story.append(card_table)
-        story.append(Spacer(1, 8))
-
-    add_modern_card("상세 관찰 기록 및 총평", row_data.get('종합 평가', ''), '#2563EB')
-
-    story.append(Spacer(1, 8))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER_COLOR, spaceAfter=6))
-    footer_style = ParagraphStyle('FooterStyle', fontName=korean_font, fontSize=8, leading=10, alignment=1, textColor=colors.HexColor('#94A3B8'))
-    story.append(Paragraph("SUNGMUN COMPANY — Professional Player Scouting Database System", footer_style))
-
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
 
 df = load_data()
 
@@ -879,29 +695,8 @@ elif menu == "📂 경기 일지 조회":
 
                         st.write("---")
                         
-                        act_col1, act_col2 = st.columns([3, 1])
-                        with act_col1:
-                            st.markdown(f"### ⚽ {match_title}")
-                            st.markdown(f"**🗓️ 일자:** {match_date_str} | **대진:** {match_teams}")
-                        with act_col2:
-                            try:
-                                pdf_bytes = generate_pdf_report_for_memo(p_memo)
-                                filename = f"{match_title.replace(' ', '_')}_경기일지.pdf"
-                                b64 = base64.b64encode(pdf_bytes.getvalue()).decode()
-                                dl_html = f"""
-                                <div style="display: flex; flex-direction: column; width: 100%;">
-                                    <a href="data:application/octet-stream;base64,{b64}" download="{filename}" 
-                                       style="background-color: #2563EB; color: white; padding: 10px 16px; text-align: center; 
-                                              text-decoration: none; display: inline-block; font-size: 14px; font-weight: bold; 
-                                              border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%;">
-                                        📄 일지 PDF 다운로드
-                                    </a>
-                                </div>
-                                """
-                                st.markdown(dl_html, unsafe_allow_html=True)
-                            except Exception as e:
-                                st.error(f"PDF 생성 오류: {e}")
-
+                        st.markdown(f"### ⚽ {match_title}")
+                        st.markdown(f"**🗓️ 일자:** {match_date_str} | **대진:** {match_teams}")
                         st.write("")
 
                         home_form = "4-3-3"
@@ -1277,7 +1072,7 @@ elif menu == "선수 등록":
 # 5. 🔍 선수 검색 및 관찰일지 조회
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
-    st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
+    st.header("🔍 관찰 선수 검색 및 상세 일지")
     
     official_df = df[df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
     
@@ -1368,32 +1163,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                 current_team_name, past_team_history = parse_team_info(p.get('소속팀', ''))
                 
                 st.write("---")
-                
-                head_col1, head_col2 = st.columns([3, 1])
-                with head_col1:
-                    st.markdown(f"### ⚽ [{p.get('진행 상태', '')}] {p.get('선수명', '')} 상세 관찰일지")
-                with head_col2:
-                    try:
-                        pdf_bytes = generate_pdf_report(p)
-                        filename = f"{p.get('선수명', '선수')}_스카우팅관찰일지.pdf"
-                        
-                        b64 = base64.b64encode(pdf_bytes.getvalue()).decode()
-                        dl_html = f"""
-                        <div style="display: flex; flex-direction: column; width: 100%;">
-                            <a href="data:application/octet-stream;base64,{b64}" download="{filename}" 
-                               style="background-color: #2563EB; color: white; padding: 10px 16px; text-align: center; 
-                                      text-decoration: none; display: inline-block; font-size: 14px; font-weight: bold; 
-                                      border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%;">
-                                📄 관찰일지 PDF 다운로드
-                            </a>
-                            <span style="font-size: 11px; color: #64748B; text-align: center; margin-top: 5px;">
-                                💡 모바일에서 새 창이 열리지 않고 안전하게 파일로 저장됩니다.
-                            </span>
-                        </div>
-                        """
-                        st.markdown(dl_html, unsafe_allow_html=True)
-                    except Exception as e:
-                        st.error(f"PDF 생성 중 오류 발생: {e}")
+                st.markdown(f"### ⚽ [{p.get('진행 상태', '')}] {p.get('선수명', '')} 상세 관찰일지")
 
                 c1, c2, c3, c4 = st.columns(4)
                 c1.metric("현재 소속팀 / 등번호", f"{current_team_name} / {p.get('등번호', '-')}번")
@@ -1531,7 +1301,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                                         st.success("🎉 해당 선수 데이터가 성공적으로 영구 삭제되었습니다!")
                                         st.rerun()
         else:
-            st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 관찰일지와 PDF 다운로드 버튼, 수정/삭제 폼이 나타납니다.")
+            st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 관찰일지와 수정/삭제 폼이 나타납니다.")
 
 # ----------------------------------------------------
 # 6. 데이터 삭제
