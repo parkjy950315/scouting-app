@@ -668,7 +668,7 @@ elif menu == "📂 경기 일지 조회":
             else:
                 display_memo_df = filtered_memo_df[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
                 display_memo_df["선수명"] = display_memo_df["선수명"].apply(lambda x: re.sub(r' \(타임:\d+\)', '', str(x)))
-                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
+                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 오웨이", "대회 정보"]
 
                 memo_selection = st.dataframe(
                     display_memo_df,
@@ -694,7 +694,6 @@ elif menu == "📂 경기 일지 조회":
                         raw_content = p_memo.get("종합 평가", "")
 
                         st.write("---")
-                        
                         st.markdown(f"### ⚽ {match_title}")
                         st.markdown(f"**🗓️ 일자:** {match_date_str} | **대진:** {match_teams}")
                         st.write("")
@@ -775,8 +774,8 @@ elif menu == "📂 경기 일지 조회":
                                     parsed_pos_memos[header_part.strip()] = content_part.strip()
 
                         st.markdown("---")
-                        with st.expander("✏️ 포메이션별 선수 체크 및 기존 메모 이어서 수정·추가하기", expanded=True):
-                            st.caption("등번호가 기입된 포지션별 체크박스를 켜면, **기존에 적어둔 메모가 그대로 유지되어 이어서 작성**할 수 있습니다.")
+                        with st.expander("✏️ 포메이션별 선수 체크 및 기존 메모 보존하여 이어서 수정·추가하기", expanded=True):
+                            st.caption("기존에 적어둔 선수별 메모와 총평이 입력창에 그대로 나타납니다. 내용을 유지한 채 안전하게 이어서 수정하거나 추가할 수 있습니다.")
 
                             edit_player_specific_memos = {}
                             edit_memo_col_h, edit_memo_col_a = st.columns(2)
@@ -840,12 +839,27 @@ elif menu == "📂 경기 일지 조회":
                             )
 
                             if st.button("💾 메모 및 총평 수정·추가 반영하기", type="primary", use_container_width=True, key=f"btn_save_all_memo_edit_{target_memo_idx}"):
-                                with st.spinner("구글 시트의 일지 내용을 업데이트하는 중..."):
-                                    meta_part = raw_content.split("⭐ [선수별 집중 관찰 메모]")[0] if "⭐ [선수별 집중 관찰 메모]" in raw_content else raw_content.split("📝 [경기 전체 총평]")[0]
+                                with st.spinner("구글 시트의 일지 내용을 안전하게 업데이트하는 중..."):
+                                    # 메타데이터 영역 분리 보존
+                                    meta_lines = []
+                                    for line in raw_content.split("\n"):
+                                        if line.startswith("📅") or line.startswith("[META_") or line.startswith("🏠 [홈팀") or line.startswith("✈️ [어웨이팀") or line.startswith("- 포지션별"):
+                                            meta_lines.append(line)
+                                        elif not line.strip():
+                                            continue
+                                        else:
+                                            break
+                                    
+                                    meta_part = "\n".join(meta_lines)
+                                    if not meta_part:
+                                        meta_part = f"📅 일자: {match_date}\n[META_HOME_FORM:{home_form}]\n[META_HOME_NUMS:]\n[META_AWAY_FORM:{away_form}]\n[META_AWAY_NUMS:]"
 
                                     new_notes_str = ""
-                                    for p_label, p_note in edit_player_specific_memos.items():
-                                        new_notes_str += f"- {p_label}:\n  {p_note}\n"
+                                    # 기존에 체크 해제되었더라도 기존 메모 데이터가 유실되지 않도록 보존하면서 반영
+                                    all_combined_memos = {**parsed_pos_memos, **edit_player_specific_memos}
+                                    for p_label, p_note in all_combined_memos.items():
+                                        if p_note.strip():
+                                            new_notes_str += f"- {p_label}:\n  {p_note}\n"
 
                                     player_notes_section = f"\n\n⭐ [선수별 집중 관찰 메모]\n{new_notes_str.strip()}" if new_notes_str.strip() else ""
                                     general_section = f"\n\n📝 [경기 전체 총평]\n{edit_general_input.strip()}"
@@ -857,7 +871,7 @@ elif menu == "📂 경기 일지 조회":
                                     updated_df = pd.DataFrame(records).astype(str)
 
                                     if save_data_to_sheet(updated_df):
-                                        st.success("🎉 경기 일지 및 선수별 집중 메모가 깔끔하게 업데이트되었습니다!")
+                                        st.success("🎉 기존 메모가 유실되지 않고 안전하게 보존되며 수정·추가 반영되었습니다!")
                                         st.rerun()
                 else:
                     st.info("💡 위 목록 표에서 조회하거나 수정할 **경기 일지 행을 클릭**하세요.")
