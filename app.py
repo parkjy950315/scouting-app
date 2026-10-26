@@ -14,7 +14,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.ttffonts import TTFont
 
 # 페이지 기본 설정
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
@@ -61,7 +61,6 @@ st.markdown("""
         cursor: pointer;
     }
     
-    /* number_input 증감(+/-) 버튼 감추기 및 깔끔한 터치 영역 확보 */
     div[data-testid="stNumberInput"] button {
         display: none !important;
     }
@@ -71,7 +70,6 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 모바일 환경 레이아웃 밀림 방지 및 폰트 크기 세밀 최적화 */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 290px !important;
@@ -100,7 +98,6 @@ st.markdown("""
             font-size: 14px !important;
             word-break: keep-all !important;
         }
-        /* 컬럼들을 강제로 가로 배치 유지 및 여백 최소화 */
         [data-testid="stHorizontalBlock"] {
             flex-direction: row !important;
             flex-wrap: nowrap !important;
@@ -462,7 +459,7 @@ formation_layouts = {
     ]
 }
 
-# ⚽ 모바일/PC 반응형 그라운드 피치 렌더러 (동그라미 노드 크기 28px로 최적화)
+# ⚽ 모바일/PC 반응형 그라운드 피치 렌더러 (동그라미 크기 28px로 최적화)
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     display_team_name = team_name if team_name else "팀명 미입력"
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
@@ -598,6 +595,7 @@ st.sidebar.markdown("---")
 menu = st.sidebar.radio("이동할 메뉴", [
     "🏟️ 현장 경기 관찰 메모", 
     "📂 경기 일지 조회", 
+    "📂 경기관찰선수리스트",
     "선수 등록", 
     "🔍 선수 검색 및 관찰일지 조회", 
     "🗑️ 데이터 삭제"
@@ -650,10 +648,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             if val_str.strip():
                 team_entered_numbers[pos] = val_str.strip()
 
-        # 1. 포메이션 시각화 그라운드 렌더링
         render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
         
-        # 2. 그라운드 아래, 등번호 입력 칸 바로 위에 팀명만 부제목으로 표시
         display_sub_name = team_name.strip() if team_name.strip() else ("홈팀" if prefix == "home" else "어웨이팀")
         prefix_icon = "🏠" if prefix == "home" else "✈️"
         st.markdown(f"**{prefix_icon} {display_sub_name}**")
@@ -856,7 +852,7 @@ elif menu == "📂 경기 일지 조회":
             else:
                 display_memo_df = filtered_memo_df[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
                 display_memo_df["선수명"] = display_memo_df["선수명"].apply(lambda x: re.sub(r' \(타임:\d+\)', '', str(x)))
-                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
+                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 오웨이", "대회 정보"]
 
                 memo_selection = st.dataframe(
                     display_memo_df,
@@ -1003,8 +999,6 @@ elif menu == "📂 경기 일지 조회":
                                         
                                         default_note_val = ""
                                         for key_str, val_str in parsed_pos_memos.items():
-                                            # ST1, ST2 등 포지션 명칭이 번호로 잘못 정규식 매핑되지 않도록 안전 파싱
-                                            clean_p_key = re.sub(r'ST\d+', 'ST', key_str)
                                             if pos in key_str and f"{num}번" in key_str and "홈" in key_str:
                                                 default_note_val = val_str
                                                 break
@@ -1030,7 +1024,6 @@ elif menu == "📂 경기 일지 조회":
                                         
                                         default_note_val = ""
                                         for key_str, val_str in parsed_pos_memos.items():
-                                            clean_p_key = re.sub(r'ST\d+', 'ST', key_str)
                                             if pos in key_str and f"{num}번" in key_str and "어웨이" in key_str:
                                                 default_note_val = val_str
                                                 break
@@ -1118,7 +1111,115 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 선수 등록
+# 3. 📂 경기관찰선수리스트 (팀명 검색 + 3회 이상 초록색 박스 하이라이트 복원)
+# ----------------------------------------------------
+elif menu == "📂 경기관찰선수리스트":
+    st.header("📂 경기 관찰 선수 리스트")
+    st.caption("현장 경기 관찰 메모에서 기록된 선수별(팀 및 등번호 기준) 관찰 횟수와 상세 내역을 확인합니다. (3회 이상 관찰된 선수는 초록색 박스로 강조됩니다)")
+
+    memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
+
+    if memo_df.empty:
+        st.info("아직 저장된 현장 경기 관찰 메모가 없습니다.")
+    else:
+        # 데이터 파싱하여 선수별 집계 추출
+        observed_players_records = []
+        
+        for _, r in memo_df.iterrows():
+            match_date = r.get("작성일자", "-")
+            match_title_raw = r.get("선수명", "")
+            match_title = re.sub(r' \(타임:\d+\)', '', str(match_title_raw))
+            raw_content = r.get("종합 평가", "")
+            match_teams = r.get("소속팀", "")
+            
+            h_team = "홈팀"
+            a_team = "어웨이팀"
+            if " vs " in match_teams:
+                parts = match_teams.split(" vs ")
+                h_team = parts[0].replace(" (홈)", "").strip()
+                a_team = parts[1].replace(" (어웨이)", "").strip()
+
+            if "⭐ [선수별 집중 관찰 메모]" in raw_content:
+                try:
+                    parts = raw_content.split("⭐ [선수별 집중 관찰 메모]")
+                    notes_part = parts[1].split("📝 [경기 전체 총평]\n")[0].strip()
+                    lines = notes_part.split("\n- ")
+                    for line in lines:
+                        if ":" in line:
+                            header_str, content_str = line.split(":", 1)
+                            header_str = header_str.strip()
+                            content_str = content_str.strip()
+                            
+                            team_name_extracted = h_team if "홈" in header_str else a_team
+                            pos_num_match = re.search(r'\[([A-Z0-9]+)\]\s*(\d+)번', header_str)
+                            if pos_num_match:
+                                pos_val = pos_num_match.group(1)
+                                num_val = pos_num_match.group(2)
+                                
+                                observed_players_records.append({
+                                    "팀명": team_name_extracted,
+                                    "등번호": f"{num_val}번",
+                                    "포지션": pos_val,
+                                    "대회/경기": match_title,
+                                    "관찰일자": match_date,
+                                    "메모내용": content_str
+                                })
+                except Exception:
+                    pass
+
+        if not observed_players_records:
+            st.info("💡 저장된 경기 일지 중 [선수별 집중 관찰 메모]에 기록된 선수가 없습니다.")
+        else:
+            obs_df = pd.DataFrame(observed_players_records)
+
+            # 팀명 검색 필터
+            search_team_query = st.text_input("🔍 팀명 검색", placeholder="관찰된 팀명을 입력하세요 (예: 매탄고, 보인고 등)")
+            if search_team_query.strip():
+                t_q = search_team_query.strip().lower()
+                obs_df = obs_df[obs_df["팀명"].str.lower().str.contains(t_q, na=False)]
+
+            if obs_df.empty:
+                st.warning("🔍 검색 조건에 일치하는 관찰 선수가 없습니다.")
+            else:
+                # 선수별(팀명 + 등번호 + 포지션) 관찰 횟수 집계
+                grouped = obs_df.groupby(["팀명", "등번호", "포지션"]).size().reset_index(name="관찰횟수")
+                grouped = grouped.sort_values(by="관찰횟수", ascending=False).reset_index(drop=True)
+
+                st.markdown("### 📊 팀별 관찰 선수 요약 및 횟수")
+                
+                for _, g_row in grouped.iterrows():
+                    g_team = g_row["팀명"]
+                    g_num = g_row["등번호"]
+                    g_pos = g_row["포지션"]
+                    g_count = g_row["관찰횟수"]
+
+                    # 3회 이상 관찰된 선수는 초록색 박스로 강조
+                    if g_count >= 3:
+                        box_style = "background-color: #d1fae5; border: 2px solid #10b981; border-radius: 10px; padding: 14px; margin-bottom: 12px;"
+                        badge_html = f"<span style='background-color: #059669; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;'>🔥 집중 관찰 대상 ({g_count회 기록})</span>"
+                    else:
+                        box_style = "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px; margin-bottom: 12px;"
+                        badge_html = f"<span style='background-color: #64748B; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;'>관찰 횟수: {g_count회}</span>"
+
+                    player_sub_df = obs_df[(obs_df["팀명"] == g_team) & (obs_df["등번호"] == g_num) & (obs_df["포지션"] == g_pos)]
+                    
+                    history_html = ""
+                    for _, sub_r in player_sub_df.iterrows():
+                        history_html += f"<div style='font-size: 12px; color: #334155; margin-top: 4px;'>• [{sub_r['관찰일자']}] {sub_r['대회/경기']} — <i>{sub_r['메모내용']}</i></div>"
+
+                    card_html = f"""
+                    <div style="{box_style}">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <b style="font-size: 16px; color: #0f172a;">⚽ [{g_team}] {g_num} ({g_pos})</b>
+                            {badge_html}
+                        </div>
+                        {history_html}
+                    </div>
+                    """
+                    st.markdown(card_html, unsafe_allow_html=True)
+
+# ----------------------------------------------------
+# 4. 선수 등록
 # ----------------------------------------------------
 elif menu == "선수 등록":
     st.header("📋 신규 관찰 선수 등록")
@@ -1177,7 +1278,7 @@ elif menu == "선수 등록":
                         st.rerun()
 
 # ----------------------------------------------------
-# 4. 🔍 선수 검색 및 관찰일지 조회
+# 5. 🔍 선수 검색 및 관찰일지 조회
 # ----------------------------------------------------
 elif menu == "🔍 선수 검색 및 관찰일지 조회":
     st.header("🔍 관찰 선수 검색 및 상세 일지 / PDF 다운로드")
@@ -1437,7 +1538,7 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
             st.info("💡 위 선수 목록 표에서 조회하고 싶은 **선수 행을 클릭**하시면 관찰일지와 PDF 다운로드 버튼, 수정/삭제 폼이 나타납니다.")
 
 # ----------------------------------------------------
-# 5. 데이터 삭제
+# 6. 데이터 삭제
 # ----------------------------------------------------
 elif menu == "🗑️ 데이터 삭제":
     st.header("🗑️ 선수 데이터 삭제")
