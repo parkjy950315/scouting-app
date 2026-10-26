@@ -668,7 +668,7 @@ elif menu == "📂 경기 일지 조회":
             else:
                 display_memo_df = filtered_memo_df[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
                 display_memo_df["선수명"] = display_memo_df["선수명"].apply(lambda x: re.sub(r' \(타임:\d+\)', '', str(x)))
-                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 오웨이", "대회 정보"]
+                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
 
                 memo_selection = st.dataframe(
                     display_memo_df,
@@ -771,11 +771,14 @@ elif menu == "📂 경기 일지 조회":
                             for line in note_lines:
                                 if ":" in line:
                                     header_part, content_part = line.split(":", 1)
-                                    parsed_pos_memos[header_part.strip()] = content_part.strip()
+                                    # 앞뒤 불필요한 점이나 기호 깔끔하게 제거
+                                    clean_header = header_part.strip().lstrip("-•* ").strip()
+                                    clean_content_val = content_part.strip().lstrip("-•* ").strip()
+                                    parsed_pos_memos[clean_header] = clean_content_val
 
                         st.markdown("---")
                         with st.expander("✏️ 포메이션별 선수 체크 및 기존 메모 보존하여 이어서 수정·추가하기", expanded=True):
-                            st.caption("기존에 적어둔 선수별 메모와 총평이 입력창에 그대로 나타납니다. 내용을 유지한 채 안전하게 이어서 수정하거나 추가할 수 있습니다.")
+                            st.caption("기존에 적어둔 선수별 메모와 총평이 입력창에 깔끔하게 나타납니다. 내용을 유지한 채 안전하게 수정할 수 있습니다.")
 
                             edit_player_specific_memos = {}
                             edit_memo_col_h, edit_memo_col_a = st.columns(2)
@@ -787,7 +790,7 @@ elif menu == "📂 경기 일지 조회":
                                         chk_key = f"edit_chk_home_{target_memo_idx}_{pos}"
                                         p_label_key = f"[홈] {h_team_name} - [{pos}] {num}번"
                                         
-                                        has_old_note = p_label_key in existing_player_notes or any(p_label_key in l for l in existing_player_notes.split("\n"))
+                                        has_old_note = any(pos in k and f"{num}번" in k and "홈" in k for k in parsed_pos_memos.keys())
                                         
                                         is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", value=has_old_note, key=chk_key)
                                         
@@ -812,7 +815,7 @@ elif menu == "📂 경기 일지 조회":
                                         chk_key = f"edit_chk_away_{target_memo_idx}_{pos}"
                                         p_label_key = f"[어웨이] {a_team_name} - [{pos}] {num}번"
                                         
-                                        has_old_note = p_label_key in existing_player_notes or any(p_label_key in l for l in existing_player_notes.split("\n"))
+                                        has_old_note = any(pos in k and f"{num}번" in k and "어웨이" in k for k in parsed_pos_memos.keys())
                                         
                                         is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", value=has_old_note, key=chk_key)
                                         
@@ -840,7 +843,6 @@ elif menu == "📂 경기 일지 조회":
 
                             if st.button("💾 메모 및 총평 수정·추가 반영하기", type="primary", use_container_width=True, key=f"btn_save_all_memo_edit_{target_memo_idx}"):
                                 with st.spinner("구글 시트의 일지 내용을 안전하게 업데이트하는 중..."):
-                                    # 메타데이터 영역 분리 보존
                                     meta_lines = []
                                     for line in raw_content.split("\n"):
                                         if line.startswith("📅") or line.startswith("[META_") or line.startswith("🏠 [홈팀") or line.startswith("✈️ [어웨이팀") or line.startswith("- 포지션별"):
@@ -855,11 +857,12 @@ elif menu == "📂 경기 일지 조회":
                                         meta_part = f"📅 일자: {match_date}\n[META_HOME_FORM:{home_form}]\n[META_HOME_NUMS:]\n[META_AWAY_FORM:{away_form}]\n[META_AWAY_NUMS:]"
 
                                     new_notes_str = ""
-                                    # 기존에 체크 해제되었더라도 기존 메모 데이터가 유실되지 않도록 보존하면서 반영
                                     all_combined_memos = {**parsed_pos_memos, **edit_player_specific_memos}
                                     for p_label, p_note in all_combined_memos.items():
-                                        if p_note.strip():
-                                            new_notes_str += f"- {p_label}:\n  {p_note}\n"
+                                        clean_label = p_label.lstrip("-•* ").strip()
+                                        clean_note = p_note.lstrip("-•* ").strip()
+                                        if clean_note:
+                                            new_notes_str += f"- {clean_label}:\n  {clean_note}\n"
 
                                     player_notes_section = f"\n\n⭐ [선수별 집중 관찰 메모]\n{new_notes_str.strip()}" if new_notes_str.strip() else ""
                                     general_section = f"\n\n📝 [경기 전체 총평]\n{edit_general_input.strip()}"
@@ -871,7 +874,7 @@ elif menu == "📂 경기 일지 조회":
                                     updated_df = pd.DataFrame(records).astype(str)
 
                                     if save_data_to_sheet(updated_df):
-                                        st.success("🎉 기존 메모가 유실되지 않고 안전하게 보존되며 수정·추가 반영되었습니다!")
+                                        st.success("🎉 점이나 불필요한 기호 누적 없이 깔끔하게 수정·반영되었습니다!")
                                         st.rerun()
                 else:
                     st.info("💡 위 목록 표에서 조회하거나 수정할 **경기 일지 행을 클릭**하세요.")
@@ -884,7 +887,7 @@ elif menu == "📂 경기 일지 조회":
             
             display_del_df = memo_df_del[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
             display_del_df["선수명"] = display_del_df["선수명"].apply(lambda x: re.sub(r' \(타임:\d+\)', '', str(x)))
-            display_del_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
+            display_del_df.columns = ["작성일자", "대회 및 대진", "홈 vs 오웨이", "대회 정보"]
 
             del_selection = st.dataframe(
                 display_del_df,
@@ -955,8 +958,8 @@ elif menu == "📂 경기관찰선수리스트":
                     for line in lines:
                         if ":" in line:
                             header_str, content_str = line.split(":", 1)
-                            header_str = header_str.strip()
-                            content_str = content_str.strip()
+                            header_str = header_str.strip().lstrip("-•* ").strip()
+                            content_str = content_str.strip().lstrip("-•* ").strip()
                             
                             team_name_extracted = h_team if "홈" in header_str else a_team
                             pos_num_match = re.search(r'\[([A-Z0-9]+)\]\s*(\d+)번', header_str)
