@@ -922,7 +922,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (팀명 검색 + 3회 이상 초록색 박스 + 선수 선택 기능 추가)
+# 3. 📂 경기관찰선수리스트 (팀명 검색 + 3회 이상 초록색 박스 + 선택한 경기 피치 시각화 추가)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기 관찰 선수 리스트")
@@ -972,7 +972,9 @@ elif menu == "📂 경기관찰선수리스트":
                                     "포지션": pos_val,
                                     "대회/경기": match_title,
                                     "관찰일자": match_date,
-                                    "메모내용": content_str
+                                    "메모내용": content_str,
+                                    "raw_content": raw_content, # 당시 경기 전체 원본 데이터 보존 (포메이션 시각화용)
+                                    "match_teams": match_teams
                                 })
                 except Exception:
                     pass
@@ -993,8 +995,7 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = obs_df.groupby(["팀명", "등번호", "포지션"]).size().reset_index(name="관찰횟수")
                 grouped = grouped.sort_values(by="관찰횟수", ascending=False).reset_index(drop=True)
 
-                # 선택하기 쉽도록 테이블 형태로 변환하여 보여주기
-                st.markdown("### 📊 관찰 선수 요약 목록 (상세 내역을 보려면 아래 표에서 **선수 행을 클릭**하세요)")
+                st.markdown("### 📊 관찰 선수 요약 목록 (상세 내역과 해당 경기 피치를 보려면 아래 표에서 **선수 행을 클릭**하세요)")
                 
                 display_obs_table = grouped.copy()
                 display_obs_table.columns = ["소속 팀명", "등번호", "포지션", "누적 관찰 횟수"]
@@ -1009,7 +1010,7 @@ elif menu == "📂 경기관찰선수리스트":
 
                 selected_obs_rows = obs_selection.selection.rows if hasattr(obs_selection, "selection") else []
 
-                # 만약 특정 선수를 클릭해서 선택했다면 해당 선수가 관찰된 경기 히스토리 카드 출력
+                # 특정 선수 선택 시 해당 선수의 관찰 경기 기록 + 당시 포메이션 피치 시각화 표시
                 if selected_obs_rows:
                     sel_row = grouped.iloc[selected_obs_rows[0]]
                     sel_team = sel_row["팀명"]
@@ -1017,25 +1018,72 @@ elif menu == "📂 경기관찰선수리스트":
                     sel_pos = sel_row["포지션"]
 
                     st.write("---")
-                    st.markdown(f"### 🎯 선택한 선수 관찰 경기 기록: [{sel_team}] {sel_num} ({sel_pos})")
+                    st.markdown(f"### 🎯 선택한 선수 관찰 경기 기록 및 포메이션 시각화: [{sel_team}] {sel_num} ({sel_pos})")
                     
                     selected_player_history = obs_df[(obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num) & (obs_df["포지션"] == sel_pos)]
                     selected_player_history = selected_player_history.sort_values(by="관찰일자", ascending=False)
 
                     for _, h_row in selected_player_history.iterrows():
-                        card_html = f"""
-                        <div style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
-                            <div style="font-weight: bold; color: #1e293b; font-size: 14px; margin-bottom: 4px;">
+                        match_raw_content = h_row["raw_content"]
+                        match_teams_str = h_row["match_teams"]
+
+                        # 해당 경기의 포메이션 및 등번호 파싱
+                        h_form = "4-3-3"
+                        a_form = "4-3-3"
+                        h_nums = {}
+                        a_nums = {}
+                        try:
+                            if "[META_HOME_FORM:" in match_raw_content:
+                                h_form = match_raw_content.split("[META_HOME_FORM:")[1].split("]")[0]
+                            if "[META_HOME_NUMS:" in match_raw_content:
+                                h_nums_raw = match_raw_content.split("[META_HOME_NUMS:")[1].split("]")[0]
+                                if h_nums_raw and h_nums_raw != "없음":
+                                    for item in h_nums_raw.split(","):
+                                        if ":" in item:
+                                            pk, pv = item.split(":")
+                                            h_nums[pk.strip()] = pv.strip()
+
+                            if "[META_AWAY_FORM:" in match_raw_content:
+                                a_form = match_raw_content.split("[META_AWAY_FORM:")[1].split("]")[0]
+                            if "[META_AWAY_NUMS:" in match_raw_content:
+                                a_nums_raw = match_raw_content.split("[META_AWAY_NUMS:")[1].split("]")[0]
+                                if a_nums_raw and a_nums_raw != "없음":
+                                    for item in a_nums_raw.split(","):
+                                        if ":" in item:
+                                            pk, pv = item.split(":")
+                                            a_nums[pk.strip()] = pv.strip()
+                        except Exception:
+                            pass
+
+                        h_t_name = "홈팀"
+                        a_t_name = "어웨이팀"
+                        if " vs " in match_teams_str:
+                            parts = match_teams_str.split(" vs ")
+                            h_t_name = parts[0].replace(" (홈)", "").strip()
+                            a_t_name = parts[1].replace(" (어웨이)", "").strip()
+
+                        # UI 카드 박스 렌더링
+                        st.markdown(f"""
+                        <div style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 15px;">
+                            <div style="font-weight: bold; color: #1e293b; font-size: 15px; margin-bottom: 6px;">
                                 📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']}
                             </div>
-                            <div style="color: #334155; font-size: 13px;">
+                            <div style="color: #334155; font-size: 13px; margin-bottom: 10px;">
                                 📝 <b>관찰 메모:</b> {h_row['메모내용']}
                             </div>
                         </div>
-                        """
-                        st.markdown(card_html, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
 
-                st.write("---")
+                        # 당시 경기 그라운드 피치 나란히 렌더링
+                        st.markdown(f"<div style='font-size: 12px; font-weight: bold; color: #475569; margin-bottom: 4px;'>🏟️ [{h_row['대회/경기']}] 당시 양팀 포메이션 및 등번호 배치</div>", unsafe_allow_html=True)
+                        pitch_col1, pitch_col2 = st.columns(2)
+                        with pitch_col1:
+                            render_pitch_graphic_from_saved(h_t_name, h_form, h_nums)
+                        with pitch_col2:
+                            render_pitch_graphic_from_saved(a_t_name, a_form, a_nums)
+                        
+                        st.markdown("---")
+
                 st.markdown("### 🔥 전체 관찰 선수 카드 모음")
                 
                 for _, g_row in grouped.iterrows():
