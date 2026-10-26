@@ -852,7 +852,7 @@ elif menu == "📂 경기 일지 조회":
             else:
                 display_memo_df = filtered_memo_df[["작성일자", "선수명", "소속팀", "장점/특기"]].copy()
                 display_memo_df["선수명"] = display_memo_df["선수명"].apply(lambda x: re.sub(r' \(타임:\d+\)', '', str(x)))
-                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 오웨이", "대회 정보"]
+                display_memo_df.columns = ["작성일자", "대회 및 대진", "홈 vs 어웨이", "대회 정보"]
 
                 memo_selection = st.dataframe(
                     display_memo_df,
@@ -1122,7 +1122,6 @@ elif menu == "📂 경기관찰선수리스트":
     if memo_df.empty:
         st.info("아직 저장된 현장 경기 관찰 메모가 없습니다.")
     else:
-        # 데이터 파싱하여 선수별 집계 추출
         observed_players_records = []
         
         for _, r in memo_df.iterrows():
@@ -1172,7 +1171,6 @@ elif menu == "📂 경기관찰선수리스트":
         else:
             obs_df = pd.DataFrame(observed_players_records)
 
-            # 팀명 검색 필터
             search_team_query = st.text_input("🔍 팀명 검색", placeholder="관찰된 팀명을 입력하세요 (예: 매탄고, 보인고 등)")
             if search_team_query.strip():
                 t_q = search_team_query.strip().lower()
@@ -1181,7 +1179,6 @@ elif menu == "📂 경기관찰선수리스트":
             if obs_df.empty:
                 st.warning("🔍 검색 조건에 일치하는 관찰 선수가 없습니다.")
             else:
-                # 선수별(팀명 + 등번호 + 포지션) 관찰 횟수 집계
                 grouped = obs_df.groupby(["팀명", "등번호", "포지션"]).size().reset_index(name="관찰횟수")
                 grouped = grouped.sort_values(by="관찰횟수", ascending=False).reset_index(drop=True)
 
@@ -1193,13 +1190,12 @@ elif menu == "📂 경기관찰선수리스트":
                     g_pos = g_row["포지션"]
                     g_count = g_row["관찰횟수"]
 
-                    # 3회 이상 관찰된 선수는 초록색 박스로 강조
                     if g_count >= 3:
                         box_style = "background-color: #d1fae5; border: 2px solid #10b981; border-radius: 10px; padding: 14px; margin-bottom: 12px;"
-                        badge_html = f"<span style='background-color: #059669; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;'>🔥 집중 관찰 대상 ({g_count회 기록})</span>"
+                        badge_html = f'<span style="background-color: #059669; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">🔥 집중 관찰 대상 ({g_count}회 기록)</span>'
                     else:
                         box_style = "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px; margin-bottom: 12px;"
-                        badge_html = f"<span style='background-color: #64748B; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;'>관찰 횟수: {g_count회}</span>"
+                        badge_html = f'<span style="background-color: #64748B; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;">관찰 횟수: {g_count}회</span>'
 
                     player_sub_df = obs_df[(obs_df["팀명"] == g_team) & (obs_df["등번호"] == g_num) & (obs_df["포지션"] == g_pos)]
                     
