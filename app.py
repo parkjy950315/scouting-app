@@ -462,7 +462,7 @@ formation_layouts = {
     ]
 }
 
-# ⚽ 모바일/PC 반응형 그라운드 피치 렌더러
+# ⚽ 모바일/PC 반응형 그라운드 피치 렌더러 (동그라미 노드 크기 28px로 최적화)
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     display_team_name = team_name if team_name else "팀명 미입력"
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
@@ -512,7 +512,7 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
         .pitch-row {{
             display: flex;
             justify-content: center;
-            gap: 4px;
+            gap: 3px;
             margin-bottom: 3px;
             flex-wrap: nowrap;
             width: 100%;
@@ -522,23 +522,23 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
             color: white;
             border: 2px solid rgba(255, 255, 255, 0.95);
             border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            min-width: 36px;
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }}
         .pos-text {{
-            font-size: 6px;
+            font-size: 5.5px;
             color: #fecaca;
             font-weight: 700;
             line-height: 1;
         }}
         .num-text {{
-            font-size: 11px;
+            font-size: 9.5px;
             color: #ffffff;
             font-weight: 900;
             line-height: 1.1;
@@ -553,16 +553,16 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
                 margin-bottom: 2px;
             }}
             .player-node {{
-                width: 29px;
-                height: 29px;
-                min-width: 29px;
+                width: 26px;
+                height: 26px;
+                min-width: 26px;
                 border-width: 1.5px;
             }}
             .pos-text {{
                 font-size: 5px;
             }}
             .num-text {{
-                font-size: 9.5px;
+                font-size: 8.5px;
             }}
         }}
     </style>
@@ -579,7 +579,7 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     """
     
     import streamlit.components.v1 as components
-    components.html(complete_html, height=360, scrolling=False)
+    components.html(complete_html, height=340, scrolling=False)
 
 display_logo()
 
@@ -628,7 +628,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    # 💡 주 제목: "⚡ 등번호 입력"
     st.subheader("⚡ 등번호 입력")
 
     def render_team_interactive_grid(team_name, formation_name, prefix):
@@ -826,7 +825,6 @@ elif menu == "📂 경기 일지 조회":
 
             sc_col1, sc_col2 = st.columns([3, 1])
             with sc_col1:
-                # 💡 검색 라벨 및 placeholder 수정 반영
                 search_query = st.text_input("🔍 검색", placeholder="팀명, 대회명", key="memo_search_box")
             with sc_col2:
                 available_months = ["전체"]
@@ -1005,7 +1003,9 @@ elif menu == "📂 경기 일지 조회":
                                         
                                         default_note_val = ""
                                         for key_str, val_str in parsed_pos_memos.items():
-                                            if pos in key_str and num in key_str and "홈" in key_str:
+                                            # ST1, ST2 등 포지션 명칭이 번호로 잘못 정규식 매핑되지 않도록 안전 파싱
+                                            clean_p_key = re.sub(r'ST\d+', 'ST', key_str)
+                                            if pos in key_str and f"{num}번" in key_str and "홈" in key_str:
                                                 default_note_val = val_str
                                                 break
 
@@ -1030,7 +1030,8 @@ elif menu == "📂 경기 일지 조회":
                                         
                                         default_note_val = ""
                                         for key_str, val_str in parsed_pos_memos.items():
-                                            if pos in key_str and num in key_str and "어웨이" in key_str:
+                                            clean_p_key = re.sub(r'ST\d+', 'ST', key_str)
+                                            if pos in key_str and f"{num}번" in key_str and "어웨이" in key_str:
                                                 default_note_val = val_str
                                                 break
 
