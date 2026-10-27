@@ -555,7 +555,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         if not home_team.strip() or not away_team.strip():
             st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다. 팀 이름을 입력해 주세요.")
         else:
-            with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
+            with st.spinner("구글 시트에 현장 메모를 저장하고 정식 등록 선수와 자동 연동하는 중..."):
                 home_valid_positions = [pos for row in formation_layouts[home_formation] for pos in row['positions']]
                 away_valid_positions = [pos for row in formation_layouts[away_formation] for pos in row['positions']]
 
@@ -604,7 +604,37 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     "작성일자": str(match_date)
                 }
 
-                updated_df = pd.DataFrame([new_memo_data]) if df.empty else pd.concat([df, pd.DataFrame([new_memo_data])], ignore_index=True)
+                # 💡 핵심 자동 연동 로직: 정식 등록된 선수 중 팀명과 등번호가 일치하는 경우 관찰일지 자동 누적
+                working_df = df.copy()
+                if player_specific_memos:
+                    for p_label, p_note in player_specific_memos.items():
+                        # p_label 예: "[홈] 매탄고 - [FW] 10번" 또는 "[어웨이] 수원고 - [MF] 8번"
+                        is_home = "홈" in p_label
+                        target_team_str = home_team.strip() if is_home else away_team.strip()
+                        
+                        # 등번호 추출
+                        num_match = re.search(r'(\d+)번', p_label)
+                        if num_match:
+                            target_num = num_match.group(1)
+                            
+                            # 정식 등록 선수 필터링 (임시 메모 제외)
+                            official_mask = working_df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"
+                            
+                            for idx, row in working_df[official_mask].iterrows():
+                                row_team, _ = parse_team_info(row.get("소속팀", ""))
+                                row_num = str(row.get("등번호", "")).strip()
+                                
+                                # 팀 이름과 등번호가 일치하는 정식 선수를 찾으면 현장 관찰 메모 자동 추가
+                                if target_team_str.lower() in row_team.lower() and target_num == row_num:
+                                    old_overall = str(row.get("종합 평가", ""))
+                                    t_str = str(match_date)
+                                    match_label_str = tournament_name.strip() if tournament_name.strip() else "현장 관찰"
+                                    
+                                    new_auto_note = f"\n\n[{t_str} {match_label_str} 자동 연동]\n{p_note.strip()}"
+                                    working_df.loc[idx, "종합 평가"] = (old_overall + new_auto_note).strip()
+
+                updated_df = pd.concat([working_df, pd.DataFrame([new_memo_data])], ignore_index=True) if not working_df.empty else pd.DataFrame([new_memo_data])
+                
                 if save_data_to_sheet(updated_df):
                     for p in ["LW", "CF", "RW", "ST1", "ST2", "ST", "LM", "LCM", "CM", "RCM", "RM", "LAM", "CAM", "RAM", "LDM", "RDM", "CDM", "LB", "LCB", "CB", "RCB", "RB", "LWB", "RWB", "GK"]:
                         if f"home_{p}" in st.session_state:
@@ -612,7 +642,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                         if f"away_{p}" in st.session_state:
                             del st.session_state[f"away_{p}"]
                     
-                    st.success("🎉 현장 경기 관찰 메모가 구글 시트에 성공적으로 저장되었습니다!")
+                    st.success("🎉 현장 경기 관찰 메모 저장 및 정식 등록 선수 관찰일지 자동 연동이 완료되었습니다!")
                     st.balloons()
 
 # ----------------------------------------------------
@@ -973,7 +1003,7 @@ elif menu == "📂 경기관찰선수리스트":
                                     "대회/경기": match_title,
                                     "관찰일자": match_date,
                                     "메모내용": content_str,
-                                    "raw_content": raw_content, # 당시 경기 전체 원본 데이터 보존 (포메이션 시각화용)
+                                    "raw_content": raw_content,
                                     "match_teams": match_teams
                                 })
                 except Exception:
@@ -1010,7 +1040,6 @@ elif menu == "📂 경기관찰선수리스트":
 
                 selected_obs_rows = obs_selection.selection.rows if hasattr(obs_selection, "selection") else []
 
-                # 특정 선수 선택 시 해당 선수의 관찰 경기 기록 + 당시 포메이션 피치 시각화 표시
                 if selected_obs_rows:
                     sel_row = grouped.iloc[selected_obs_rows[0]]
                     sel_team = sel_row["팀명"]
@@ -1027,7 +1056,6 @@ elif menu == "📂 경기관찰선수리스트":
                         match_raw_content = h_row["raw_content"]
                         match_teams_str = h_row["match_teams"]
 
-                        # 해당 경기의 포메이션 및 등번호 파싱
                         h_form = "4-3-3"
                         a_form = "4-3-3"
                         h_nums = {}
@@ -1062,7 +1090,6 @@ elif menu == "📂 경기관찰선수리스트":
                             h_t_name = parts[0].replace(" (홈)", "").strip()
                             a_t_name = parts[1].replace(" (어웨이)", "").strip()
 
-                        # UI 카드 박스 렌더링
                         st.markdown(f"""
                         <div style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 15px;">
                             <div style="font-weight: bold; color: #1e293b; font-size: 15px; margin-bottom: 6px;">
@@ -1074,7 +1101,6 @@ elif menu == "📂 경기관찰선수리스트":
                         </div>
                         """, unsafe_allow_html=True)
 
-                        # 당시 경기 그라운드 피치 나란히 렌더링
                         st.markdown(f"<div style='font-size: 12px; font-weight: bold; color: #475569; margin-bottom: 4px;'>🏟️ [{h_row['대회/경기']}] 당시 양팀 포메이션 및 등번호 배치</div>", unsafe_allow_html=True)
                         pitch_col1, pitch_col2 = st.columns(2)
                         with pitch_col1:
