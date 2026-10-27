@@ -11,7 +11,7 @@ from datetime import datetime
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 최적화 스타일 설정
+# 📱 PC & 모바일 반응형 최적화 스타일 설정 (Metric 폰트 크기 최적화 포함)
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -41,6 +41,7 @@ st.markdown("""
         font-weight: bold !important;
     }
 
+    /* 📱 모바일 상세 관찰일지 Metric 글씨 잘림 방지 (폰트 크기 축소) */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 290px !important;
@@ -77,6 +78,14 @@ st.markdown("""
         [data-testid="stHorizontalBlock"] > div {
             flex: 1 !important;
             min-width: 0 !important;
+        }
+        /* Metric 값 글씨 크기를 줄여서 ... 방지 */
+        [data-testid="stMetricValue"] {
+            font-size: 13px !important;
+            word-break: break-all !important;
+        }
+        [data-testid="stMetricLabel"] {
+            font-size: 10.5px !important;
         }
     }
     @media (min-width: 769px) {
@@ -430,7 +439,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
     st.caption("📱 화면이 꺼지거나 새로고침되어도 작성 중인 내용이 지워지지 않도록 실시간 임시 보존됩니다.")
 
-    # 💡 임시 보존 데이터 존재 시 안내 및 초기화 버튼
     if "draft_tournament" in st.session_state or "draft_general_memo" in st.session_state:
         st.info("💡 **작성 중이던 메모가 안전하게 유지되고 있습니다.** (모두 지우고 새로 작성하려면 아래 '초기화' 버튼을 클릭하세요)")
         if st.button("🧹 작성 중인 내용 완전히 초기화하기", type="secondary"):
@@ -638,7 +646,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 updated_df = pd.concat([df, pd.DataFrame([new_memo_data])], ignore_index=True) if not df.empty else pd.DataFrame([new_memo_data])
                 
                 if save_data_to_sheet(updated_df):
-                    # 저장 완료 후 작성 중 세션 깔끔하게 클리어
                     for key in list(st.session_state.keys()):
                         if key.startswith("draft_") or key.startswith("home_") or key.startswith("away_") or key.startswith("text_memo_") or key.startswith("chk_memo_"):
                             del st.session_state[key]
@@ -1305,9 +1312,9 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                 st.markdown(f"### ⚽ [{p.get('진행 상태', '')}] {p.get('선수명', '')} 상세 관찰일지")
 
                 c1, c2, c3, c4 = st.columns(4)
-                c1.metric("현재 소속팀 / 등번호", f"{current_team_name} / {p.get('등번호', '-')}번")
-                c2.metric("포지션 / 주발", f"{p.get('포지션', '-')} / {p.get('주발', '-')}")
-                c3.metric("나이", f"{p.get('만 나이', '-')}")
+                c1.metric("소속/등번호", f"{current_team_name} / {p.get('등번호', '-')}번")
+                c2.metric("포지션/주발", f"{p.get('포지션', '-')} / {p.get('주발', '-')}")
+                c3.metric("만 나이", f"{p.get('만 나이', '-')}")
                 
                 weight_display = f"{p.get('체중(kg)')}kg" if p.get('체중(kg)') else "미입력"
                 c4.metric("피지컬", f"{p.get('신장(cm)', '-')}cm / {weight_display}")
