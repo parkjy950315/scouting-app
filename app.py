@@ -424,17 +424,26 @@ menu = st.sidebar.radio("이동할 메뉴", [
 ])
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (연도별 독립 시즌 구분 적용)
+# 1. 🏟️ 현장 경기 관찰 메모 (화면 잠금 및 새로고침 방지 - 임시 복원 로직)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("선수 이름을 몰라도 됩니다! 경기 일자(연도)와 등번호만으로 기록하면 시즌별로 안전하게 누적됩니다.")
+    st.caption("📱 화면이 꺼지거나 새로고침되어도 작성 중인 내용이 지워지지 않도록 실시간 임시 보존됩니다.")
+
+    # 💡 임시 보존 데이터 존재 시 안내 및 초기화 버튼
+    if "draft_tournament" in st.session_state or "draft_general_memo" in st.session_state:
+        st.info("💡 **작성 중이던 메모가 안전하게 유지되고 있습니다.** (모두 지우고 새로 작성하려면 아래 '초기화' 버튼을 클릭하세요)")
+        if st.button("🧹 작성 중인 내용 완전히 초기화하기", type="secondary"):
+            for key in list(st.session_state.keys()):
+                if key.startswith("draft_") or key.startswith("home_") or key.startswith("away_") or key.startswith("text_memo_") or key.startswith("chk_memo_"):
+                    del st.session_state[key]
+            st.rerun()
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
-        match_date = st.date_input("경기 일자", value=datetime.today())
+        match_date = st.date_input("경기 일자", value=st.session_state.get("draft_match_date", datetime.today()), key="draft_match_date")
     with col_m2:
-        tournament_name = st.text_input("대회 이름", placeholder="예: 금석배 U18, 대통령배 등")
+        tournament_name = st.text_input("대회 이름", value=st.session_state.get("draft_tournament", ""), placeholder="예: 금석배 U18, 대통령배 등", key="draft_tournament")
 
     st.write("---")
 
@@ -442,25 +451,25 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     
     with col_t1:
         st.markdown("**🏠 홈팀 명***")
-        home_keyword = st.text_input("홈팀 검색 키워드", value="", placeholder="예: FC, 매탄, 보인 등 입력", key="home_keyword_input")
+        home_keyword = st.text_input("홈팀 검색 키워드", value=st.session_state.get("draft_home_keyword", ""), placeholder="예: FC, 매탄, 보인 등 입력", key="draft_home_keyword")
         filtered_home_teams = [t for t in all_teams_master if home_keyword.strip().lower() in t.lower()] if home_keyword.strip() else all_teams_master
         
-        home_team = st.selectbox("홈팀 선택 (검색 결과)", options=["직접 입력 또는 선택하세요"] + filtered_home_teams, key="home_team_selectbox")
+        home_team = st.selectbox("홈팀 선택 (검색 결과)", options=["직접 입력 또는 선택하세요"] + filtered_home_teams, key="draft_home_selectbox")
         if home_team == "직접 입력 또는 선택하세요":
             home_team = home_keyword.strip()
 
-        home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="home_form")
+        home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="draft_home_form")
 
     with col_t2:
         st.markdown("**✈️ 어웨이팀 명***")
-        away_keyword = st.text_input("어웨이팀 검색 키워드", value="", placeholder="예: 현대, 신평, FC 등 입력", key="away_keyword_input")
+        away_keyword = st.text_input("어웨이팀 검색 키워드", value=st.session_state.get("draft_away_keyword", ""), placeholder="예: 현대, 신평, FC 등 입력", key="draft_away_keyword")
         filtered_away_teams = [t for t in all_teams_master if away_keyword.strip().lower() in t.lower()] if away_keyword.strip() else all_teams_master
         
-        away_team = st.selectbox("어웨이팀 선택 (검색 결과)", options=["직접 입력 또는 선택하세요"] + filtered_away_teams, key="away_team_selectbox")
+        away_team = st.selectbox("어웨이팀 선택 (검색 결과)", options=["직접 입력 또는 선택하세요"] + filtered_away_teams, key="draft_away_selectbox")
         if away_team == "직접 입력 또는 선택하세요":
             away_team = away_keyword.strip()
 
-        away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="away_form")
+        away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="draft_away_form")
 
     st.write("---")
 
@@ -566,8 +575,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     st.subheader("📋 종합 메모")
     general_memo = st.text_area(
         "", 
+        value=st.session_state.get("draft_general_memo", ""),
         placeholder="[예시]\n- 교체선수\n- 경기양상\n- 스코어\n- 등",
-        key="general_match_memo_input",
+        key="draft_general_memo",
         height=140,
         label_visibility="collapsed"
     )
@@ -628,11 +638,10 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                 updated_df = pd.concat([df, pd.DataFrame([new_memo_data])], ignore_index=True) if not df.empty else pd.DataFrame([new_memo_data])
                 
                 if save_data_to_sheet(updated_df):
-                    for p in ["LW", "CF", "RW", "ST1", "ST2", "ST", "LM", "LCM", "CM", "RCM", "RM", "LAM", "CAM", "RAM", "LDM", "RDM", "CDM", "LB", "LCB", "CB", "RCB", "RB", "LWB", "RWB", "GK"]:
-                        if f"home_{p}" in st.session_state:
-                            del st.session_state[f"home_{p}"]
-                        if f"away_{p}" in st.session_state:
-                            del st.session_state[f"away_{p}"]
+                    # 저장 완료 후 작성 중 세션 깔끔하게 클리어
+                    for key in list(st.session_state.keys()):
+                        if key.startswith("draft_") or key.startswith("home_") or key.startswith("away_") or key.startswith("text_memo_") or key.startswith("chk_memo_"):
+                            del st.session_state[key]
                     
                     st.success("🎉 현장 경기 관찰 메모가 연도별 시즌에 맞추어 성공적으로 저장되었습니다!")
                     st.balloons()
@@ -941,7 +950,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (연도별 시즌 완전 분리 적용)
+# 3. 📂 경기관찰선수리스트
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기 관찰 선수 리스트 (연도별 시즌 분리)")
