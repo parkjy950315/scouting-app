@@ -238,7 +238,7 @@ def parse_team_info(team_str):
         return current_team, past_teams
     return team_str, ""
 
-# 🔍 통합 팀 마스터 리스트 생성 (기본 마스터 + 시트 등록 팀 + 임시 메모 팀 합치기)
+# 🔍 통합 팀 마스터 리스트 생성
 def get_combined_teams_list(df_data):
     teams_set = set(DEFAULT_TEAM_MASTER_LIST)
     for _, r in df_data.iterrows():
@@ -424,11 +424,11 @@ menu = st.sidebar.radio("이동할 메뉴", [
 ])
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (네이버식 연관검색/자동완성 완벽 구현)
+# 1. 🏟️ 현장 경기 관찰 메모 (연도별 독립 시즌 구분 적용)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("팀명 입력창에 'FC'나 학교이름 일부만 적어도 일치하는 팀들이 밑으로 쭈르륵 연관 검색어처럼 자동 완성됩니다!")
+    st.caption("선수 이름을 몰라도 됩니다! 경기 일자(연도)와 등번호만으로 기록하면 시즌별로 안전하게 누적됩니다.")
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
@@ -440,19 +440,12 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     col_t1, col_t2 = st.columns(2)
     
-    # 🔍 네이버 검색처럼 글자 입력 시 일치하는 팀들이 밑으로 쭈르륵 뜨는 연관검색 구현
     with col_t1:
         st.markdown("**🏠 홈팀 명***")
         home_keyword = st.text_input("홈팀 검색 키워드", value="", placeholder="예: FC, 매탄, 보인 등 입력", key="home_keyword_input")
-        
-        # 키워드가 포함된 팀들만 실시간으로 필터링
         filtered_home_teams = [t for t in all_teams_master if home_keyword.strip().lower() in t.lower()] if home_keyword.strip() else all_teams_master
         
-        home_team = st.selectbox(
-            "홈팀 선택 (검색 결과)",
-            options=["직접 입력 또는 선택하세요"] + filtered_home_teams,
-            key="home_team_selectbox"
-        )
+        home_team = st.selectbox("홈팀 선택 (검색 결과)", options=["직접 입력 또는 선택하세요"] + filtered_home_teams, key="home_team_selectbox")
         if home_team == "직접 입력 또는 선택하세요":
             home_team = home_keyword.strip()
 
@@ -461,14 +454,9 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     with col_t2:
         st.markdown("**✈️ 어웨이팀 명***")
         away_keyword = st.text_input("어웨이팀 검색 키워드", value="", placeholder="예: 현대, 신평, FC 등 입력", key="away_keyword_input")
-        
         filtered_away_teams = [t for t in all_teams_master if away_keyword.strip().lower() in t.lower()] if away_keyword.strip() else all_teams_master
         
-        away_team = st.selectbox(
-            "어웨이팀 선택 (검색 결과)",
-            options=["직접 입력 또는 선택하세요"] + filtered_away_teams,
-            key="away_team_selectbox"
-        )
+        away_team = st.selectbox("어웨이팀 선택 (검색 결과)", options=["직접 입력 또는 선택하세요"] + filtered_away_teams, key="away_team_selectbox")
         if away_team == "직접 입력 또는 선택하세요":
             away_team = away_keyword.strip()
 
@@ -549,17 +537,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         if active_home_pos:
             for pos, num in active_home_pos.items():
                 chk_key = f"chk_memo_home_{pos}"
-                
-                matched_player_info = ""
-                official_mask = df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"
-                for _, r in df[official_mask].iterrows():
-                    r_team, _ = parse_team_info(r.get("소속팀", ""))
-                    r_num = str(r.get("등번호", "")).strip()
-                    if h_display_label.lower() in r_team.lower() and str(num) == r_num:
-                        matched_player_info = f" (👤 등록선수: {r.get('선수명')})"
-                        break
-
-                is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모{matched_player_info}", key=chk_key)
+                is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", key=chk_key)
                 if is_checked:
                     text_key = f"text_memo_home_{pos}"
                     note_val = st.text_area(f"[{pos}] {num}번 세부 관찰 기록", placeholder=f"[{pos}] {num}번 선수의 플레이 장점, 특징 등을 적어주세요...", key=text_key, height=90)
@@ -574,17 +552,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         if active_away_pos:
             for pos, num in active_away_pos.items():
                 chk_key = f"chk_memo_away_{pos}"
-                
-                matched_player_info = ""
-                official_mask = df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"
-                for _, r in df[official_mask].iterrows():
-                    r_team, _ = parse_team_info(r.get("소속팀", ""))
-                    r_num = str(r.get("등번호", "")).strip()
-                    if a_display_label.lower() in r_team.lower() and str(num) == r_num:
-                        matched_player_info = f" (👤 등록선수: {r.get('선수명')})"
-                        break
-
-                is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모{matched_player_info}", key=chk_key)
+                is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", key=chk_key)
                 if is_checked:
                     text_key = f"text_memo_away_{pos}"
                     note_val = st.text_area(f"[{pos}] {num}번 세부 관찰 기록", placeholder=f"[{pos}] {num}번 선수의 플레이 장점, 특징 등을 적어주세요...", key=text_key, height=90)
@@ -609,7 +577,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         if not home_team.strip() or not away_team.strip():
             st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다. 팀 이름을 입력해 주세요.")
         else:
-            with st.spinner("구글 시트에 현장 메모를 저장하고 정식 등록 선수와 자동 연동하는 중..."):
+            with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
                 home_valid_positions = [pos for row in formation_layouts[home_formation] for pos in row['positions']]
                 away_valid_positions = [pos for row in formation_layouts[away_formation] for pos in row['positions']]
 
@@ -626,7 +594,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                         player_notes_formatted += f"- {p_label}:\n  {p_note}\n"
 
                 t_name_prefix = f"[{tournament_name}] " if tournament_name.strip() else ""
-                
                 timestamp_id = datetime.now().strftime('%H%M%S')
                 memo_player_name = f"{t_name_prefix}{home_team.strip()} vs {away_team.strip()} (타임:{timestamp_id})"
                 memo_team = f"{home_team.strip()} (홈) vs {away_team.strip()} (어웨이)"
@@ -658,30 +625,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     "작성일자": str(match_date)
                 }
 
-                working_df = df.copy()
-                if player_specific_memos:
-                    for p_label, p_note in player_specific_memos.items():
-                        is_home = "홈" in p_label
-                        target_team_str = home_team.strip() if is_home else away_team.strip()
-                        
-                        num_match = re.search(r'(\d+)번', p_label)
-                        if num_match:
-                            target_num = num_match.group(1)
-                            official_mask = working_df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"
-                            
-                            for idx, row in working_df[official_mask].iterrows():
-                                row_team, _ = parse_team_info(row.get("소속팀", ""))
-                                row_num = str(row.get("등번호", "")).strip()
-                                
-                                if target_team_str.lower() in row_team.lower() and target_num == row_num:
-                                    old_overall = str(row.get("종합 평가", ""))
-                                    t_str = str(match_date)
-                                    match_label_str = tournament_name.strip() if tournament_name.strip() else "현장 관찰"
-                                    
-                                    new_auto_note = f"\n\n[{t_str} {match_label_str} 자동 연동]\n{p_note.strip()}"
-                                    working_df.loc[idx, "종합 평가"] = (old_overall + new_auto_note).strip()
-
-                updated_df = pd.concat([working_df, pd.DataFrame([new_memo_data])], ignore_index=True) if not working_df.empty else pd.DataFrame([new_memo_data])
+                updated_df = pd.concat([df, pd.DataFrame([new_memo_data])], ignore_index=True) if not df.empty else pd.DataFrame([new_memo_data])
                 
                 if save_data_to_sheet(updated_df):
                     for p in ["LW", "CF", "RW", "ST1", "ST2", "ST", "LM", "LCM", "CM", "RCM", "RM", "LAM", "CAM", "RAM", "LDM", "RDM", "CDM", "LB", "LCB", "CB", "RCB", "RB", "LWB", "RWB", "GK"]:
@@ -690,7 +634,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                         if f"away_{p}" in st.session_state:
                             del st.session_state[f"away_{p}"]
                     
-                    st.success("🎉 현장 경기 관찰 메모 저장 및 정식 등록 선수 관찰일지 자동 연동이 완료되었습니다!")
+                    st.success("🎉 현장 경기 관찰 메모가 연도별 시즌에 맞추어 성공적으로 저장되었습니다!")
                     st.balloons()
 
 # ----------------------------------------------------
@@ -868,7 +812,6 @@ elif menu == "📂 경기 일지 조회":
                                         p_label_key = f"[홈] {h_team_name} - [{pos}] {num}번"
                                         
                                         has_old_note = any(pos in k and f"{num}번" in k and "홈" in k for k in parsed_pos_memos.keys())
-                                        
                                         is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", value=has_old_note, key=chk_key)
                                         
                                         default_note_val = ""
@@ -893,7 +836,6 @@ elif menu == "📂 경기 일지 조회":
                                         p_label_key = f"[어웨이] {a_team_name} - [{pos}] {num}번"
                                         
                                         has_old_note = any(pos in k and f"{num}번" in k and "어웨이" in k for k in parsed_pos_memos.keys())
-                                        
                                         is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", value=has_old_note, key=chk_key)
                                         
                                         default_note_val = ""
@@ -985,7 +927,6 @@ elif menu == "📂 경기 일지 조회":
                         indices_to_drop = []
                         for r_idx in selected_del_rows:
                             if r_idx < len(memo_df_del):
-                                selected_row_data = memo_df_del.iloc[r_idx]
                                 orig_indices = df[(df["선수명"] == memo_df_del.iloc[r_idx]["선수명"]) & 
                                                   (df["진행 상태"] == "현장 관찰 메모 (임시)")].index
                                 if len(orig_indices) > 0:
@@ -1000,11 +941,11 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트
+# 3. 📂 경기관찰선수리스트 (연도별 시즌 완전 분리 적용)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
-    st.header("📂 경기 관찰 선수 리스트")
-    st.caption("현장 경기 관찰 메모에서 기록된 선수별(팀 및 등번호 기준) 관찰 횟수와 상세 내역을 확인합니다. (3회 이상 관찰된 선수는 초록색 박스로 강조됩니다)")
+    st.header("📂 경기 관찰 선수 리스트 (연도별 시즌 분리)")
+    st.caption("연도(시즌)별로 팀명 + 등번호 기준 관찰 횟수와 상세 내역을 집계합니다. (매년 졸업생 및 등번호 변경으로 인한 혼선 방지)")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
@@ -1014,7 +955,9 @@ elif menu == "📂 경기관찰선수리스트":
         observed_players_records = []
         
         for _, r in memo_df.iterrows():
-            match_date = r.get("작성일자", "-")
+            match_date_str = str(r.get("작성일자", "-"))
+            match_year = match_date_str[:4] if len(match_date_str) >= 4 else "미분류"
+            
             match_title_raw = r.get("선수명", "")
             match_title = re.sub(r' \(타임:\d+\)', '', str(match_title_raw))
             raw_content = r.get("종합 평가", "")
@@ -1045,11 +988,12 @@ elif menu == "📂 경기관찰선수리스트":
                                 num_val = pos_num_match.group(2)
                                 
                                 observed_players_records.append({
+                                    "관찰연도": match_year,
                                     "팀명": team_name_extracted,
                                     "등번호": f"{num_val}번",
                                     "포지션": pos_val,
                                     "대회/경기": match_title,
-                                    "관찰일자": match_date,
+                                    "관찰일자": match_date_str,
                                     "메모내용": content_str,
                                     "raw_content": raw_content,
                                     "match_teams": match_teams
@@ -1062,21 +1006,24 @@ elif menu == "📂 경기관찰선수리스트":
         else:
             obs_df = pd.DataFrame(observed_players_records)
 
-            search_team_query = st.text_input("🔍 팀명 검색", placeholder="관찰된 팀명을 입력하세요 (예: 매탄고, 보인고 등)")
+            search_team_query = st.text_input("🔍 팀명 또는 연도 검색", placeholder="예: 2026, 매탄고 등 입력")
             if search_team_query.strip():
                 t_q = search_team_query.strip().lower()
-                obs_df = obs_df[obs_df["팀명"].str.lower().str.contains(t_q, na=False)]
+                obs_df = obs_df[
+                    obs_df["팀명"].str.lower().str.contains(t_q, na=False) |
+                    obs_df["관찰연도"].str.lower().str.contains(t_q, na=False)
+                ]
 
             if obs_df.empty:
                 st.warning("🔍 검색 조건에 일치하는 관찰 선수가 없습니다.")
             else:
-                grouped = obs_df.groupby(["팀명", "등번호", "포지션"]).size().reset_index(name="관찰횟수")
-                grouped = grouped.sort_values(by="관찰횟수", ascending=False).reset_index(drop=True)
+                grouped = obs_df.groupby(["관찰연도", "팀명", "등번호", "포지션"]).size().reset_index(name="관찰횟수")
+                grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
-                st.markdown("### 📊 관찰 선수 요약 목록 (상세 내역과 해당 경기 피치를 보려면 아래 표에서 **선수 행을 클릭**하세요)")
+                st.markdown("### 📊 연도별 관찰 선수 요약 목록 (상세 내역을 보려면 아래 표에서 **선수 행을 클릭**하세요)")
                 
                 display_obs_table = grouped.copy()
-                display_obs_table.columns = ["소속 팀명", "등번호", "포지션", "누적 관찰 횟수"]
+                display_obs_table.columns = ["관찰 연도", "소속 팀명", "등번호", "포지션", "누적 관찰 횟수"]
 
                 obs_selection = st.dataframe(
                     display_obs_table,
@@ -1090,14 +1037,15 @@ elif menu == "📂 경기관찰선수리스트":
 
                 if selected_obs_rows:
                     sel_row = grouped.iloc[selected_obs_rows[0]]
+                    sel_year = sel_row["관찰연도"]
                     sel_team = sel_row["팀명"]
                     sel_num = sel_row["등번호"]
                     sel_pos = sel_row["포지션"]
 
                     st.write("---")
-                    st.markdown(f"### 🎯 선택한 선수 관찰 경기 기록 및 포메이션 시각화: [{sel_team}] {sel_num} ({sel_pos})")
+                    st.markdown(f"### 🎯 [{sel_year}시즌] {sel_team} {sel_num} ({sel_pos}) 상세 관찰 히스토리")
                     
-                    selected_player_history = obs_df[(obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num) & (obs_df["포지션"] == sel_pos)]
+                    selected_player_history = obs_df[(obs_df["관찰연도"] == sel_year) & (obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num) & (obs_df["포지션"] == sel_pos)]
                     selected_player_history = selected_player_history.sort_values(by="관찰일자", ascending=False)
 
                     for _, h_row in selected_player_history.iterrows():
@@ -1158,9 +1106,10 @@ elif menu == "📂 경기관찰선수리스트":
                         
                         st.markdown("---")
 
-                st.markdown("### 🔥 전체 관찰 선수 카드 모음")
+                st.markdown("### 🔥 연도별 관찰 선수 카드 모음")
                 
                 for _, g_row in grouped.iterrows():
+                    g_year = g_row["관찰연도"]
                     g_team = g_row["팀명"]
                     g_num = g_row["등번호"]
                     g_pos = g_row["포지션"]
@@ -1168,12 +1117,12 @@ elif menu == "📂 경기관찰선수리스트":
 
                     if g_count >= 3:
                         box_style = "background-color: #d1fae5; border: 2px solid #10b981; border-radius: 10px; padding: 14px; margin-bottom: 12px;"
-                        badge_html = f'<span style="background-color: #059669; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">🔥 집중 관찰 대상 ({g_count}회 기록)</span>'
+                        badge_html = f'<span style="background-color: #059669; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">🔥 집중 관찰 대상 ({g_count}회)</span>'
                     else:
                         box_style = "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px; margin-bottom: 12px;"
                         badge_html = f'<span style="background-color: #64748B; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;">관찰 횟수: {g_count}회</span>'
 
-                    player_sub_df = obs_df[(obs_df["팀명"] == g_team) & (obs_df["등번호"] == g_num) & (obs_df["포지션"] == g_pos)]
+                    player_sub_df = obs_df[(obs_df["관찰연도"] == g_year) & (obs_df["팀명"] == g_team) & (obs_df["등번호"] == g_num) & (obs_df["포지션"] == g_pos)]
                     
                     history_html = ""
                     for _, sub_r in player_sub_df.iterrows():
@@ -1182,7 +1131,7 @@ elif menu == "📂 경기관찰선수리스트":
                     card_html = f"""
                     <div style="{box_style}">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <b style="font-size: 16px; color: #0f172a;">⚽ [{g_team}] {g_num} ({g_pos})</b>
+                            <b style="font-size: 16px; color: #0f172a;">⚽ [{g_year}] {g_team} {g_num} ({g_pos})</b>
                             {badge_html}
                         </div>
                         {history_html}
