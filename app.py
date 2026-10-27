@@ -100,6 +100,17 @@ GOOGLE_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxTTvgJqNnmBxwuCGvT
 STATUS_OPTIONS = ["관심 선수 (Watchlist)", "집중 관찰 중", "컨택 완료", "계약 검토", "보류 / 제외"]
 POSITION_OPTIONS = ["GK", "CB", "LCB", "RCB", "LB", "RB", "MF", "LW", "RW", "CF"]
 
+# ⚽ 대한민국 주요 고등/대학/프로 U18 축구팀 기본 마스터 리스트
+DEFAULT_TEAM_MASTER_LIST = [
+    "매탄고", "보인고", "현대고", "오산고", "금호고", "포항제철고", "영생고", "개성고", "충남기계공고", "진주고", 
+    "광양제철고", "풍생고", "전주영생고", "서울이랜드 U18", "안산그리너스 U18", "FC안양 U18", "부천FC1995 U18", 
+    "성남FC U18", "수원FC U18", "충남아산 U18", "경남FC U18", "부산아이파크 U18", "대구FC U18", "강원FC U18",
+    "제주유나이티드 U18", "전북현대 U18", "울산현대 U18", "포항스틸러스 U18", "수원삼성 U18", "FC서울 U18",
+    "인천유나이티드 U18", "용인시축구센터 U18", "천안제일고", "신평고", "중앙고", "배재고", "동북고", "언남고",
+    "장흥고", "과천고", "평택진위FC U18", "FC한양 U18", "서울디지털대", "고려대", "연세대", "용인대", "선문대",
+    "인천대", "한남대", "광운대", "단국대", "중앙대", "수원대", "아주대", "경희대", "한국체대", "상지대", "청주대"
+]
+
 # ----------------------------------------------------
 # 🏢 성문컴퍼니(SMC) 로고 HTML 렌더링
 # ----------------------------------------------------
@@ -227,16 +238,15 @@ def parse_team_info(team_str):
         return current_team, past_teams
     return team_str, ""
 
-# 🔍 DB 내 등록된 기존 팀 목록 추출 함수 (연관 검색어/자동완성용)
-def get_existing_teams_list(df_data):
-    teams_set = set()
-    for idx, r in df_data.iterrows():
+# 🔍 통합 팀 마스터 리스트 생성 (기본 마스터 + 시트 등록 팀 + 임시 메모 팀 합치기)
+def get_combined_teams_list(df_data):
+    teams_set = set(DEFAULT_TEAM_MASTER_LIST)
+    for _, r in df_data.iterrows():
         t_val = str(r.get("소속팀", "")).strip()
         if t_val and t_val != "-" and " (홈) vs " not in t_val:
             cur_t, _ = parse_team_info(t_val)
             if cur_t and cur_t != "-":
                 teams_set.add(cur_t)
-        # 현장 메모 임시 데이터의 경우 소속팀 항목(홈 vs 어웨이)에서도 추출
         if " vs " in t_val:
             parts = t_val.split(" vs ")
             for p in parts:
@@ -246,7 +256,7 @@ def get_existing_teams_list(df_data):
     return sorted(list(teams_set))
 
 df = load_data()
-existing_teams = get_existing_teams_list(df)
+all_teams_master = get_combined_teams_list(df)
 
 formation_layouts = {
     "4-3-3": [
@@ -294,7 +304,7 @@ formation_layouts = {
     ]
 }
 
-# ⚽ 모바일/PC 반응형 그라운드 피치 렌더러 (동그라미 크기 28px로 최적화)
+# ⚽ 모바일/PC 반응형 그라운드 피치 렌더러
 def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     display_team_name = team_name if team_name else "팀명 미입력"
     layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
@@ -375,28 +385,6 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
             font-weight: 900;
             line-height: 1.1;
         }}
-        
-        @media (max-width: 500px) {{
-            .pitch-container {{
-                padding: 6px 2px;
-            }}
-            .pitch-row {{
-                gap: 2px;
-                margin-bottom: 2px;
-            }}
-            .player-node {{
-                width: 26px;
-                height: 26px;
-                min-width: 26px;
-                border-width: 1.5px;
-            }}
-            .pos-text {{
-                font-size: 5px;
-            }}
-            .num-text {{
-                font-size: 8.5px;
-            }}
-        }}
     </style>
     </head>
     <body>
@@ -409,7 +397,6 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     </body>
     </html>
     """
-    
     import streamlit.components.v1 as components
     components.html(complete_html, height=340, scrolling=False)
 
@@ -437,11 +424,11 @@ menu = st.sidebar.radio("이동할 메뉴", [
 ])
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모 (연관검색/자동완성 기능 완벽 연동)
+# 1. 🏟️ 현장 경기 관찰 메모 (네이버식 연관검색/자동완성 완벽 구현)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("포메이션 진형 모양 그대로 배치된 입력 칸을 터치하여 등번호를 바로 기입하세요.")
+    st.caption("팀명 입력창에 'FC'나 학교이름 일부만 적어도 일치하는 팀들이 밑으로 쭈르륵 연관 검색어처럼 자동 완성됩니다!")
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
@@ -453,42 +440,37 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     col_t1, col_t2 = st.columns(2)
     
-    # 🔍 네이버 검색처럼 기존 등록된 팀명이 자동완성/연관검색 드롭다운으로 표시되는 입력을 함께 제공
+    # 🔍 네이버 검색처럼 글자 입력 시 일치하는 팀들이 밑으로 쭈르륵 뜨는 연관검색 구현
     with col_t1:
         st.markdown("**🏠 홈팀 명***")
+        home_keyword = st.text_input("홈팀 검색 키워드", value="", placeholder="예: FC, 매탄, 보인 등 입력", key="home_keyword_input")
         
-        # 1) 직접 입력창
-        home_team_input = st.text_input("홈팀 직접 입력", value="", placeholder="예: 매탄고, 보인고 등 직접 입력", key="input_home_team_name", label_visibility="collapsed")
+        # 키워드가 포함된 팀들만 실시간으로 필터링
+        filtered_home_teams = [t for t in all_teams_master if home_keyword.strip().lower() in t.lower()] if home_keyword.strip() else all_teams_master
         
-        # 2) DB 기반 팀명 연관 검색 / 선택 옵션
-        selected_home_suggest = ""
-        if existing_teams:
-            selected_home_suggest = st.selectbox("💡 등록된 기존 팀 연관선택 (선택 시 자동 적용)", options=["(직접 입력 사용)"] + existing_teams, key="select_home_team_suggest")
-
-        # 연관검색 드롭다운에서 선택한 경우 해당 값 우선 적용
-        if selected_home_suggest and selected_home_suggest != "(직접 입력 사용)":
-            home_team = selected_home_suggest
-        else:
-            home_team = home_team_input
+        home_team = st.selectbox(
+            "홈팀 선택 (검색 결과)",
+            options=["직접 입력 또는 선택하세요"] + filtered_home_teams,
+            key="home_team_selectbox"
+        )
+        if home_team == "직접 입력 또는 선택하세요":
+            home_team = home_keyword.strip()
 
         home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="home_form")
 
     with col_t2:
         st.markdown("**✈️ 어웨이팀 명***")
+        away_keyword = st.text_input("어웨이팀 검색 키워드", value="", placeholder="예: 현대, 신평, FC 등 입력", key="away_keyword_input")
         
-        # 1) 직접 입력창
-        away_team_input = st.text_input("어웨이팀 직접 입력", value="", placeholder="예: 현대고, 신평고 등 직접 입력", key="input_away_team_name", label_visibility="collapsed")
+        filtered_away_teams = [t for t in all_teams_master if away_keyword.strip().lower() in t.lower()] if away_keyword.strip() else all_teams_master
         
-        # 2) DB 기반 팀명 연관 검색 / 선택 옵션
-        selected_away_suggest = ""
-        if existing_teams:
-            selected_away_suggest = st.selectbox("💡 등록된 기존 팀 연관선택 (선택 시 자동 적용)", options=["(직접 입력 사용)"] + existing_teams, key="select_away_team_suggest")
-
-        # 연관검색 드롭다운에서 선택한 경우 해당 값 우선 적용
-        if selected_away_suggest and selected_away_suggest != "(직접 입력 사용)":
-            away_team = selected_away_suggest
-        else:
-            away_team = away_team_input
+        away_team = st.selectbox(
+            "어웨이팀 선택 (검색 결과)",
+            options=["직접 입력 또는 선택하세요"] + filtered_away_teams,
+            key="away_team_selectbox"
+        )
+        if away_team == "직접 입력 또는 선택하세요":
+            away_team = away_keyword.strip()
 
         away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="away_form")
 
@@ -568,7 +550,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             for pos, num in active_home_pos.items():
                 chk_key = f"chk_memo_home_{pos}"
                 
-                # 💡 연관 선수 정보 안내 (해당 등번호의 선수가 정식 DB에 등록되어 있는지 안내)
                 matched_player_info = ""
                 official_mask = df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"
                 for _, r in df[official_mask].iterrows():
@@ -677,7 +658,6 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     "작성일자": str(match_date)
                 }
 
-                # 정식 등록된 선수와 자동 연동 로직
                 working_df = df.copy()
                 if player_specific_memos:
                     for p_label, p_note in player_specific_memos.items():
@@ -1225,12 +1205,7 @@ elif menu == "선수 등록":
         col1, col2 = st.columns(2)
         with col1:
             name = st.text_input("선수명*")
-            
-            # 선수 등록 소속팀 입력 시에도 기존 등록 팀 연관 추천 기능 제공
             team = st.text_input("현재 소속팀*", placeholder="예: 매탄고, 보인고 등")
-            if existing_teams:
-                st.caption(f"💡 기존 등록 팀 목록: {', '.join(existing_teams[:10])} ...")
-
             position = st.selectbox("포지션", options=POSITION_OPTIONS)
             status = st.selectbox("진행 상태", STATUS_OPTIONS)
             
