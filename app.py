@@ -41,26 +41,19 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 🖨️ 인쇄 시 사이드바, 헤더, 입력창 등 불필요한 UI 숨기고 인쇄 영역만 출력 */
+    /* 🖨️ 인쇄 시 불필요한 UI 완벽 숨기고 리포트만 출력 */
     @media print {
         body {
             background: white !important;
             color: black !important;
         }
-        [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame, .no-print {
+        [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame, div[data-testid="stToolbar"] {
             display: none !important;
         }
         .block-container {
             padding: 0 !important;
             max-width: 100% !important;
         }
-        .print-only-section {
-            display: block !important;
-        }
-    }
-
-    .print-only-section {
-        display: none;
     }
 
     /* 📱 모바일 상세 관찰일지 Metric 글씨 잘림 방지 (폰트 크기 축소) */
@@ -101,6 +94,7 @@ st.markdown("""
             flex: 1 !important;
             min-width: 0 !important;
         }
+        /* Metric 값 글씨 크기를 줄여서 ... 방지 */
         [data-testid="stMetricValue"] {
             font-size: 13px !important;
             word-break: break-all !important;
@@ -1058,7 +1052,7 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
                 st.markdown("### 📊 연도별 관찰 선수 요약 목록 (멀티 선택 인쇄 지원)")
-                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 일괄 인쇄]** 버튼을 누르시면 브라우저 인쇄 창이 바로 실행됩니다.")
+                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 일괄 인쇄 / PDF 저장]** 버튼을 누르시면 해당 선수들의 리포트가 깔끔하게 인쇄됩니다.")
                 
                 # 🖨️ 멀티 인쇄를 위한 선택 컬럼 추가
                 display_obs_table = grouped.copy()
@@ -1077,9 +1071,20 @@ elif menu == "📂 경기관찰선수리스트":
                 if not checked_rows.empty:
                     st.write("")
                     
-                    # 🖨️ 인쇄 전용 영역 컨테이너로 감싸서 출력
-                    st.markdown('<div class="print-only-section">', unsafe_allow_html=True)
-                    st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>⚽ 선택 선수 스카우팅 관찰 리포트 일괄 모음</h1>", unsafe_allow_html=True)
+                    # 🖨️ 스트림릿 고유의 st.button과 자바스크립트 window.print()를 결합하여 안정적인 인쇄 구현
+                    col_info_p, col_btn_p = st.columns([3, 1])
+                    with col_info_p:
+                        st.info(f"📌 총 **{len(checked_rows)}명**의 선수가 선택되었습니다. 아래 인쇄 버튼을 누르세요.")
+                    with col_btn_p:
+                        if st.button("🖨️ 선택 선수 일괄 인쇄 / PDF 저장", type="primary", use_container_width=True):
+                            st.components.v1.html("""
+                                <script>
+                                    window.parent.print();
+                                </script>
+                            """, height=0)
+
+                    st.markdown("---")
+                    st.markdown("### 📄 [인쇄 미리보기] 선택된 선수 리포트 모음")
                     
                     for _, row in checked_rows.iterrows():
                         b_year = row["관찰 연도"]
@@ -1097,7 +1102,44 @@ elif menu == "📂 경기관찰선수리스트":
                         player_histories = player_histories.sort_values(by="관찰일자", ascending=False)
 
                         for _, h_row in player_histories.iterrows():
+                            match_raw_content = h_row["raw_content"]
+                            match_teams_str = h_row["match_teams"]
                             p_val_display = h_row["포지션"]
+
+                            h_form = "4-3-3"
+                            a_form = "4-3-3"
+                            h_nums = {}
+                            a_nums = {}
+                            try:
+                                if "[META_HOME_FORM:" in match_raw_content:
+                                    h_form = match_raw_content.split("[META_HOME_FORM:")[1].split("]")[0]
+                                if "[META_HOME_NUMS:" in match_raw_content:
+                                    h_nums_raw = match_raw_content.split("[META_HOME_NUMS:")[1].split("]")[0]
+                                    if h_nums_raw and h_nums_raw != "없음":
+                                        for item in h_nums_raw.split(","):
+                                            if ":" in item:
+                                                pk, pv = item.split(":")
+                                                h_nums[pk.strip()] = pv.strip()
+
+                                if "[META_AWAY_FORM:" in match_raw_content:
+                                    a_form = match_raw_content.split("[META_AWAY_FORM:")[1].split("]")[0]
+                                if "[META_AWAY_NUMS:" in match_raw_content:
+                                    a_nums_raw = match_raw_content.split("[META_AWAY_NUMS:")[1].split("]")[0]
+                                    if a_nums_raw and a_nums_raw != "없음":
+                                        for item in a_nums_raw.split(","):
+                                            if ":" in item:
+                                                pk, pv = item.split(":")
+                                                a_nums[pk.strip()] = pv.strip()
+                            except Exception:
+                                pass
+
+                            h_t_name = "홈팀"
+                            a_t_name = "어웨이팀"
+                            if " vs " in match_teams_str:
+                                parts = match_teams_str.split(" vs ")
+                                h_t_name = parts[0].replace(" (홈)", "").strip()
+                                a_t_name = parts[1].replace(" (어웨이)", "").strip()
+
                             st.markdown(f"""
                             <div style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 15px;">
                                 <div style="font-weight: bold; color: #1e293b; font-size: 14px; margin-bottom: 6px;">
@@ -1109,20 +1151,13 @@ elif menu == "📂 경기관찰선수리스트":
                             </div>
                             """, unsafe_allow_html=True)
 
-                        st.markdown("</div>", unsafe_allow_html=True)
-                    
-                    st.markdown('</div>', unsafe_allow_html=True)
+                            p_col1, p_col2 = st.columns(2)
+                            with p_col1:
+                                render_pitch_graphic_from_saved(h_t_name, h_form, h_nums)
+                            with p_col2:
+                                render_pitch_graphic_from_saved(a_t_name, a_form, a_nums)
 
-                    # 브라우저 기본 window.print()를 호출하는 안정적인 버튼 스크립트
-                    import streamlit.components.v1 as components
-                    batch_print_script = """
-                    <div class="no-print" style="text-align: right; padding-top: 5px;">
-                        <button onclick="window.print();" style="background-color: #2563EB; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-                            🖨️ 선택한 선수 일괄 인쇄 / PDF 저장
-                        </button>
-                    </div>
-                    """
-                    components.html(batch_print_script, height=60, scrolling=False)
+                        st.markdown("</div>", unsafe_allow_html=True)
 
                 st.write("---")
 
@@ -1152,15 +1187,12 @@ elif menu == "📂 경기관찰선수리스트":
                     with col_title:
                         st.markdown(f"### 🎯 [{sel_year}시즌] {sel_team} {sel_num} 상세 관찰 히스토리")
                     with col_btn_p:
-                        import streamlit.components.v1 as components
-                        single_print_script = """
-                        <div class="no-print" style="text-align: right; padding-top: 5px;">
-                            <button onclick="window.print();" style="background-color: #2563EB; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; width: 100%;">
-                                🖨️ 인쇄 / PDF 저장
-                            </button>
-                        </div>
-                        """
-                        components.html(single_print_script, height=45, scrolling=False)
+                        if st.button("🖨️ 인쇄 / PDF 저장", type="primary", use_container_width=True, key="single_print_btn_action"):
+                            st.components.v1.html("""
+                                <script>
+                                    window.parent.print();
+                                </script>
+                            """, height=0)
 
                     selected_player_history = obs_df[(obs_df["관찰연도"] == sel_year) & (obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num)]
                     selected_player_history = selected_player_history.sort_values(by="관찰일자", ascending=False)
