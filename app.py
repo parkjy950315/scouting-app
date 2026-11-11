@@ -11,7 +11,7 @@ from datetime import datetime
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 및 인쇄 미리보기 진하게 고대비 CSS 설정
+# 📱 PC & 모바일 반응형 및 인쇄 시 모든 페이지 진하게 고정하는 CSS 설정
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -41,7 +41,7 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 🖨️ 인쇄 미리보기에서도 폰트와 글자가 물빠짐 없이 진하게 고대비 출력되도록 강제 설정 */
+    /* 🖨️ 인쇄 시 모든 보고서 박스와 글자가 위아래 상관없이 진하게 출력되도록 강제 고정 */
     @media print {
         * {
             -webkit-print-color-adjust: exact !important;
@@ -51,7 +51,7 @@ st.markdown("""
         body {
             background-color: #ffffff !important;
             color: #000000 !important;
-            font-family: 'Pretendard', -apple-system, sans-serif !important;
+            font-family: sans-serif !important;
         }
         [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame, div[data-testid="stToolbar"] {
             display: none !important;
@@ -69,18 +69,10 @@ st.markdown("""
             padding: 20px !important;
             border-radius: 4px !important;
         }
-        .report-print-box * {
+        .report-print-box *, .report-print-box h2, .report-print-box div {
             color: #000000 !important;
             opacity: 1 !important;
-        }
-        .report-header-title {
-            color: #000000 !important;
-            font-weight: 900 !important;
-        }
-        .report-card-item {
-            background-color: #f1f5f9 !important;
-            border-left: 5px solid #000000 !important;
-            border: 1px solid #94a3b8 !important;
+            visibility: visible !important;
         }
     }
     </style>
@@ -252,52 +244,6 @@ def get_combined_teams_list(df_data):
 df = load_data()
 all_teams_master = get_combined_teams_list(df)
 
-formation_layouts = {
-    "4-3-3": [
-        {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
-        {"line": "MF LINE", "positions": ["LCM", "CDM", "RCM"]},
-        {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
-        {"line": "GK LINE", "positions": ["GK"]}
-    ],
-    "4-4-2": [
-        {"line": "FW LINE", "positions": ["ST1", "ST2"]},
-        {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
-        {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
-        {"line": "GK LINE", "positions": ["GK"]}
-    ],
-    "4-2-3-1": [
-        {"line": "FW LINE", "positions": ["ST"]},
-        {"line": "AM LINE", "positions": ["LAM", "CAM", "RAM"]},
-        {"line": "DM LINE", "positions": ["LDM", "RDM"]},
-        {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
-        {"line": "GK LINE", "positions": ["GK"]}
-    ],
-    "3-4-3": [
-        {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
-        {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
-        {"line": "DF LINE", "positions": ["LCB", "CB", "RCB"]},
-        {"line": "GK LINE", "positions": ["GK"]}
-    ],
-    "3-5-2": [
-        {"line": "FW LINE", "positions": ["ST1", "ST2"]},
-        {"line": "MF LINE", "positions": ["LWB", "LCM", "CDM", "RCM", "RWB"]},
-        {"line": "DF LINE", "positions": ["LCB", "CB", "RCB"]},
-        {"line": "GK LINE", "positions": ["GK"]}
-    ],
-    "5-3-2": [
-        {"line": "FW LINE", "positions": ["ST1", "ST2"]},
-        {"line": "MF LINE", "positions": ["LCM", "CM", "RCM"]},
-        {"line": "DF LINE", "positions": ["LWB", "LCB", "CB", "RCB", "RWB"]},
-        {"line": "GK LINE", "positions": ["GK"]}
-    ],
-    "5-4-1": [
-        {"line": "FW LINE", "positions": ["ST"]},
-        {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
-        {"line": "DF LINE", "positions": ["LWB", "LCB", "CB", "RCB", "RWB"]},
-        {"line": "GK LINE", "positions": ["GK"]}
-    ]
-}
-
 display_logo()
 
 st.title("⚽ 선수 스카우팅 관리 시스템")
@@ -371,6 +317,52 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     st.write("---")
 
     st.subheader("⚡ 등번호 입력")
+
+    formation_layouts = {
+        "4-3-3": [
+            {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
+            {"line": "MF LINE", "positions": ["LCM", "CDM", "RCM"]},
+            {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
+            {"line": "GK LINE", "positions": ["GK"]}
+        ],
+        "4-4-2": [
+            {"line": "FW LINE", "positions": ["ST1", "ST2"]},
+            {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
+            {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
+            {"line": "GK LINE", "positions": ["GK"]}
+        ],
+        "4-2-3-1": [
+            {"line": "FW LINE", "positions": ["ST"]},
+            {"line": "AM LINE", "positions": ["LAM", "CAM", "RAM"]},
+            {"line": "DM LINE", "positions": ["LDM", "RDM"]},
+            {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
+            {"line": "GK LINE", "positions": ["GK"]}
+        ],
+        "3-4-3": [
+            {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
+            {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
+            {"line": "DF LINE", "positions": ["LCB", "CB", "RCB"]},
+            {"line": "GK LINE", "positions": ["GK"]}
+        ],
+        "3-5-2": [
+            {"line": "FW LINE", "positions": ["ST1", "ST2"]},
+            {"line": "MF LINE", "positions": ["LWB", "LCM", "CDM", "RCM", "RWB"]},
+            {"line": "DF LINE", "positions": ["LCB", "CB", "RCB"]},
+            {"line": "GK LINE", "positions": ["GK"]}
+        ],
+        "5-3-2": [
+            {"line": "FW LINE", "positions": ["ST1", "ST2"]},
+            {"line": "MF LINE", "positions": ["LCM", "CM", "RCM"]},
+            {"line": "DF LINE", "positions": ["LWB", "LCB", "CB", "RCB", "RWB"]},
+            {"line": "GK LINE", "positions": ["GK"]}
+        ],
+        "5-4-1": [
+            {"line": "FW LINE", "positions": ["ST"]},
+            {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
+            {"line": "DF LINE", "positions": ["LWB", "LCB", "CB", "RCB", "RWB"]},
+            {"line": "GK LINE", "positions": ["GK"]}
+        ]
+    }
 
     def render_team_interactive_grid(team_name, formation_name, prefix):
         layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
@@ -832,7 +824,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (진한 선명도 보고서)
+# 3. 📂 경기관찰선수리스트 (진한 선명도 보고서 - 아래쪽 흐림 방지 적용)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기 관찰 선수 리스트 (연도별 시즌 분리)")
@@ -912,7 +904,7 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
                 st.markdown("### 📊 연도별 관찰 선수 요약 목록 (텍스트 보고서 멀티 선택 인쇄)")
-                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 텍스트 보고서 일괄 인쇄]** 버튼을 누르시면 진하고 선명하게 보고서가 출력됩니다.")
+                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 텍스트 보고서 일괄 인쇄]** 버튼을 누르시면 위아래 모든 페이지가 진하고 선명하게 출력됩니다.")
                 
                 display_obs_table = grouped.copy()
                 display_obs_table.insert(0, "선택", False)
@@ -948,14 +940,14 @@ elif menu == "📂 경기관찰선수리스트":
                         b_team = row["소속 팀명"]
                         b_num = row["등번호"]
 
-                        # 🌟 고대비 진한 검은색 폰트와 선명한 테두리
+                        # 🌟 각 박스마다 인라인 스타일로 글자와 선의 진하기를 명확히 지정하여 아래쪽 흐림 원천 차단
                         st.markdown(f"""
-                        <div class="report-print-box">
-                            <div style="border-bottom: 3px solid #000000; padding-bottom: 8px; margin-bottom: 16px;">
-                                <h2 class="report-header-title" style="margin: 0; font-size: 22px;">
+                        <div class="report-print-box" style="border: 2px solid #000000 !important; background-color: #ffffff !important; padding: 20px; margin-bottom: 25px; border-radius: 6px;">
+                            <div style="border-bottom: 3px solid #000000 !important; padding-bottom: 8px; margin-bottom: 16px;">
+                                <h2 style="color: #000000 !important; margin: 0; font-size: 22px; font-weight: 900;">
                                     🎯 [{b_year}시즌] {b_team} {b_num} 선수 스카우팅 보고서
                                 </h2>
-                                <div style="color: #1e293b; font-size: 12px; font-weight: bold; margin-top: 4px;">SMC FOOTBALL SCOUTING REPORT</div>
+                                <div style="color: #000000 !important; font-size: 12px; font-weight: 700; margin-top: 4px;">SMC FOOTBALL SCOUTING REPORT</div>
                             </div>
                         """, unsafe_allow_html=True)
 
@@ -965,11 +957,11 @@ elif menu == "📂 경기관찰선수리스트":
                         for _, h_row in player_histories.iterrows():
                             p_val_display = h_row["포지션"]
                             st.markdown(f"""
-                            <div class="report-card-item" style="padding: 14px; margin-bottom: 14px; border-radius: 4px;">
-                                <div style="font-weight: 900; color: #000000; font-size: 15px; margin-bottom: 6px;">
+                            <div style="background-color: #f8fafc !important; border-left: 5px solid #000000 !important; border: 1px solid #000000 !important; padding: 14px; margin-bottom: 14px; border-radius: 4px;">
+                                <div style="font-weight: 900 !important; color: #000000 !important; font-size: 15px; margin-bottom: 6px;">
                                     📅 관찰 일자: {h_row['관찰일자']} &nbsp;|&nbsp; 🏆 대회/경기: {h_row['대회/경기']} &nbsp;|&nbsp; 포지션: {p_val_display}
                                 </div>
-                                <div style="color: #000000; font-size: 14px; line-height: 1.6; font-weight: 500; margin-top: 6px;">
+                                <div style="color: #000000 !important; font-size: 14px; line-height: 1.6; font-weight: 600 !important; margin-top: 6px;">
                                     📝 <b>상세 관찰 메모:</b><br>{h_row['메모내용'].replace(chr(10), '<br>')}
                                 </div>
                             </div>
@@ -1018,11 +1010,11 @@ elif menu == "📂 경기관찰선수리스트":
                     for _, h_row in selected_player_history.iterrows():
                         p_val_display = h_row["포지션"]
                         st.markdown(f"""
-                        <div class="report-print-box">
-                            <div style="font-weight: 900; color: #000000; font-size: 15px; margin-bottom: 6px;">
+                        <div class="report-print-box" style="border: 2px solid #000000 !important; background-color: #ffffff !important; padding: 16px; margin-bottom: 15px; border-radius: 6px;">
+                            <div style="font-weight: 900 !important; color: #000000 !important; font-size: 15px; margin-bottom: 6px;">
                                 📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']} (당시 포지션: {p_val_display})
                             </div>
-                            <div style="color: #000000; font-size: 14px; line-height: 1.6; font-weight: 500; margin-top: 6px;">
+                            <div style="color: #000000 !important; font-size: 14px; line-height: 1.6; font-weight: 600 !important; margin-top: 6px;">
                                 📝 <b>관찰 메모:</b><br>{h_row['메모내용'].replace(chr(10), '<br>')}
                             </div>
                         </div>
