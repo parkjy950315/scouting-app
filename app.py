@@ -11,15 +11,15 @@ from datetime import datetime
 st.set_page_config(page_title="선수 스카우팅 관리 시스템", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 리포트 인쇄 및 화면 공통 CSS 스타일
+# 📱 대표팀 보고용 리포트 전용 인쇄 CSS 스타일
 # ----------------------------------------------------
 st.markdown("""
     <style>
     .block-container {
         padding-top: 2rem !important;
         padding-bottom: 3rem !important;
-        padding-left: 0.8rem !important;
-        padding-right: 0.8rem !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
     }
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 2.5rem !important;
@@ -39,6 +39,58 @@ st.markdown("""
         text-align: center !important;
         padding: 4px 6px !important;
         font-weight: bold !important;
+    }
+
+    /* 🖨️ 인쇄 시 사이드바 및 UI 요소를 100% 숨기고 오직 보고서 카드만 출력 */
+    @media print {
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        body {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+        }
+        [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame, div[data-testid="stToolbar"] {
+            display: none !important;
+        }
+        .block-container {
+            padding: 0 !important;
+            max-width: 100% !important;
+        }
+        .scouting-report-card {
+            border: 2px solid #000000 !important;
+            box-shadow: none !important;
+            page-break-after: always;
+            break-after: page;
+            margin-bottom: 0 !important;
+        }
+    }
+
+    /* 📄 보고서 카드 디자인 */
+    .scouting-report-card {
+        border: 3px solid #0f172a;
+        padding: 40px;
+        margin-bottom: 40px;
+        background-color: #ffffff;
+        color: #000000;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        border-bottom: 3px solid #0f172a;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    .history-box {
+        border: 2px solid #cbd5e1;
+        padding: 18px;
+        margin-bottom: 16px;
+        background-color: #f8fafc;
+        border-radius: 8px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -789,7 +841,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (완벽한 대표팀 보고용 리포트 전용 양식)
+# 3. 📂 경기관찰선수리스트 (완벽한 대표팀 보고용 리포트 양식)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기 관찰 선수 리스트 (연도별 시즌 분리)")
@@ -868,7 +920,7 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = obs_df.groupby(["관찰연도", "팀명", "등번호"]).size().reset_index(name="관찰횟수")
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
-                st.markdown("### 📊 연도별 관찰 선수 요약 목록 (대표팀/보고용 리포트 생성)")
+                st.markdown("### 📊 연도별 관찰 선수 요약 목록 (대표팀 보고용 리포트 생성)")
                 st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 체크**한 뒤, 아래 버튼을 누르면 **기존 UI를 모두 숨기고 오직 보고용 리포트만 화면에 꽉 차게** 생성됩니다.")
                 
                 display_obs_table = grouped.copy()
@@ -905,45 +957,7 @@ elif menu == "📂 경기관찰선수리스트":
                         </div>
                         """, unsafe_allow_html=True)
 
-                        # 🌟 기존 스트림릿 요소를 완전히 배제하고 오직 인쇄용 보고서 HTML만 깔끔하게 구성
-                        report_full_html = """
-                        <style>
-                            @media print {
-                                body { background-color: #ffffff !important; }
-                                /* 인쇄 시 사이드바 및 불필요한 컨트롤 숨김 */
-                                [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame, div[data-testid="stToolbar"] {
-                                    display: none !important;
-                                }
-                            }
-                            .scouting-report-card {
-                                border: 3px solid #1e293b;
-                                padding: 35px;
-                                margin-bottom: 40px;
-                                background-color: #ffffff;
-                                color: #000000;
-                                border-radius: 12px;
-                                font-family: 'Malgun Gothic', sans-serif;
-                                page-break-after: always;
-                                break-after: page;
-                            }
-                            .report-header {
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: flex-end;
-                                border-bottom: 3px solid #0f172a;
-                                padding-bottom: 15px;
-                                margin-bottom: 20px;
-                            }
-                            .history-box {
-                                border: 2px solid #cbd5e1;
-                                padding: 18px;
-                                margin-bottom: 15px;
-                                background-color: #f8fafc;
-                                border-radius: 8px;
-                            }
-                        </style>
-                        """
-
+                        # 🌟 완벽한 대표팀 보고용 리포트 전용 양식 렌더링
                         for _, row in checked_rows.iterrows():
                             b_year = row["관찰 연도"]
                             b_team = row["소속 팀명"]
@@ -968,7 +982,7 @@ elif menu == "📂 경기관찰선수리스트":
                                 </div>
                                 """
 
-                            report_full_html += f"""
+                            card_full_html = f"""
                             <div class="scouting-report-card">
                                 <div class="report-header">
                                     <div>
@@ -989,8 +1003,7 @@ elif menu == "📂 경기관찰선수리스트":
                                 {history_items_html}
                             </div>
                             """
-
-                        st.markdown(report_full_html, unsafe_allow_html=True)
+                            st.markdown(card_full_html, unsafe_allow_html=True)
                         
                         if st.button("🔄 보고서 닫기 및 목록으로 돌아가기", type="secondary"):
                             st.session_state["show_clean_report"] = False
