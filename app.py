@@ -11,7 +11,7 @@ from datetime import datetime
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 인쇄 시 새로운 보고서 양식만 선명하게 출력하는 CSS
+# 📱 인쇄 시 절대 흐려지지 않고 진하게 출력되도록 강제하는 CSS
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -41,7 +41,7 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 🖨️ 인쇄 시 화면 UI를 완벽히 숨기고 보고서만 선명하게 출력 */
+    /* 🖨️ 인쇄 시 화면 UI를 숨기고 선택 선수 보고서만 진하고 선명하게 출력 */
     @media print {
         * {
             -webkit-print-color-adjust: exact !important;
@@ -812,7 +812,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (스트림릿 네이티브 마크다운 인쇄 양식 적용)
+# 3. 📂 경기관찰선수리스트 (진하고 선명한 인쇄용 마크다운 양식)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기 관찰 선수 리스트 (연도별 시즌 분리)")
@@ -892,9 +892,10 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
                 st.markdown("### 📊 연도별 관찰 선수 요약 목록 (텍스트 보고서 멀티 선택 인쇄)")
-                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 깔끔한 보고서 양식으로 인쇄]** 버튼을 누르세요.")
+                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들만 체크**한 뒤, 하단의 **[🖨️ 선택 선수 깔끔한 보고서 양식으로 인쇄]** 버튼을 누르세요.")
                 
                 display_obs_table = grouped.copy()
+                # 🌟 [수정 포인트] 기본값을 False로 설정하여 전체 선택되는 현상 원천 차단
                 display_obs_table.insert(0, "선택", False)
                 display_obs_table.columns = ["선택", "관찰 연도", "소속 팀명", "등번호", "누적 관찰 횟수"]
 
@@ -923,25 +924,39 @@ elif menu == "📂 경기관찰선수리스트":
                     st.markdown("---")
                     st.markdown("### 📄 [선택한 선수 새로운 보고서 양식 미리보기]")
                     
-                    # 🌟 순수 스트림릿 마크다운 양식으로 완전히 대체하여 HTML 노출 원천 차단
                     for _, row in checked_rows.iterrows():
                         b_year = row["관찰 연도"]
                         b_team = row["소속 팀명"]
                         b_num = row["등번호"]
                         total_obs_count = len(obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)])
 
-                        st.markdown(f"--- \n## 🎯 SMC SCOUTING REPORT  \n**시즌:** {b_year} &nbsp;|&nbsp; **출력일:** {datetime.today().strftime('%Y-%m-%d')}")
-                        st.info(f"📌 **소속 팀:** {b_team} &nbsp;&nbsp;|&nbsp;&nbsp; **등번호:** {b_num} &nbsp;&nbsp;|&nbsp;&nbsp; **누적 관찰 횟수:** {total_obs_count}회")
+                        st.markdown(f"""
+                        <div style="border: 3px solid #000000; padding: 25px; margin-bottom: 30px; background-color: #ffffff; color: #000000; border-radius: 8px;" class="page-break">
+                            <h1 style="color: #000000; font-size: 24px; font-weight: 900; margin-bottom: 5px;">SMC SCOUTING REPORT</h1>
+                            <p style="color: #000000; font-weight: bold; font-size: 13px;">시즌: {b_year} | 출력일: {datetime.today().strftime('%Y-%m-%d')}</p>
+                            <hr style="border: 2px solid #000000;">
+                            <h3 style="color: #000000; font-size: 18px; font-weight: 900;">소속 팀: {b_team} &nbsp;|&nbsp; 등번호: {b_num} &nbsp;|&nbsp; 누적 관찰: {total_obs_count}회</h3>
+                            <br>
+                        """, unsafe_allow_html=True)
 
                         player_histories = obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)]
                         player_histories = player_histories.sort_values(by="관찰일자", ascending=False)
 
                         for _, h_row in player_histories.iterrows():
                             p_val_display = h_row["포지션"]
-                            with st.container():
-                                st.markdown(f"**📅 관찰일자:** {h_row['관찰일자']} &nbsp;|&nbsp; **대회/경기:** {h_row['대회/경기']} &nbsp;|&nbsp; **포지션:** {p_val_display}")
-                                st.markdown(f"> {str(h_row['메모내용']).replace(chr(10), '<br>')}", unsafe_allow_html=True)
-                                st.markdown("")
+                            memo_clean = str(h_row['메모내용']).replace('\n', '<br>')
+                            st.markdown(f"""
+                            <div style="border: 2px solid #000000; padding: 15px; margin-bottom: 12px; background-color: #ffffff; color: #000000; border-radius: 6px;">
+                                <p style="font-weight: 900; color: #000000; font-size: 14px; margin-bottom: 6px;">
+                                    📅 관찰일자: {h_row['관찰일자']} &nbsp;|&nbsp; 🏆 대회: {h_row['대회/경기']} &nbsp;|&nbsp; 포지션: {p_val_display}
+                                </p>
+                                <p style="font-weight: 700; color: #000000; font-size: 14px; line-height: 1.6; margin: 0;">
+                                    {memo_clean}
+                                </p>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                        st.markdown("</div>", unsafe_allow_html=True)
 
                 st.write("---")
 
