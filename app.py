@@ -41,18 +41,26 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 🖨️ 인쇄 시 불필요한 UI 숨기고 깔끔하게 출력 */
+    /* 🖨️ 인쇄 시 사이드바, 헤더, 입력창 등 불필요한 UI 숨기고 인쇄 영역만 출력 */
     @media print {
         body {
             background: white !important;
             color: black !important;
         }
-        [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame {
+        [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame, .no-print {
             display: none !important;
         }
         .block-container {
             padding: 0 !important;
+            max-width: 100% !important;
         }
+        .print-only-section {
+            display: block !important;
+        }
+    }
+
+    .print-only-section {
+        display: none;
     }
 
     /* 📱 모바일 상세 관찰일지 Metric 글씨 잘림 방지 (폰트 크기 축소) */
@@ -93,7 +101,6 @@ st.markdown("""
             flex: 1 !important;
             min-width: 0 !important;
         }
-        /* Metric 값 글씨 크기를 줄여서 ... 방지 */
         [data-testid="stMetricValue"] {
             font-size: 13px !important;
             word-break: break-all !important;
@@ -1051,7 +1058,7 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
                 st.markdown("### 📊 연도별 관찰 선수 요약 목록 (멀티 선택 인쇄 지원)")
-                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 일괄 인쇄]** 버튼을 누르시면 해당 선수들의 리포트만 깔끔하게 새 창으로 열려 인쇄/PDF 저장할 수 있습니다.")
+                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 일괄 인쇄]** 버튼을 누르시면 브라우저 인쇄 창이 바로 실행됩니다.")
                 
                 # 🖨️ 멀티 인쇄를 위한 선택 컬럼 추가
                 display_obs_table = grouped.copy()
@@ -1070,28 +1077,28 @@ elif menu == "📂 경기관찰선수리스트":
                 if not checked_rows.empty:
                     st.write("")
                     
-                    # 🖨️ 선택된 선수들의 상세 HTML 콘텐츠를 동적으로 생성하여 새 창으로 띄우는 자바스크립트 인쇄 버튼
-                    reports_html_content = ""
+                    # 🖨️ 인쇄 전용 영역 컨테이너로 감싸서 출력
+                    st.markdown('<div class="print-only-section">', unsafe_allow_html=True)
+                    st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>⚽ 선택 선수 스카우팅 관찰 리포트 일괄 모음</h1>", unsafe_allow_html=True)
+                    
                     for _, row in checked_rows.iterrows():
                         b_year = row["관찰 연도"]
                         b_team = row["소속 팀명"]
                         b_num = row["등번호"]
 
-                        reports_html_content += f"""
+                        st.markdown(f"""
                         <div style="border: 2px solid #2563EB; border-radius: 10px; padding: 20px; margin-bottom: 30px; background-color: #ffffff; page-break-after: always;">
                             <h2 style="color: #1e293b; margin-top: 0; border-bottom: 2px solid #cbd5e1; padding-bottom: 10px; font-size: 20px;">
                                 🎯 [{b_year}시즌] {b_team} {b_num} 관찰 리포트
                             </h2>
-                        """
+                        """, unsafe_allow_html=True)
 
                         player_histories = obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)]
                         player_histories = player_histories.sort_values(by="관찰일자", ascending=False)
 
                         for _, h_row in player_histories.iterrows():
-                            match_raw_content = h_row["raw_content"]
                             p_val_display = h_row["포지션"]
-
-                            reports_html_content += f"""
+                            st.markdown(f"""
                             <div style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 15px;">
                                 <div style="font-weight: bold; color: #1e293b; font-size: 14px; margin-bottom: 6px;">
                                     📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']} <span style="color: #2563EB;">(당시 포지션: {p_val_display})</span>
@@ -1100,32 +1107,21 @@ elif menu == "📂 경기관찰선수리스트":
                                     📝 <b>관찰 메모:</b> {h_row['메모내용']}
                                 </div>
                             </div>
-                            """
+                            """, unsafe_allow_html=True)
 
-                        reports_html_content += "</div>"
-
-                    # 자바스크립트 기반 새 창 인쇄 스크립트 작성
-                    import json
-                    safe_html_str = json.dumps(reports_html_content)
+                        st.markdown("</div>", unsafe_allow_html=True)
                     
-                    batch_print_script = f"""
-                    <div style="text-align: right; padding-top: 5px;">
-                        <button onclick="
-                            var printWindow = window.open('', '_blank', 'height=800,width=900');
-                            printWindow.document.write('<html><head><title>선수 스카우팅 관찰 리포트 일괄 인쇄</title>');
-                            printWindow.document.write('<style>body {{ font-family: sans-serif; padding: 20px; color: #000; }}</style>');
-                            printWindow.document.write('</head><body>');
-                            printWindow.document.write({safe_html_str});
-                            printWindow.document.write('</body></html>');
-                            printWindow.document.close();
-                            printWindow.focus();
-                            setTimeout(function() {{ printWindow.print(); printWindow.close(); }}, 500);
-                        " style="background-color: #2563EB; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-                            🖨️ 선택한 선수 {len(checked_rows)}명 일괄 인쇄 / PDF 저장
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                    # 브라우저 기본 window.print()를 호출하는 안정적인 버튼 스크립트
+                    import streamlit.components.v1 as components
+                    batch_print_script = """
+                    <div class="no-print" style="text-align: right; padding-top: 5px;">
+                        <button onclick="window.print();" style="background-color: #2563EB; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                            🖨️ 선택한 선수 일괄 인쇄 / PDF 저장
                         </button>
                     </div>
                     """
-                    import streamlit.components.v1 as components
                     components.html(batch_print_script, height=60, scrolling=False)
 
                 st.write("---")
@@ -1156,51 +1152,18 @@ elif menu == "📂 경기관찰선수리스트":
                     with col_title:
                         st.markdown(f"### 🎯 [{sel_year}시즌] {sel_team} {sel_num} 상세 관찰 히스토리")
                     with col_btn_p:
-                        # 🖨️ 1명 전용 새 창 인쇄 스크립트
-                        single_history_html = f"""
-                        <div style="border: 2px solid #2563EB; border-radius: 10px; padding: 20px; background-color: #ffffff;">
-                            <h2 style="color: #1e293b; margin-top: 0; border-bottom: 2px solid #cbd5e1; padding-bottom: 10px; font-size: 20px;">
-                                🎯 [{sel_year}시즌] {sel_team} {sel_num} 상세 관찰 리포트
-                            </h2>
-                        """
-                        selected_player_history = obs_df[(obs_df["관찰연도"] == sel_year) & (obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num)]
-                        selected_player_history = selected_player_history.sort_values(by="관찰일자", ascending=False)
-
-                        for _, h_row in selected_player_history.iterrows():
-                            single_history_html += f"""
-                            <div style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 15px;">
-                                <div style="font-weight: bold; color: #1e293b; font-size: 14px; margin-bottom: 6px;">
-                                    📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']} <span style="color: #2563EB;">(당시 포지션: {h_row['포지션']})</span>
-                                </div>
-                                <div style="color: #334155; font-size: 13px; line-height: 1.5;">
-                                    📝 <b>관찰 메모:</b> {h_row['메모내용']}
-                                </div>
-                            </div>
-                            """
-                        single_history_html += "</div>"
-
-                        import json
-                        safe_single_html = json.dumps(single_history_html)
-
-                        single_print_script = f"""
-                        <div style="text-align: right; padding-top: 5px;">
-                            <button onclick="
-                                var printWindow = window.open('', '_blank', 'height=800,width=900');
-                                printWindow.document.write('<html><head><title>선수 관찰 리포트 인쇄</title>');
-                                printWindow.document.write('<style>body {{ font-family: sans-serif; padding: 20px; color: #000; }}</style>');
-                                printWindow.document.write('</head><body>');
-                                printWindow.document.write({safe_single_html});
-                                printWindow.document.write('</body></html>');
-                                printWindow.document.close();
-                                printWindow.focus();
-                                setTimeout(function() {{ printWindow.print(); printWindow.close(); }}, 500);
-                            " style="background-color: #2563EB; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; width: 100%;">
+                        import streamlit.components.v1 as components
+                        single_print_script = """
+                        <div class="no-print" style="text-align: right; padding-top: 5px;">
+                            <button onclick="window.print();" style="background-color: #2563EB; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; width: 100%;">
                                 🖨️ 인쇄 / PDF 저장
                             </button>
                         </div>
                         """
-                        import streamlit.components.v1 as components
                         components.html(single_print_script, height=45, scrolling=False)
+
+                    selected_player_history = obs_df[(obs_df["관찰연도"] == sel_year) & (obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num)]
+                    selected_player_history = selected_player_history.sort_values(by="관찰일자", ascending=False)
 
                     for _, h_row in selected_player_history.iterrows():
                         match_raw_content = h_row["raw_content"]
