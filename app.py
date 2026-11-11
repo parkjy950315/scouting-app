@@ -975,7 +975,7 @@ elif menu == "📂 경기 일지 조회":
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기 관찰 선수 리스트 (연도별 시즌 분리)")
-    st.caption("연도(시즌)별로 팀명 + 등번호 기준 관찰 횟수와 상세 내역을 집계합니다. (포지션이 달라도 팀과 등번호가 같으면 동일 선수로 집계)")
+    st.caption("연도(시즌)별로 팀명 + 등번호 기준 관찰 횟수와 상세 내역을 집계합니다. (선택 복사 및 일괄 복사 지원)")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
@@ -1050,20 +1050,62 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = obs_df.groupby(["관찰연도", "팀명", "등번호"]).size().reset_index(name="관찰횟수")
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
-                st.markdown("### 📊 연도별 관찰 선수 요약 목록 (상세 내역을 보려면 아래 표에서 **선수 행을 클릭**하세요)")
+                st.markdown("### 📊 연도별 관찰 선수 요약 목록 (선택 또는 일괄 복사 가능)")
+                st.caption("💡 표 왼쪽의 체크박스로 **여러 명을 선택**한 뒤 하단 버튼으로 일괄 복사하거나, 행을 **클릭**하여 상세 내용 및 1명씩 복사할 수 있습니다.")
                 
+                # 📋 멀티 복사를 위한 선택 컬럼 추가
                 display_obs_table = grouped.copy()
-                display_obs_table.columns = ["관찰 연도", "소속 팀명", "등번호", "누적 관찰 횟수"]
+                display_obs_table.insert(0, "선택", False)
+                display_obs_table.columns = ["선택", "관찰 연도", "소속 팀명", "등번호", "누적 관찰 횟수"]
 
-                obs_selection = st.dataframe(
+                edited_obs_table = st.data_editor(
                     display_obs_table,
+                    use_container_width=True,
+                    hide_index=True,
+                    key="observed_player_multi_select_editor"
+                )
+
+                # 선택된 선수들 일괄 복사 버튼 영역
+                checked_rows = edited_obs_table[edited_obs_table["선택"] == True]
+                if not checked_rows.empty:
+                    if st.button(f"📋 선택한 선수 {len(checked_rows)}명 일괄 복사하기", type="primary", use_container_width=True):
+                        batch_copy_text = "⚽ [선택 선수단 스카우팅 관찰 리포트 일괄 모음]\n\n"
+                        for _, row in checked_rows.iterrows():
+                            b_year = row["관찰 연도"]
+                            b_team = row["소속 팀명"]
+                            b_num = row["등번호"]
+                            
+                            batch_copy_text += f"━━━━━━━━━━━━━━━━━━━━\n"
+                            batch_copy_text += f"🎯 [{b_year}시즌] {b_team} {b_num}\n"
+                            batch_copy_text += f"━━━━━━━━━━━━━━━━━━━━\n"
+                            
+                            player_histories = obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)]
+                            player_histories = player_histories.sort_values(by="관찰일자", ascending=False)
+                            
+                            for _, hist in player_histories.iterrows():
+                                batch_copy_text += f"• 일자: {hist['관찰일자']} | 대회: {hist['대회/경기']} (포지션: {hist['포지션']})\n"
+                                batch_copy_text += f"  - 메모: {hist['메모내용']}\n"
+                            batch_copy_text += "\n"
+
+                        st.text_area("📋 일괄 복사된 텍스트 (아래 박스를 복사하세요)", value=batch_copy_text.strip(), height=200)
+                        st.success(f"🎉 총 {len(checked_rows)}명의 선수 관찰 내용이 아래 박스에 일괄 생성되었습니다!")
+
+                st.write("---")
+
+                # 행 클릭 시 개별 상세 내역 및 1명씩 복사/인쇄 기능
+                # (스트림릿 dataframe 선택 활용을 위해 별도 표 표출)
+                display_single_table = grouped.copy()
+                display_single_table.columns = ["관찰 연도", "소속 팀명", "등번호", "누적 관찰 횟수"]
+                
+                single_selection = st.dataframe(
+                    display_single_table,
                     use_container_width=True,
                     selection_mode="single-row",
                     on_select="rerun",
-                    key="observed_player_table_selection"
+                    key="observed_player_single_select_table"
                 )
 
-                selected_obs_rows = obs_selection.selection.rows if hasattr(obs_selection, "selection") else []
+                selected_obs_rows = single_selection.selection.rows if hasattr(single_selection, "selection") else []
 
                 if selected_obs_rows:
                     sel_row = grouped.iloc[selected_obs_rows[0]]
@@ -1073,23 +1115,35 @@ elif menu == "📂 경기관찰선수리스트":
 
                     st.write("---")
                     
-                    # 🖨️ 인쇄 버튼 영역
-                    col_title, col_print_btn = st.columns([3, 1])
+                    col_title, col_btns = st.columns([2, 2])
                     with col_title:
                         st.markdown(f"### 🎯 [{sel_year}시즌] {sel_team} {sel_num} 상세 관찰 히스토리")
-                    with col_print_btn:
-                        import streamlit.components.v1 as components
-                        print_script_html = f"""
-                        <div style="text-align: right; padding-top: 5px;">
-                            <button onclick="window.print();" style="background-color: #2563EB; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                                🖨️ 인쇄 / PDF 저장
-                            </button>
-                        </div>
-                        """
-                        components.html(print_script_html, height=50, scrolling=False)
+                    with col_btns:
+                        col_btn1, col_btn2 = st.columns(2)
+                        with col_btn1:
+                            # 🖨️ 인쇄 버튼
+                            import streamlit.components.v1 as components
+                            print_script_html = f"""
+                            <div style="text-align: right; padding-top: 5px;">
+                                <button onclick="window.print();" style="background-color: #2563EB; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; width: 100%;">
+                                    🖨️ 인쇄
+                                </button>
+                            </div>
+                            """
+                            components.html(print_script_html, height=45, scrolling=False)
+                        with col_btn2:
+                            single_copy_btn = st.button("📋 1명 복사", use_container_width=True)
 
                     selected_player_history = obs_df[(obs_df["관찰연도"] == sel_year) & (obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num)]
                     selected_player_history = selected_player_history.sort_values(by="관찰일자", ascending=False)
+
+                    single_copy_text = f"🎯 [{sel_year}시즌] {sel_team} {sel_num} 상세 관찰 리포트\n\n"
+                    for _, h_row in selected_player_history.iterrows():
+                        single_copy_text += f"• 일자: {h_row['관찰일자']} | 대회: {h_row['대회/경기']} (포지션: {h_row['포지션']})\n  - 메모: {h_row['메모내용']}\n\n"
+
+                    if single_copy_btn:
+                        st.text_area("📋 복사된 텍스트", value=single_copy_text.strip(), height=130)
+                        st.success("🎉 해당 선수 메모가 텍스트 박스에 복사되었습니다!")
 
                     for _, h_row in selected_player_history.iterrows():
                         match_raw_content = h_row["raw_content"]
