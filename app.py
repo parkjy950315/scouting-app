@@ -11,7 +11,7 @@ from datetime import datetime
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 인쇄 시 절대 흐려지지 않고 진하게 출력되도록 강제하는 CSS
+# 📱 스트림릿 기본 UI 및 인쇄 설정 스타일
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -39,29 +39,6 @@ st.markdown("""
         text-align: center !important;
         padding: 4px 6px !important;
         font-weight: bold !important;
-    }
-
-    /* 🖨️ 인쇄 시 화면 UI를 숨기고 선택 선수 보고서만 진하고 선명하게 출력 */
-    @media print {
-        * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-        body {
-            background-color: #ffffff !important;
-            color: #000000 !important;
-        }
-        [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame, div[data-testid="stToolbar"] {
-            display: none !important;
-        }
-        .block-container {
-            padding: 0 !important;
-            max-width: 100% !important;
-        }
-        .page-break {
-            page-break-after: always;
-            break-after: page;
-        }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -812,7 +789,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (진하고 선명한 인쇄용 마크다운 양식)
+# 3. 📂 경기관찰선수리스트 (독립형 팝업/인쇄 창 방식 적용)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기 관찰 선수 리스트 (연도별 시즌 분리)")
@@ -891,11 +868,10 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = obs_df.groupby(["관찰연도", "팀명", "등번호"]).size().reset_index(name="관찰횟수")
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
-                st.markdown("### 📊 연도별 관찰 선수 요약 목록 (텍스트 보고서 멀티 선택 인쇄)")
-                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들만 체크**한 뒤, 하단의 **[🖨️ 선택 선수 깔끔한 보고서 양식으로 인쇄]** 버튼을 누르세요.")
+                st.markdown("### 📊 연도별 관찰 선수 요약 목록 (선명한 인쇄 전용 팝업 연동)")
+                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들만 체크**한 뒤, 아래 버튼을 누르면 **절대 흐리지 않고 진하게 인쇄되는 독립 보고서 창**이 열립니다.")
                 
                 display_obs_table = grouped.copy()
-                # 🌟 [수정 포인트] 기본값을 False로 설정하여 전체 선택되는 현상 원천 차단
                 display_obs_table.insert(0, "선택", False)
                 display_obs_table.columns = ["선택", "관찰 연도", "소속 팀명", "등번호", "누적 관찰 횟수"]
 
@@ -912,53 +888,88 @@ elif menu == "📂 경기관찰선수리스트":
                     st.write("")
                     col_info_p, col_btn_p = st.columns([3, 1])
                     with col_info_p:
-                        st.info(f"📌 총 **{len(checked_rows)}명**의 선수가 선택되었습니다. 새로운 보고서 양식으로 인쇄하려면 버튼을 누르세요.")
+                        st.info(f"📌 총 **{len(checked_rows)}명**의 선수가 선택되었습니다. 선명한 전용 인쇄 창을 띄우려면 버튼을 누르세요.")
                     with col_btn_p:
-                        if st.button("🖨️ 선택 선수 깔끔한 보고서 양식으로 인쇄", type="primary", use_container_width=True):
-                            st.components.v1.html("""
+                        if st.button("🖨️ 진하고 선명한 전용 인쇄 창 열기", type="primary", use_container_width=True):
+                            # 🌟 흐림 현상을 100% 차단하기 위해 완벽히 독립된 HTML/CSS 인쇄 페이지 생성
+                            report_html_blocks = ""
+                            for _, row in checked_rows.iterrows():
+                                b_year = row["관찰 연도"]
+                                b_team = row["소속 팀명"]
+                                b_num = row["등번호"]
+                                total_obs_count = len(obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)])
+
+                                player_histories = obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)]
+                                player_histories = player_histories.sort_values(by="관찰일자", ascending=False)
+
+                                history_items_html = ""
+                                for _, h_row in player_histories.iterrows():
+                                    p_val_display = h_row["포지션"]
+                                    memo_clean = str(h_row['메모내용']).replace('\n', '<br>')
+                                    history_items_html += f"""
+                                    <div style="border: 2px solid #000000; padding: 16px; margin-bottom: 16px; background-color: #ffffff; border-radius: 6px;">
+                                        <p style="font-weight: 900; color: #000000; font-size: 15px; margin-bottom: 8px;">
+                                            📅 관찰일자: {h_row['관찰일자']} &nbsp;|&nbsp; 🏆 대회: {h_row['대회/경기']} &nbsp;|&nbsp; 포지션: {p_val_display}
+                                        </p>
+                                        <p style="font-weight: 700; color: #000000; font-size: 15px; line-height: 1.6; margin: 0;">
+                                            {memo_clean}
+                                        </p>
+                                    </div>
+                                    """
+
+                                report_html_blocks += f"""
+                                <div class="page-container" style="border: 3px solid #000000; padding: 30px; margin-bottom: 40px; background-color: #ffffff; color: #000000; page-break-after: always; break-after: page;">
+                                    <h1 style="color: #000000; font-size: 26px; font-weight: 900; margin-bottom: 5px;">SMC SCOUTING REPORT</h1>
+                                    <p style="color: #000000; font-weight: bold; font-size: 14px;">시즌: {b_year} &nbsp;|&nbsp; 출력일: {datetime.today().strftime('%Y-%m-%d')}</p>
+                                    <hr style="border: 2px solid #000000; margin: 15px 0;">
+                                    <h3 style="color: #000000; font-size: 20px; font-weight: 900; margin-bottom: 20px;">소속 팀: {b_team} &nbsp;|&nbsp; 등번호: {b_num} &nbsp;|&nbsp; 누적 관찰: {total_obs_count}회</h3>
+                                    {history_items_html}
+                                </div>
+                                """
+
+                            full_popup_html = f"""
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <meta charset="utf-8">
+                                <title>SMC 스카우팅 리포트 인쇄</title>
+                                <style>
+                                    * {{
+                                        -webkit-print-color-adjust: exact !important;
+                                        print-color-adjust: exact !important;
+                                        color: #000000 !important;
+                                        font-family: 'Malgun Gothic', sans-serif !important;
+                                    }}
+                                    body {{
+                                        background-color: #ffffff !important;
+                                        padding: 20px;
+                                        margin: 0;
+                                    }}
+                                    @media print {{
+                                        body {{ padding: 0; }}
+                                        .no-print {{ display: none !important; }}
+                                    }}
+                                </style>
+                            </head>
+                            <body>
+                                <div class="no-print" style="text-align: right; margin-bottom: 20px;">
+                                    <button onclick="window.print();" style="background-color: #007bff; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer;">🖨️ 인쇄 / PDF 저장하기</button>
+                                </div>
+                                {report_html_blocks}
                                 <script>
-                                    window.parent.print();
+                                    window.onload = function() {{
+                                        setTimeout(function() {{ window.print(); }}, 500);
+                                    }};
                                 </script>
-                            """, height=0)
+                            </body>
+                            </html>
+                            """
 
-                    st.markdown("---")
-                    st.markdown("### 📄 [선택한 선수 새로운 보고서 양식 미리보기]")
-                    
-                    for _, row in checked_rows.iterrows():
-                        b_year = row["관찰 연도"]
-                        b_team = row["소속 팀명"]
-                        b_num = row["등번호"]
-                        total_obs_count = len(obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)])
+                            b64_html = base64.b64encode(full_popup_html.encode('utf-8')).decode('utf-8')
+                            html_link = f'<a href="data:text/html;base64,{b64_html}" target="_blank" style="display: block; background-color: #10b981; color: white; text-align: center; padding: 14px; font-size: 18px; font-weight: 900; border-radius: 8px; text-decoration: none; margin-top: 10px;">🚀 [클릭] 진하고 선명한 인쇄 전용 새 창 열기 (인쇄창이 안 뜨면 여기를 누르세요)</a>'
+                            st.markdown(html_link, unsafe_allow_html=True)
 
-                        st.markdown(f"""
-                        <div style="border: 3px solid #000000; padding: 25px; margin-bottom: 30px; background-color: #ffffff; color: #000000; border-radius: 8px;" class="page-break">
-                            <h1 style="color: #000000; font-size: 24px; font-weight: 900; margin-bottom: 5px;">SMC SCOUTING REPORT</h1>
-                            <p style="color: #000000; font-weight: bold; font-size: 13px;">시즌: {b_year} | 출력일: {datetime.today().strftime('%Y-%m-%d')}</p>
-                            <hr style="border: 2px solid #000000;">
-                            <h3 style="color: #000000; font-size: 18px; font-weight: 900;">소속 팀: {b_team} &nbsp;|&nbsp; 등번호: {b_num} &nbsp;|&nbsp; 누적 관찰: {total_obs_count}회</h3>
-                            <br>
-                        """, unsafe_allow_html=True)
-
-                        player_histories = obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)]
-                        player_histories = player_histories.sort_values(by="관찰일자", ascending=False)
-
-                        for _, h_row in player_histories.iterrows():
-                            p_val_display = h_row["포지션"]
-                            memo_clean = str(h_row['메모내용']).replace('\n', '<br>')
-                            st.markdown(f"""
-                            <div style="border: 2px solid #000000; padding: 15px; margin-bottom: 12px; background-color: #ffffff; color: #000000; border-radius: 6px;">
-                                <p style="font-weight: 900; color: #000000; font-size: 14px; margin-bottom: 6px;">
-                                    📅 관찰일자: {h_row['관찰일자']} &nbsp;|&nbsp; 🏆 대회: {h_row['대회/경기']} &nbsp;|&nbsp; 포지션: {p_val_display}
-                                </p>
-                                <p style="font-weight: 700; color: #000000; font-size: 14px; line-height: 1.6; margin: 0;">
-                                    {memo_clean}
-                                </p>
-                            </div>
-                            """, unsafe_allow_html=True)
-
-                        st.markdown("</div>", unsafe_allow_html=True)
-
-                st.write("---")
+                    st.write("---")
 
                 # 기존 1명씩 상세 조회 및 인쇄 기능 유지
                 display_single_table = grouped.copy()
