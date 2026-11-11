@@ -11,7 +11,7 @@ from datetime import datetime
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 최적화 스타일 설정 (Metric 폰트 크기 최적화 포함)
+# 📱 PC & 모바일 반응형 최적화 스타일 설정 (인쇄 스타일 포함)
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -39,6 +39,20 @@ st.markdown("""
         text-align: center !important;
         padding: 4px 6px !important;
         font-weight: bold !important;
+    }
+
+    /* 🖨️ 인쇄 시 불필요한 UI 숨기고 깔끔하게 출력 */
+    @media print {
+        body {
+            background: white !important;
+            color: black !important;
+        }
+        [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox {
+            display: none !important;
+        }
+        .block-container {
+            padding: 0 !important;
+        }
     }
 
     /* 📱 모바일 상세 관찰일지 Metric 글씨 잘림 방지 (폰트 크기 축소) */
@@ -1033,7 +1047,6 @@ elif menu == "📂 경기관찰선수리스트":
             if obs_df.empty:
                 st.warning("🔍 검색 조건에 일치하는 관찰 선수가 없습니다.")
             else:
-                # 💡 포지션(포지션별)을 제외하고 [관찰연도, 팀명, 등번호] 기준으로만 그룹화하여 집계
                 grouped = obs_df.groupby(["관찰연도", "팀명", "등번호"]).size().reset_index(name="관찰횟수")
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
@@ -1059,9 +1072,22 @@ elif menu == "📂 경기관찰선수리스트":
                     sel_num = sel_row["등번호"]
 
                     st.write("---")
-                    st.markdown(f"### 🎯 [{sel_year}시즌] {sel_team} {sel_num} 상세 관찰 히스토리")
                     
-                    # 포지션에 상관없이 팀명과 등번호가 같은 기록들을 모두 불러옴
+                    # 🖨️ 인쇄 버튼 영역
+                    col_title, col_print_btn = st.columns([3, 1])
+                    with col_title:
+                        st.markdown(f"### 🎯 [{sel_year}시즌] {sel_team} {sel_num} 상세 관찰 히스토리")
+                    with col_print_btn:
+                        import streamlit.components.v1 as components
+                        print_script_html = f"""
+                        <div style="text-align: right; padding-top: 5px;">
+                            <button onclick="window.print();" style="background-color: #2563EB; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                🖨️ 인쇄 / PDF 저장
+                            </button>
+                        </div>
+                        """
+                        components.html(print_script_html, height=50, scrolling=False)
+
                     selected_player_history = obs_df[(obs_df["관찰연도"] == sel_year) & (obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num)]
                     selected_player_history = selected_player_history.sort_values(by="관찰일자", ascending=False)
 
