@@ -916,7 +916,7 @@ elif menu == "📂 경기관찰선수리스트":
 
                 checked_rows = edited_obs_table[edited_obs_table["선택"] == True]
                 
-                # 🌟 인쇄 전용 깔끔한 HTML 리포트 컨테이너 구성 (인쇄 시에만 통째로 출력됨)
+                # 🌟 [수정 포인트] unsafe_allow_html=True를 적용하여 HTML이 깨지지 않고 완벽한 표/박스로 인쇄되도록 빌드
                 print_html_builder = '<div class="print-report-container">'
                 
                 if not checked_rows.empty:
@@ -926,15 +926,15 @@ elif menu == "📂 경기관찰선수리스트":
                         b_num = row["등번호"]
                         
                         print_html_builder += f"""
-                        <div style="padding: 30px; font-family: sans-serif; background: #ffffff; color: #000000; margin-bottom: 40px;" class="page-break">
+                        <div style="padding: 30px; font-family: sans-serif; background: #ffffff; color: #000000; margin-bottom: 40px; border: 2px solid #000000; border-radius: 8px;" class="page-break">
                             <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 20px;">
                                 <div>
                                     <h1 style="margin: 0; font-size: 26px; font-weight: 900; color: #000;">SMC SCOUTING REPORT</h1>
-                                    <div style="font-size: 13px; font-weight: bold; color: #555; margin-top: 4px;">성문컴퍼니 선수 스카우팅 종합 분석서</div>
+                                    <div style="font-size: 13px; font-weight: bold; color: #333; margin-top: 4px;">성문컴퍼니 선수 스카우팅 종합 분석서</div>
                                 </div>
                                 <div style="text-align: right;">
                                     <div style="font-size: 14px; font-weight: bold;">시즌: {b_year}</div>
-                                    <div style="font-size: 12px; color: #666; margin-top: 2px;">출력일: {datetime.today().strftime('%Y-%m-%d')}</div>
+                                    <div style="font-size: 12px; color: #333; margin-top: 2px;">출력일: {datetime.today().strftime('%Y-%m-%d')}</div>
                                 </div>
                             </div>
                             
@@ -972,7 +972,7 @@ elif menu == "📂 경기관찰선수리스트":
 
                 print_html_builder += '</div>'
                 
-                # 화면에 인쇄용 숨김 HTML 렌더링
+                # 🌟 [수정 포인트] unsafe_allow_html=True를 적용하여 태그가 노출되지 않고 정식 렌더링되도록 수정
                 st.markdown(print_html_builder, unsafe_allow_html=True)
 
                 if not checked_rows.empty:
@@ -1006,7 +1006,7 @@ elif menu == "📂 경기관찰선수리스트":
                                     </div>
                                     <div style="text-align: right;">
                                         <div style="font-size: 13px; font-weight: bold;">시즌: {b_year}</div>
-                                        <div style="font-size: 11px; color: #666;">출력일: {datetime.today().strftime('%Y-%m-%d')}</div>
+                                        <div style="font-size: 11px; color: #333;">출력일: {datetime.today().strftime('%Y-%m-%d')}</div>
                                     </div>
                                 </div>
                                 <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; color: #000;">
