@@ -11,7 +11,7 @@ from datetime import datetime
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 및 깔끔한 텍스트 보고서 인쇄 전용 CSS
+# 📱 PC & 모바일 반응형 및 인쇄 미리보기 진하게 고대비 CSS 설정
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -41,12 +41,17 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 🖨️ 인쇄 시 불필요한 UI 완벽 숨기고 텍스트 보고서 박스만 깔끔하게 출력 */
+    /* 🖨️ 인쇄 미리보기에서도 폰트와 글자가 물빠짐 없이 진하게 고대비 출력되도록 강제 설정 */
     @media print {
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
         body {
-            background: white !important;
-            color: black !important;
-            font-family: sans-serif !important;
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            font-family: 'Pretendard', -apple-system, sans-serif !important;
         }
         [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame, div[data-testid="stToolbar"] {
             display: none !important;
@@ -56,14 +61,26 @@ st.markdown("""
             max-width: 100% !important;
         }
         .report-print-box {
-            border: 1px solid #cbd5e1 !important;
+            border: 2px solid #000000 !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             background-color: #ffffff !important;
-            box-shadow: none !important;
             margin-bottom: 25px !important;
             padding: 20px !important;
-            border-radius: 6px !important;
+            border-radius: 4px !important;
+        }
+        .report-print-box * {
+            color: #000000 !important;
+            opacity: 1 !important;
+        }
+        .report-header-title {
+            color: #000000 !important;
+            font-weight: 900 !important;
+        }
+        .report-card-item {
+            background-color: #f1f5f9 !important;
+            border-left: 5px solid #000000 !important;
+            border: 1px solid #94a3b8 !important;
         }
     }
     </style>
@@ -815,11 +832,11 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (텍스트 보고서 형식)
+# 3. 📂 경기관찰선수리스트 (진한 선명도 보고서)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기 관찰 선수 리스트 (연도별 시즌 분리)")
-    st.caption("연도(시즌)별로 팀명 + 등번호 기준 관찰 횟수와 상세 내역을 텍스트 보고서 형식으로 집계합니다.")
+    st.caption("연도(시즌)별로 팀명 + 등번호 기준 관찰 횟수와 상세 내역을 진한 선명도의 보고서 형식으로 집계합니다.")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
@@ -895,7 +912,7 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
                 st.markdown("### 📊 연도별 관찰 선수 요약 목록 (텍스트 보고서 멀티 선택 인쇄)")
-                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 텍스트 보고서 일괄 인쇄]** 버튼을 누르시면 오직 선수 프로필과 메모 내용만 깔끔하게 정돈된 보고서 형태로 출력됩니다.")
+                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 텍스트 보고서 일괄 인쇄]** 버튼을 누르시면 진하고 선명하게 보고서가 출력됩니다.")
                 
                 display_obs_table = grouped.copy()
                 display_obs_table.insert(0, "선택", False)
@@ -924,21 +941,21 @@ elif menu == "📂 경기관찰선수리스트":
                             """, height=0)
 
                     st.markdown("---")
-                    st.markdown("### 📄 [텍스트 보고서 인쇄 미리보기]")
+                    st.markdown("### 📄 [고대비 선명한 보고서 인쇄 미리보기]")
                     
                     for _, row in checked_rows.iterrows():
                         b_year = row["관찰 연도"]
                         b_team = row["소속 팀명"]
                         b_num = row["등번호"]
 
-                        # 🌟 그림 없이 순수 텍스트/카드 형식의 깔끔한 보고서 박스
+                        # 🌟 고대비 진한 검은색 폰트와 선명한 테두리
                         st.markdown(f"""
-                        <div class="report-print-box" style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 24px; margin-bottom: 30px; background-color: #ffffff;">
-                            <div style="border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 15px;">
-                                <h2 style="color: #0f172a; margin: 0; font-size: 20px; font-weight: 800;">
+                        <div class="report-print-box">
+                            <div style="border-bottom: 3px solid #000000; padding-bottom: 8px; margin-bottom: 16px;">
+                                <h2 class="report-header-title" style="margin: 0; font-size: 22px;">
                                     🎯 [{b_year}시즌] {b_team} {b_num} 선수 스카우팅 보고서
                                 </h2>
-                                <div style="color: #64748B; font-size: 11.5px; margin-top: 3px;">SMC FOOTBALL SCOUTING REPORT</div>
+                                <div style="color: #1e293b; font-size: 12px; font-weight: bold; margin-top: 4px;">SMC FOOTBALL SCOUTING REPORT</div>
                             </div>
                         """, unsafe_allow_html=True)
 
@@ -948,11 +965,11 @@ elif menu == "📂 경기관찰선수리스트":
                         for _, h_row in player_histories.iterrows():
                             p_val_display = h_row["포지션"]
                             st.markdown(f"""
-                            <div style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; margin-bottom: 14px;">
-                                <div style="font-weight: bold; color: #1e293b; font-size: 14px; margin-bottom: 6px;">
-                                    📅 관찰 일자: {h_row['관찰일자']} &nbsp;|&nbsp; 🏆 대회/경기: {h_row['대회/경기']} &nbsp;|&nbsp; <span style="color: #2563EB;">포지션: {p_val_display}</span>
+                            <div class="report-card-item" style="padding: 14px; margin-bottom: 14px; border-radius: 4px;">
+                                <div style="font-weight: 900; color: #000000; font-size: 15px; margin-bottom: 6px;">
+                                    📅 관찰 일자: {h_row['관찰일자']} &nbsp;|&nbsp; 🏆 대회/경기: {h_row['대회/경기']} &nbsp;|&nbsp; 포지션: {p_val_display}
                                 </div>
-                                <div style="color: #334155; font-size: 13.5px; line-height: 1.6; margin-top: 6px;">
+                                <div style="color: #000000; font-size: 14px; line-height: 1.6; font-weight: 500; margin-top: 6px;">
                                     📝 <b>상세 관찰 메모:</b><br>{h_row['메모내용'].replace(chr(10), '<br>')}
                                 </div>
                             </div>
@@ -1001,11 +1018,11 @@ elif menu == "📂 경기관찰선수리스트":
                     for _, h_row in selected_player_history.iterrows():
                         p_val_display = h_row["포지션"]
                         st.markdown(f"""
-                        <div class="report-print-box" style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 15px;">
-                            <div style="font-weight: bold; color: #1e293b; font-size: 14.5px; margin-bottom: 6px;">
-                                📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']} <span style="color: #2563EB; font-size: 13px;">(당시 포지션: {p_val_display})</span>
+                        <div class="report-print-box">
+                            <div style="font-weight: 900; color: #000000; font-size: 15px; margin-bottom: 6px;">
+                                📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']} (당시 포지션: {p_val_display})
                             </div>
-                            <div style="color: #334155; font-size: 13.5px; line-height: 1.6; margin-top: 6px;">
+                            <div style="color: #000000; font-size: 14px; line-height: 1.6; font-weight: 500; margin-top: 6px;">
                                 📝 <b>관찰 메모:</b><br>{h_row['메모내용'].replace(chr(10), '<br>')}
                             </div>
                         </div>
