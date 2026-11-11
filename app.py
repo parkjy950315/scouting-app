@@ -3,8 +3,6 @@ import pandas as pd
 import requests
 import io
 import re
-import os
-import base64
 from datetime import datetime
 
 # 페이지 기본 설정 (와이드 레이아웃)
