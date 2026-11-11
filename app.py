@@ -41,7 +41,7 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 🖨️ 인쇄 및 PDF 저장 시 완벽한 정돈 및 가독성 최적화 */
+    /* 🖨️ 인쇄 시 불필요한 UI 완벽 숨기고 보고서 영역만 출력 */
     @media print {
         body {
             background: white !important;
@@ -55,14 +55,15 @@ st.markdown("""
             padding: 0 !important;
             max-width: 100% !important;
         }
-        /* 인쇄 시 리포트 박스가 잘리지 않고 깔끔하게 정돈되도록 설정 */
-        div[style*="border"] {
-            border: 1px solid #94a3b8 !important;
+        .report-print-box {
+            border: 1.5px solid #cbd5e1 !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             background-color: #ffffff !important;
             box-shadow: none !important;
-            margin-bottom: 20px !important;
+            margin-bottom: 25px !important;
+            padding: 20px !important;
+            border-radius: 8px !important;
         }
     }
 
@@ -365,10 +366,10 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
         .pitch-container {{
             background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%);
             border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 14px;
-            padding: 8px 4px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.25), inset 0 0 15px rgba(255,255,255,0.1);
-            margin-bottom: 10px;
+            border-radius: 12px;
+            padding: 6px 4px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            margin-bottom: 8px;
             width: 100%;
             box-sizing: border-box;
             font-family: sans-serif;
@@ -377,10 +378,10 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
             text-align: center;
             color: #38bdf8;
             font-weight: 800;
-            font-size: 11px;
+            font-size: 10px;
             letter-spacing: 1px;
             text-transform: uppercase;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             border-bottom: 1px solid rgba(255,255,255,0.15);
             padding-bottom: 2px;
         }}
@@ -388,7 +389,7 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
             display: flex;
             justify-content: center;
             gap: 3px;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
             flex-wrap: nowrap;
             width: 100%;
         }}
@@ -397,23 +398,23 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
             color: white;
             border: 2px solid rgba(255, 255, 255, 0.95);
             border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            min-width: 28px;
+            width: 25px;
+            height: 25px;
+            min-width: 25px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }}
         .pos-text {{
-            font-size: 5.5px;
+            font-size: 5px;
             color: #fecaca;
             font-weight: 700;
             line-height: 1;
         }}
         .num-text {{
-            font-size: 9.5px;
+            font-size: 8.5px;
             color: #ffffff;
             font-weight: 900;
             line-height: 1.1;
@@ -423,7 +424,7 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     <body>
         <div class="pitch-container">
             <div class="pitch-header">
-                🏟️ {display_team_name} <span style="color: #cbd5e1; font-size: 9px; font-weight: normal;">({formation_name})</span>
+                🏟️ {display_team_name} <span style="color: #cbd5e1; font-size: 8.5px; font-weight: normal;">({formation_name})</span>
             </div>
             {rows_html}
         </div>
@@ -431,7 +432,7 @@ def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
     </html>
     """
     import streamlit.components.v1 as components
-    components.html(complete_html, height=340, scrolling=False)
+    components.html(complete_html, height=290, scrolling=False)
 
 display_logo()
 
@@ -985,7 +986,7 @@ elif menu == "📂 경기 일지 조회":
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기 관찰 선수 리스트 (연도별 시즌 분리)")
-    st.caption("연도(시즌)별로 팀명 + 등번호 기준 관찰 횟수와 상세 내역을 집계합니다. (여러 명 선택 후 일괄 인쇄 지원)")
+    st.caption("연도(시즌)별로 팀명 + 등번호 기준 관찰 횟수와 상세 내역을 집계합니다. (여러 명 선택 후 깔끔한 보고서 인쇄 지원)")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
@@ -1061,9 +1062,8 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
                 st.markdown("### 📊 연도별 관찰 선수 요약 목록 (멀티 선택 인쇄 지원)")
-                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 일괄 인쇄 / PDF 저장]** 버튼을 누르시면 해당 선수들의 리포트가 깔끔하게 정돈되어 인쇄됩니다.")
+                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 일괄 인쇄 / PDF 저장]** 버튼을 누르시면 해당 선수들의 리포트만 A4 보고서 형태로 깔끔하게 모여서 출력됩니다.")
                 
-                # 🖨️ 멀티 인쇄를 위한 선택 컬럼 추가
                 display_obs_table = grouped.copy()
                 display_obs_table.insert(0, "선택", False)
                 display_obs_table.columns = ["선택", "관찰 연도", "소속 팀명", "등번호", "누적 관찰 횟수"]
@@ -1075,7 +1075,6 @@ elif menu == "📂 경기관찰선수리스트":
                     key="observed_player_multi_select_editor"
                 )
 
-                # 선택된 선수들 일괄 인쇄 영역
                 checked_rows = edited_obs_table[edited_obs_table["선택"] == True]
                 if not checked_rows.empty:
                     st.write("")
@@ -1092,18 +1091,22 @@ elif menu == "📂 경기관찰선수리스트":
                             """, height=0)
 
                     st.markdown("---")
-                    st.markdown("### 📄 [인쇄 미리보기] 선택된 선수 리포트 모음")
+                    st.markdown("### 📄 [인쇄 보고서 미리보기] 선택된 선수 리포트 모음")
                     
                     for _, row in checked_rows.iterrows():
                         b_year = row["관찰 연도"]
                         b_team = row["소속 팀명"]
                         b_num = row["등번호"]
 
+                        # 🌟 인쇄 전용 클래스(.report-print-box)를 적용하여 보고서 형태로 깔끔하게 격리
                         st.markdown(f"""
-                        <div style="border: 2px solid #2563EB; border-radius: 12px; padding: 24px; margin-bottom: 35px; background-color: #ffffff; page-break-after: always; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                            <h2 style="color: #0f172a; margin-top: 0; border-bottom: 3px solid #2563EB; padding-bottom: 12px; font-size: 22px; font-weight: 800;">
-                                🎯 [{b_year}시즌] {b_team} {b_num} 관찰 종합 리포트
-                            </h2>
+                        <div class="report-print-box" style="border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 22px; margin-bottom: 30px; background-color: #ffffff;">
+                            <div style="border-bottom: 2.5px solid #2563EB; padding-bottom: 10px; margin-bottom: 15px;">
+                                <h2 style="color: #0f172a; margin: 0; font-size: 20px; font-weight: 800;">
+                                    🎯 [{b_year}시즌] {b_team} {b_num} 선수 관찰 리포트
+                                </h2>
+                                <div style="color: #64748B; font-size: 12px; margin-top: 4px;">SMC FOOTBALL SCOUTING SYSTEM</div>
+                            </div>
                         """, unsafe_allow_html=True)
 
                         player_histories = obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)]
@@ -1149,11 +1152,11 @@ elif menu == "📂 경기관찰선수리스트":
                                 a_t_name = parts[1].replace(" (어웨이)", "").strip()
 
                             st.markdown(f"""
-                            <div style="background-color: #f8fafc; border-left: 5px solid #2563EB; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 18px;">
-                                <div style="font-weight: bold; color: #1e293b; font-size: 15px; margin-bottom: 8px;">
+                            <div style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+                                <div style="font-weight: bold; color: #1e293b; font-size: 13.5px; margin-bottom: 6px;">
                                     📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']} <span style="color: #2563EB; font-weight: 700;">(당시 포지션: {p_val_display})</span>
                                 </div>
-                                <div style="color: #334155; font-size: 14px; line-height: 1.6;">
+                                <div style="color: #334155; font-size: 13px; line-height: 1.5;">
                                     📝 <b>관찰 메모:</b><br>{h_row['메모내용'].replace(chr(10), '<br>')}
                                 </div>
                             </div>
@@ -1245,7 +1248,7 @@ elif menu == "📂 경기관찰선수리스트":
                             a_t_name = parts[1].replace(" (어웨이)", "").strip()
 
                         st.markdown(f"""
-                        <div style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 15px;">
+                        <div class="report-print-box" style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 15px;">
                             <div style="font-weight: bold; color: #1e293b; font-size: 15px; margin-bottom: 6px;">
                                 📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']} <span style="color: #2563EB; font-size: 13px;">(당시 포지션: {p_val_display})</span>
                             </div>
