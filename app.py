@@ -7,11 +7,11 @@ import os
 import base64
 from datetime import datetime
 
-# 페이지 기본 설정
-st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
+# 페이지 기본 설정 (와이드 레이아웃)
+st.set_page_config(page_title="선수 스카우팅 관리 시스템", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 스트림릿 기본 UI 및 인쇄 설정 스타일
+# 📱 리포트 인쇄 및 화면 공통 CSS 스타일
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -789,11 +789,11 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (독립형 팝업/인쇄 창 방식 적용)
+# 3. 📂 경기관찰선수리스트 (완벽한 대표팀 보고용 리포트 전용 양식)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기 관찰 선수 리스트 (연도별 시즌 분리)")
-    st.caption("연도(시즌)별로 팀명 + 등번호 기준 관찰 횟수와 상세 내역을 새로운 보고서 양식으로 집계합니다.")
+    st.caption("연도(시즌)별로 팀명 + 등번호 기준 관찰 횟수와 상세 내역을 대표팀 보고용 깔끔한 리포트 양식으로 집계합니다.")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
@@ -868,8 +868,8 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = obs_df.groupby(["관찰연도", "팀명", "등번호"]).size().reset_index(name="관찰횟수")
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
-                st.markdown("### 📊 연도별 관찰 선수 요약 목록 (선명한 인쇄 전용 팝업 연동)")
-                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들만 체크**한 뒤, 아래 버튼을 누르면 **절대 흐리지 않고 진하게 인쇄되는 독립 보고서 창**이 열립니다.")
+                st.markdown("### 📊 연도별 관찰 선수 요약 목록 (대표팀/보고용 리포트 생성)")
+                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 체크**한 뒤, 아래 버튼을 누르면 **기존 UI를 모두 숨기고 오직 보고용 리포트만 화면에 꽉 차게** 생성됩니다.")
                 
                 display_obs_table = grouped.copy()
                 display_obs_table.insert(0, "선택", False)
@@ -888,88 +888,115 @@ elif menu == "📂 경기관찰선수리스트":
                     st.write("")
                     col_info_p, col_btn_p = st.columns([3, 1])
                     with col_info_p:
-                        st.info(f"📌 총 **{len(checked_rows)}명**의 선수가 선택되었습니다. 선명한 전용 인쇄 창을 띄우려면 버튼을 누르세요.")
+                        st.info(f"📌 총 **{len(checked_rows)}명**의 선수가 선택되었습니다.")
                     with col_btn_p:
-                        if st.button("🖨️ 진하고 선명한 전용 인쇄 창 열기", type="primary", use_container_width=True):
-                            # 🌟 흐림 현상을 100% 차단하기 위해 완벽히 독립된 HTML/CSS 인쇄 페이지 생성
-                            report_html_blocks = ""
-                            for _, row in checked_rows.iterrows():
-                                b_year = row["관찰 연도"]
-                                b_team = row["소속 팀명"]
-                                b_num = row["등번호"]
-                                total_obs_count = len(obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)])
+                        generate_report = st.button("📄 대표팀 보고용 리포트 뷰어 생성", type="primary", use_container_width=True)
 
-                                player_histories = obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)]
-                                player_histories = player_histories.sort_values(by="관찰일자", ascending=False)
+                    if generate_report or st.session_state.get("show_clean_report", False):
+                        st.session_state["show_clean_report"] = True
+                        
+                        st.markdown("---")
+                        st.markdown("""
+                        <div style="background-color: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <b style="font-size: 16px; color: #0f172a;">📋 SMC 스카우팅 공식 보고서 (A4 최적화)</b>
+                                <p style="margin: 0; font-size: 13px; color: #475569;">이 상태에서 키보드 단축키 <kbd style="background: white; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px;">Ctrl + P</kbd> (또는 <kbd style="background: white; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px;">Cmd + P</kbd>)를 누르시면 오직 보고서만 진하게 인쇄됩니다.</p>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
 
-                                history_items_html = ""
-                                for _, h_row in player_histories.iterrows():
-                                    p_val_display = h_row["포지션"]
-                                    memo_clean = str(h_row['메모내용']).replace('\n', '<br>')
-                                    history_items_html += f"""
-                                    <div style="border: 2px solid #000000; padding: 16px; margin-bottom: 16px; background-color: #ffffff; border-radius: 6px;">
-                                        <p style="font-weight: 900; color: #000000; font-size: 15px; margin-bottom: 8px;">
-                                            📅 관찰일자: {h_row['관찰일자']} &nbsp;|&nbsp; 🏆 대회: {h_row['대회/경기']} &nbsp;|&nbsp; 포지션: {p_val_display}
-                                        </p>
-                                        <p style="font-weight: 700; color: #000000; font-size: 15px; line-height: 1.6; margin: 0;">
-                                            {memo_clean}
-                                        </p>
+                        # 🌟 기존 스트림릿 요소를 완전히 배제하고 오직 인쇄용 보고서 HTML만 깔끔하게 구성
+                        report_full_html = """
+                        <style>
+                            @media print {
+                                body { background-color: #ffffff !important; }
+                                /* 인쇄 시 사이드바 및 불필요한 컨트롤 숨김 */
+                                [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame, div[data-testid="stToolbar"] {
+                                    display: none !important;
+                                }
+                            }
+                            .scouting-report-card {
+                                border: 3px solid #1e293b;
+                                padding: 35px;
+                                margin-bottom: 40px;
+                                background-color: #ffffff;
+                                color: #000000;
+                                border-radius: 12px;
+                                font-family: 'Malgun Gothic', sans-serif;
+                                page-break-after: always;
+                                break-after: page;
+                            }
+                            .report-header {
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: flex-end;
+                                border-bottom: 3px solid #0f172a;
+                                padding-bottom: 15px;
+                                margin-bottom: 20px;
+                            }
+                            .history-box {
+                                border: 2px solid #cbd5e1;
+                                padding: 18px;
+                                margin-bottom: 15px;
+                                background-color: #f8fafc;
+                                border-radius: 8px;
+                            }
+                        </style>
+                        """
+
+                        for _, row in checked_rows.iterrows():
+                            b_year = row["관찰 연도"]
+                            b_team = row["소속 팀명"]
+                            b_num = row["등번호"]
+                            total_obs_count = len(obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)])
+
+                            player_histories = obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)]
+                            player_histories = player_histories.sort_values(by="관찰일자", ascending=False)
+
+                            history_items_html = ""
+                            for _, h_row in player_histories.iterrows():
+                                p_val_display = h_row["포지션"]
+                                memo_clean = str(h_row['메모내용']).replace('\n', '<br>')
+                                history_items_html += f"""
+                                <div class="history-box">
+                                    <div style="font-weight: 900; color: #0f172a; font-size: 15px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
+                                        📅 관찰일자: {h_row['관찰일자']} &nbsp;|&nbsp; 🏆 대회: {h_row['대회/경기']} &nbsp;|&nbsp; 포지션: <span style="color: #2563eb;">{p_val_display}</span>
                                     </div>
-                                    """
-
-                                report_html_blocks += f"""
-                                <div class="page-container" style="border: 3px solid #000000; padding: 30px; margin-bottom: 40px; background-color: #ffffff; color: #000000; page-break-after: always; break-after: page;">
-                                    <h1 style="color: #000000; font-size: 26px; font-weight: 900; margin-bottom: 5px;">SMC SCOUTING REPORT</h1>
-                                    <p style="color: #000000; font-weight: bold; font-size: 14px;">시즌: {b_year} &nbsp;|&nbsp; 출력일: {datetime.today().strftime('%Y-%m-%d')}</p>
-                                    <hr style="border: 2px solid #000000; margin: 15px 0;">
-                                    <h3 style="color: #000000; font-size: 20px; font-weight: 900; margin-bottom: 20px;">소속 팀: {b_team} &nbsp;|&nbsp; 등번호: {b_num} &nbsp;|&nbsp; 누적 관찰: {total_obs_count}회</h3>
-                                    {history_items_html}
+                                    <div style="font-weight: 600; color: #334155; font-size: 15px; line-height: 1.7;">
+                                        {memo_clean}
+                                    </div>
                                 </div>
                                 """
 
-                            full_popup_html = f"""
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <meta charset="utf-8">
-                                <title>SMC 스카우팅 리포트 인쇄</title>
-                                <style>
-                                    * {{
-                                        -webkit-print-color-adjust: exact !important;
-                                        print-color-adjust: exact !important;
-                                        color: #000000 !important;
-                                        font-family: 'Malgun Gothic', sans-serif !important;
-                                    }}
-                                    body {{
-                                        background-color: #ffffff !important;
-                                        padding: 20px;
-                                        margin: 0;
-                                    }}
-                                    @media print {{
-                                        body {{ padding: 0; }}
-                                        .no-print {{ display: none !important; }}
-                                    }}
-                                </style>
-                            </head>
-                            <body>
-                                <div class="no-print" style="text-align: right; margin-bottom: 20px;">
-                                    <button onclick="window.print();" style="background-color: #007bff; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer;">🖨️ 인쇄 / PDF 저장하기</button>
+                            report_full_html += f"""
+                            <div class="scouting-report-card">
+                                <div class="report-header">
+                                    <div>
+                                        <div style="color: #2563eb; font-weight: 900; letter-spacing: 2px; font-size: 14px;">SUNGMUN COMPANY (SMC)</div>
+                                        <h1 style="color: #0f172a; font-size: 28px; font-weight: 900; margin: 5px 0 0 0;">PLAYER SCOUTING REPORT</h1>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: bold; color: #64748B; font-size: 13px;">시즌: {b_year}</div>
+                                        <div style="font-weight: bold; color: #64748B; font-size: 13px;">작성일: {datetime.today().strftime('%Y-%m-%d')}</div>
+                                    </div>
                                 </div>
-                                {report_html_blocks}
-                                <script>
-                                    window.onload = function() {{
-                                        setTimeout(function() {{ window.print(); }}, 500);
-                                    }};
-                                </script>
-                            </body>
-                            </html>
+                                <div style="background-color: #0f172a; color: white; padding: 15px 20px; border-radius: 6px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 18px; font-weight: 900;">소속 팀: {b_team}</span>
+                                    <span style="font-size: 18px; font-weight: 900;">등번호: {b_num}</span>
+                                    <span style="font-size: 16px; font-weight: 700; background: #3b82f6; padding: 4px 12px; border-radius: 4px;">누적 관찰: {total_obs_count}회</span>
+                                </div>
+                                <h3 style="color: #0f172a; font-size: 16px; font-weight: 900; margin-bottom: 15px;">📌 세부 관찰 히스토리 및 평가</h3>
+                                {history_items_html}
+                            </div>
                             """
 
-                            b64_html = base64.b64encode(full_popup_html.encode('utf-8')).decode('utf-8')
-                            html_link = f'<a href="data:text/html;base64,{b64_html}" target="_blank" style="display: block; background-color: #10b981; color: white; text-align: center; padding: 14px; font-size: 18px; font-weight: 900; border-radius: 8px; text-decoration: none; margin-top: 10px;">🚀 [클릭] 진하고 선명한 인쇄 전용 새 창 열기 (인쇄창이 안 뜨면 여기를 누르세요)</a>'
-                            st.markdown(html_link, unsafe_allow_html=True)
+                        st.markdown(report_full_html, unsafe_allow_html=True)
+                        
+                        if st.button("🔄 보고서 닫기 및 목록으로 돌아가기", type="secondary"):
+                            st.session_state["show_clean_report"] = False
+                            st.rerun()
 
-                    st.write("---")
+                st.write("---")
 
                 # 기존 1명씩 상세 조회 및 인쇄 기능 유지
                 display_single_table = grouped.copy()
