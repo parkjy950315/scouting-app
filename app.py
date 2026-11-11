@@ -11,7 +11,7 @@ from datetime import datetime
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 및 인쇄 시 모든 페이지 진하게 고정하는 CSS 설정
+# 📱 PC & 모바일 반응형 및 인쇄 시 선택된 보고서만 선명하게 출력하는 CSS
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -41,7 +41,7 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 🖨️ 인쇄 시 불필요한 UI 숨기고 보고서만 100% 진하게 출력 */
+    /* 🖨️ 인쇄 시 사이드바 및 Streamlit 기본 UI를 완벽히 숨기고 인쇄 영역만 출력 */
     @media print {
         * {
             -webkit-print-color-adjust: exact !important;
@@ -53,7 +53,7 @@ st.markdown("""
             color: #000000 !important;
             font-family: sans-serif !important;
         }
-        [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame, div[data-testid="stToolbar"] {
+        [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame, div[data-testid="stToolbar"], .element-container:not(:has(#print-target-section)) {
             display: none !important;
         }
         .block-container {
@@ -810,7 +810,7 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (완벽한 단일 HTML 고대비 인쇄 엔진 적용)
+# 3. 📂 경기관찰선수리스트 (선택된 선수 보고서만 단독 인쇄 엔진 적용)
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기 관찰 선수 리스트 (연도별 시즌 분리)")
@@ -890,7 +890,7 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
                 st.markdown("### 📊 연도별 관찰 선수 요약 목록 (텍스트 보고서 멀티 선택 인쇄)")
-                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 텍스트 보고서 일괄 인쇄]** 버튼을 누르시면 아래쪽까지 완벽하게 진하고 선명하게 출력됩니다.")
+                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 텍스트 보고서 일괄 인쇄]** 버튼을 누르시면 오직 체크한 선수의 보고서만 정확히 출력됩니다.")
                 
                 display_obs_table = grouped.copy()
                 display_obs_table.insert(0, "선택", False)
@@ -907,7 +907,7 @@ elif menu == "📂 경기관찰선수리스트":
                 if not checked_rows.empty:
                     st.write("")
                     
-                    # 🌟 렌더링 누락 방지를 위해 모든 보고서 HTML을 단일 컴포넌트(iframe) 안에 통째로 빌드하여 완벽 출력
+                    # 🌟 인쇄 전용 고립 HTML 빌드 (print-target-section 아이디 부여하여 이 영역만 인쇄되도록 제어)
                     html_reports_content = """
                     <!DOCTYPE html>
                     <html>
@@ -925,6 +925,7 @@ elif menu == "📂 경기관찰선수리스트":
                         </style>
                     </head>
                     <body>
+                    <div id="print-target-section">
                     """
 
                     for _, row in checked_rows.iterrows():
@@ -960,6 +961,7 @@ elif menu == "📂 경기관찰선수리스트":
                         html_reports_content += "</div>"
 
                     html_reports_content += """
+                    </div>
                     </body>
                     </html>
                     """
@@ -976,9 +978,9 @@ elif menu == "📂 경기관찰선수리스트":
                             """, height=0)
 
                     st.markdown("---")
-                    st.markdown("### 📄 [고대비 선명한 보고서 인쇄 미리보기]")
+                    st.markdown("### 📄 [선택한 선수 보고서 인쇄 미리보기]")
                     
-                    # 브라우저 렌더링 누락을 막기 위해 단일 HTML 뷰어로 화면에 전체 출력
+                    # 오직 선택된 보고서 HTML만 렌더링
                     st.components.v1.html(html_reports_content, height=800, scrolling=True)
 
                 st.write("---")
@@ -1019,18 +1021,47 @@ elif menu == "📂 경기관찰선수리스트":
                     selected_player_history = obs_df[(obs_df["관찰연도"] == sel_year) & (obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num)]
                     selected_player_history = selected_player_history.sort_values(by="관찰일자", ascending=False)
 
+                    # 🌟 단일 선택 인쇄 시에도 깔끔하게 인쇄되도록 영역 태그 적용
+                    single_report_html = f"""
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <style>
+                            body {{ font-family: sans-serif; background-color: #ffffff; color: #000000; margin: 0; padding: 10px; }}
+                            .report-box {{ border: 2px solid #000000 !important; background-color: #ffffff !important; padding: 16px; margin-bottom: 15px; border-radius: 6px; }}
+                            .card-header {{ font-weight: 900 !important; color: #000000 !important; font-size: 15px; margin-bottom: 6px; }}
+                            .card-body {{ color: #000000 !important; font-size: 14px; line-height: 1.6; font-weight: 600 !important; margin-top: 6px; }}
+                        </style>
+                    </head>
+                    <body>
+                    <div id="print-target-section">
+                        <div style="font-weight: 900; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #000; padding-bottom: 6px;">
+                            🎯 [{sel_year}시즌] {sel_team} {sel_num} 상세 관찰 히스토리
+                        </div>
+                    """
+
                     for _, h_row in selected_player_history.iterrows():
                         p_val_display = h_row["포지션"]
-                        st.markdown(f"""
-                        <div style="border: 2px solid #000000 !important; background-color: #ffffff !important; padding: 16px; margin-bottom: 15px; border-radius: 6px;">
-                            <div style="font-weight: 900 !important; color: #000000 !important; font-size: 15px; margin-bottom: 6px;">
+                        memo_formatted = str(h_row['메모내용']).replace('\n', '<br>')
+                        single_report_html += f"""
+                        <div class="report-box">
+                            <div class="card-header">
                                 📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']} (당시 포지션: {p_val_display})
                             </div>
-                            <div style="color: #000000 !important; font-size: 14px; line-height: 1.6; font-weight: 600 !important; margin-top: 6px;">
-                                📝 <b>관찰 메모:</b><br>{h_row['메모내용'].replace(chr(10), '<br>')}
+                            <div class="card-body">
+                                📝 <b>관찰 메모:</b><br>{memo_formatted}
                             </div>
                         </div>
-                        """, unsafe_allow_html=True)
+                        """
+
+                    single_report_html += """
+                    </div>
+                    </body>
+                    </html>
+                    """
+
+                    st.components.v1.html(single_report_html, height=500, scrolling=True)
 
                 st.markdown("### 🔥 연도별 관찰 선수 카드 모음")
                 
