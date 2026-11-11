@@ -961,7 +961,7 @@ elif menu == "📂 경기 일지 조회":
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
     st.header("📂 경기 관찰 선수 리스트 (연도별 시즌 분리)")
-    st.caption("연도(시즌)별로 팀명 + 등번호 기준 관찰 횟수와 상세 내역을 집계합니다. (매년 졸업생 및 등번호 변경으로 인한 혼선 방지)")
+    st.caption("연도(시즌)별로 팀명 + 등번호 기준 관찰 횟수와 상세 내역을 집계합니다. (포지션이 달라도 팀과 등번호가 같으면 동일 선수로 집계)")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
@@ -1033,13 +1033,14 @@ elif menu == "📂 경기관찰선수리스트":
             if obs_df.empty:
                 st.warning("🔍 검색 조건에 일치하는 관찰 선수가 없습니다.")
             else:
-                grouped = obs_df.groupby(["관찰연도", "팀명", "등번호", "포지션"]).size().reset_index(name="관찰횟수")
+                # 💡 포지션(포지션별)을 제외하고 [관찰연도, 팀명, 등번호] 기준으로만 그룹화하여 집계
+                grouped = obs_df.groupby(["관찰연도", "팀명", "등번호"]).size().reset_index(name="관찰횟수")
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
                 st.markdown("### 📊 연도별 관찰 선수 요약 목록 (상세 내역을 보려면 아래 표에서 **선수 행을 클릭**하세요)")
                 
                 display_obs_table = grouped.copy()
-                display_obs_table.columns = ["관찰 연도", "소속 팀명", "등번호", "포지션", "누적 관찰 횟수"]
+                display_obs_table.columns = ["관찰 연도", "소속 팀명", "등번호", "누적 관찰 횟수"]
 
                 obs_selection = st.dataframe(
                     display_obs_table,
@@ -1056,17 +1057,18 @@ elif menu == "📂 경기관찰선수리스트":
                     sel_year = sel_row["관찰연도"]
                     sel_team = sel_row["팀명"]
                     sel_num = sel_row["등번호"]
-                    sel_pos = sel_row["포지션"]
 
                     st.write("---")
-                    st.markdown(f"### 🎯 [{sel_year}시즌] {sel_team} {sel_num} ({sel_pos}) 상세 관찰 히스토리")
+                    st.markdown(f"### 🎯 [{sel_year}시즌] {sel_team} {sel_num} 상세 관찰 히스토리")
                     
-                    selected_player_history = obs_df[(obs_df["관찰연도"] == sel_year) & (obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num) & (obs_df["포지션"] == sel_pos)]
+                    # 포지션에 상관없이 팀명과 등번호가 같은 기록들을 모두 불러옴
+                    selected_player_history = obs_df[(obs_df["관찰연도"] == sel_year) & (obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num)]
                     selected_player_history = selected_player_history.sort_values(by="관찰일자", ascending=False)
 
                     for _, h_row in selected_player_history.iterrows():
                         match_raw_content = h_row["raw_content"]
                         match_teams_str = h_row["match_teams"]
+                        p_val_display = h_row["포지션"]
 
                         h_form = "4-3-3"
                         a_form = "4-3-3"
@@ -1105,7 +1107,7 @@ elif menu == "📂 경기관찰선수리스트":
                         st.markdown(f"""
                         <div style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 15px;">
                             <div style="font-weight: bold; color: #1e293b; font-size: 15px; margin-bottom: 6px;">
-                                📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']}
+                                📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']} <span style="color: #2563EB; font-size: 13px;">(당시 포지션: {p_val_display})</span>
                             </div>
                             <div style="color: #334155; font-size: 13px; margin-bottom: 10px;">
                                 📝 <b>관찰 메모:</b> {h_row['메모내용']}
@@ -1128,7 +1130,6 @@ elif menu == "📂 경기관찰선수리스트":
                     g_year = g_row["관찰연도"]
                     g_team = g_row["팀명"]
                     g_num = g_row["등번호"]
-                    g_pos = g_row["포지션"]
                     g_count = g_row["관찰횟수"]
 
                     if g_count >= 3:
@@ -1138,16 +1139,16 @@ elif menu == "📂 경기관찰선수리스트":
                         box_style = "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px; margin-bottom: 12px;"
                         badge_html = f'<span style="background-color: #64748B; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;">관찰 횟수: {g_count}회</span>'
 
-                    player_sub_df = obs_df[(obs_df["관찰연도"] == g_year) & (obs_df["팀명"] == g_team) & (obs_df["등번호"] == g_num) & (obs_df["포지션"] == g_pos)]
+                    player_sub_df = obs_df[(obs_df["관찰연도"] == g_year) & (obs_df["팀명"] == g_team) & (obs_df["등번호"] == g_num)]
                     
                     history_html = ""
                     for _, sub_r in player_sub_df.iterrows():
-                        history_html += f"<div style='font-size: 12px; color: #334155; margin-top: 4px;'>• [{sub_r['관찰일자']}] {sub_r['대회/경기']} — <i>{sub_r['메모내용']}</i></div>"
+                        history_html += f"<div style='font-size: 12px; color: #334155; margin-top: 4px;'>• [{sub_r['관찰일자']}] {sub_r['대회/경기']} <span style='color: #64748B; font-size: 11px;'>(포지션: {sub_r['포지션']})</span> — <i>{sub_r['메모내용']}</i></div>"
 
                     card_html = f"""
                     <div style="{box_style}">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <b style="font-size: 16px; color: #0f172a;">⚽ [{g_year}] {g_team} {g_num} ({g_pos})</b>
+                            <b style="font-size: 16px; color: #0f172a;">⚽ [{g_year}] {g_team} {g_num}</b>
                             {badge_html}
                         </div>
                         {history_html}
