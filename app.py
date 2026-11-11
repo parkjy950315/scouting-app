@@ -11,7 +11,7 @@ from datetime import datetime
 st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 PC & 모바일 반응형 최적화 스타일 설정 (인쇄 스타일 포함)
+# 📱 PC & 모바일 반응형 및 깔끔한 인쇄 전용 CSS 스타일 설정
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -41,11 +41,12 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 🖨️ 인쇄 시 불필요한 UI 완벽 숨기고 리포트만 출력 */
+    /* 🖨️ 인쇄 및 PDF 저장 시 완벽한 정돈 및 가독성 최적화 */
     @media print {
         body {
             background: white !important;
             color: black !important;
+            font-family: sans-serif !important;
         }
         [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame, div[data-testid="stToolbar"] {
             display: none !important;
@@ -53,6 +54,15 @@ st.markdown("""
         .block-container {
             padding: 0 !important;
             max-width: 100% !important;
+        }
+        /* 인쇄 시 리포트 박스가 잘리지 않고 깔끔하게 정돈되도록 설정 */
+        div[style*="border"] {
+            border: 1px solid #94a3b8 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            background-color: #ffffff !important;
+            box-shadow: none !important;
+            margin-bottom: 20px !important;
         }
     }
 
@@ -94,7 +104,6 @@ st.markdown("""
             flex: 1 !important;
             min-width: 0 !important;
         }
-        /* Metric 값 글씨 크기를 줄여서 ... 방지 */
         [data-testid="stMetricValue"] {
             font-size: 13px !important;
             word-break: break-all !important;
@@ -1052,7 +1061,7 @@ elif menu == "📂 경기관찰선수리스트":
                 grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
 
                 st.markdown("### 📊 연도별 관찰 선수 요약 목록 (멀티 선택 인쇄 지원)")
-                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 일괄 인쇄 / PDF 저장]** 버튼을 누르시면 해당 선수들의 리포트가 깔끔하게 인쇄됩니다.")
+                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 여러 명 선택**한 뒤, 하단의 **[🖨️ 선택 선수 일괄 인쇄 / PDF 저장]** 버튼을 누르시면 해당 선수들의 리포트가 깔끔하게 정돈되어 인쇄됩니다.")
                 
                 # 🖨️ 멀티 인쇄를 위한 선택 컬럼 추가
                 display_obs_table = grouped.copy()
@@ -1071,7 +1080,6 @@ elif menu == "📂 경기관찰선수리스트":
                 if not checked_rows.empty:
                     st.write("")
                     
-                    # 🖨️ 스트림릿 고유의 st.button과 자바스크립트 window.print()를 결합하여 안정적인 인쇄 구현
                     col_info_p, col_btn_p = st.columns([3, 1])
                     with col_info_p:
                         st.info(f"📌 총 **{len(checked_rows)}명**의 선수가 선택되었습니다. 아래 인쇄 버튼을 누르세요.")
@@ -1092,9 +1100,9 @@ elif menu == "📂 경기관찰선수리스트":
                         b_num = row["등번호"]
 
                         st.markdown(f"""
-                        <div style="border: 2px solid #2563EB; border-radius: 10px; padding: 20px; margin-bottom: 30px; background-color: #ffffff; page-break-after: always;">
-                            <h2 style="color: #1e293b; margin-top: 0; border-bottom: 2px solid #cbd5e1; padding-bottom: 10px; font-size: 20px;">
-                                🎯 [{b_year}시즌] {b_team} {b_num} 관찰 리포트
+                        <div style="border: 2px solid #2563EB; border-radius: 12px; padding: 24px; margin-bottom: 35px; background-color: #ffffff; page-break-after: always; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                            <h2 style="color: #0f172a; margin-top: 0; border-bottom: 3px solid #2563EB; padding-bottom: 12px; font-size: 22px; font-weight: 800;">
+                                🎯 [{b_year}시즌] {b_team} {b_num} 관찰 종합 리포트
                             </h2>
                         """, unsafe_allow_html=True)
 
@@ -1141,12 +1149,12 @@ elif menu == "📂 경기관찰선수리스트":
                                 a_t_name = parts[1].replace(" (어웨이)", "").strip()
 
                             st.markdown(f"""
-                            <div style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 15px;">
-                                <div style="font-weight: bold; color: #1e293b; font-size: 14px; margin-bottom: 6px;">
-                                    📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']} <span style="color: #2563EB;">(당시 포지션: {p_val_display})</span>
+                            <div style="background-color: #f8fafc; border-left: 5px solid #2563EB; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 18px;">
+                                <div style="font-weight: bold; color: #1e293b; font-size: 15px; margin-bottom: 8px;">
+                                    📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']} <span style="color: #2563EB; font-weight: 700;">(당시 포지션: {p_val_display})</span>
                                 </div>
-                                <div style="color: #334155; font-size: 13px; line-height: 1.5;">
-                                    📝 <b>관찰 메모:</b> {h_row['메모내용']}
+                                <div style="color: #334155; font-size: 14px; line-height: 1.6;">
+                                    📝 <b>관찰 메모:</b><br>{h_row['메모내용'].replace(chr(10), '<br>')}
                                 </div>
                             </div>
                             """, unsafe_allow_html=True)
@@ -1242,7 +1250,7 @@ elif menu == "📂 경기관찰선수리스트":
                                 📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']} <span style="color: #2563EB; font-size: 13px;">(당시 포지션: {p_val_display})</span>
                             </div>
                             <div style="color: #334155; font-size: 13px; margin-bottom: 10px;">
-                                📝 <b>관찰 메모:</b> {h_row['메모내용']}
+                                📝 <b>관찰 메모:</b><br>{h_row['메모내용'].replace(chr(10), '<br>')}
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
