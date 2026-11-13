@@ -124,5 +124,4 @@ def display_logo():
     st.sidebar.markdown(logo_html, unsafe_allow_html=True)
     st.markdown(logo_html, unsafe_allow_html=True)
 
-def calculate_age(born_date):
-    if not born_date:
+def calculate_age(born_date): return ("", "") if not born_date else (f"만 {datetime.today().year - born_date.year - ((datetime.today().month, datetime.today().day) < (born_date.month, born_date.day))}세", f"{datetime.today().year - born_date.year}세")
