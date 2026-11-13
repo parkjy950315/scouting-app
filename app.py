@@ -125,4 +125,4 @@ def display_logo():
     st.markdown(logo_html, unsafe_allow_html=True)
 
 def calculate_age(born_date):
-    if not born_date:
+    today = datetime.today()
