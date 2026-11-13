@@ -9,7 +9,7 @@ from datetime import datetime
 st.set_page_config(page_title="선수 스카우팅 관리 시스템", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 모바일 포메이션 시각화 및 인쇄 공통 CSS 스타일 수정
+# 📱 모바일 및 PC 포메이션 가로 정렬 고정 CSS 스타일
 # ----------------------------------------------------
 st.markdown("""
     <style>
@@ -23,14 +23,29 @@ st.markdown("""
         padding-top: 2.5rem !important;
     }
     
-    /* ⚽ 포메이션 번호 입력 박스 일자 나열 방지 및 그라운드 그리드 고정 */
+    /* ⚽ 포메이션 번호 입력 칸 화살표 제거 및 정렬 */
     div[data-testid="stNumberInput"] button {
         display: none !important;
     }
     div[data-testid="stNumberInput"] input {
         text-align: center !important;
-        padding: 4px 2px !important;
+        padding: 6px 2px !important;
         font-weight: bold !important;
+        font-size: 14px !important;
+    }
+
+    /* 📱 모바일/PC 공용 포메이션 가로 배치 Flexbox 스타일 */
+    .formation-row {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        width: 100%;
+    }
+    .formation-col {
+        flex: 1;
+        min-width: 0;
     }
 
     /* 🖨️ 인쇄 시 사이드바 및 UI 요소를 100% 숨기고 오직 보고서 카드만 출력 */
@@ -325,7 +340,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    st.subheader("⚡ 포메이션별 등번호 입력 (그라운드 배치)")
+    st.subheader("⚡ 포메이션별 등번호 입력 (그라운드 가로 배치)")
 
     formation_layouts = {
         "4-3-3": [
@@ -387,16 +402,19 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         display_sub_name = team_name.strip() if team_name.strip() else ("홈팀" if prefix == "home" else "어웨이팀")
         prefix_icon = "🏠" if prefix == "home" else "✈️"
         
-        # 🟢 그라운드 스타일 박스로 감싸서 모바일에서도 가로 정렬이 깨지지 않도록 고정
-        st.markdown(f"""
-        <div style="background-color: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 15px;">
-            <div style="font-size: 16px; font-weight: 900; color: #0f172a; margin-bottom: 12px; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px;">
+        # 🟢 HTML 플렉스박스를 활용해 모바일에서도 가로 정렬 강제 고정
+        grid_html = f"""
+        <div style="background-color: #f8fafc; border: 2px solid #cbd5e1; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <div style="font-size: 16px; font-weight: 900; color: #0f172a; margin-bottom: 12px; border-bottom: 2px solid #94a3b8; padding-bottom: 6px;">
                 {prefix_icon} {display_sub_name} <span style="font-size: 13px; color: #2563eb; font-weight: 700;">({formation_name})</span>
             </div>
-        """, unsafe_allow_html=True)
+        """
+        st.markdown(grid_html, unsafe_allow_html=True)
 
         for row in layout:
-            st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 8px; margin-bottom: 4px;'>📍 {row['line']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size: 12px; font-weight: bold; color: #475569; margin-top: 10px; margin-bottom: 4px;'>📍 {row['line']}</div>", unsafe_allow_html=True)
+            
+            # 수동으로 가로 배치 HTML 및 Streamlit 입력창 결합
             cols = st.columns(len(row['positions']))
             for idx, pos in enumerate(row['positions']):
                 key_name = f"{prefix}_{pos}"
