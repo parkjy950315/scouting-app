@@ -3,101 +3,90 @@ import pandas as pd
 import requests
 import io
 import re
+import os
+import base64
 from datetime import datetime
 
-# 페이지 기본 설정 (와이드 레이아웃)
-st.set_page_config(page_title="선수 스카우팅 관리 시스템", page_icon="⚽", layout="wide")
+# 페이지 기본 설정
+st.set_page_config(page_title="선수 스카우팅 DB", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 모바일 및 PC 포메이션 가로 정렬 고정 CSS 스타일
+# 📱 PC & 모바일 반응형 최적화 스타일 설정
 # ----------------------------------------------------
 st.markdown("""
     <style>
     .block-container {
         padding-top: 2rem !important;
         padding-bottom: 3rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
     }
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 2.5rem !important;
     }
+    [data-testid="stSidebar"] .stRadio label {
+        padding: 14px 18px !important;
+        margin-bottom: 10px !important;
+        border-radius: 12px;
+        background-color: rgba(255, 255, 255, 0.08);
+        cursor: pointer;
+    }
     
-    /* ⚽ 포메이션 번호 입력 칸 화살표 제거 및 정렬 */
     div[data-testid="stNumberInput"] button {
         display: none !important;
     }
     div[data-testid="stNumberInput"] input {
         text-align: center !important;
-        padding: 6px 2px !important;
+        padding: 4px 6px !important;
         font-weight: bold !important;
-        font-size: 14px !important;
     }
 
-    /* 📱 모바일/PC 공용 포메이션 가로 배치 Flexbox 스타일 */
-    .formation-row {
-        display: flex;
-        flex-direction: row;
-        justify-content: center;
-        gap: 8px;
-        margin-bottom: 8px;
-        width: 100%;
-    }
-    .formation-col {
-        flex: 1;
-        min-width: 0;
-    }
-
-    /* 🖨️ 인쇄 시 사이드바 및 UI 요소를 100% 숨기고 오직 보고서 카드만 출력 */
-    @media print {
-        * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+    @media (max-width: 768px) {
+        [data-testid="stSidebar"] {
+            min-width: 290px !important;
+            max-width: 330px !important;
         }
-        body {
-            background-color: #ffffff !important;
-            color: #000000 !important;
+        [data-testid="stSidebar"] .stRadio label p {
+            font-size: 18px !important;
+            font-weight: 700 !important;
         }
-        [data-testid="stSidebar"], header, footer, .stButton, .stTextInput, .stSelectbox, .stDataFrame, div[data-testid="stToolbar"] {
-            display: none !important;
+        [data-testid="stSidebar"] button {
+            padding: 14px 18px !important;
+            font-size: 17px !important;
         }
-        .block-container {
-            padding: 0 !important;
-            max-width: 100% !important;
+        h1 {
+            font-size: 19px !important;
+            margin-top: 5px !important;
+            margin-bottom: 12px !important;
         }
-        .scouting-report-card {
-            border: 2px solid #000000 !important;
-            box-shadow: none !important;
-            page-break-after: always;
-            break-after: page;
-            margin-bottom: 0 !important;
+        h2 {
+            font-size: 17px !important;
+            margin-top: 8px !important;
+            margin-bottom: 10px !important;
+            word-break: keep-all !important;
+        }
+        h3 {
+            font-size: 14px !important;
+            word-break: keep-all !important;
+        }
+        [data-testid="stHorizontalBlock"] {
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            gap: 4px !important;
+        }
+        [data-testid="stHorizontalBlock"] > div {
+            flex: 1 !important;
+            min-width: 0 !important;
         }
     }
-
-    /* 📄 보고서 카드 디자인 */
-    .scouting-report-card {
-        border: 3px solid #0f172a;
-        padding: 40px;
-        margin-bottom: 40px;
-        background-color: #ffffff;
-        color: #000000;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-    .report-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        border-bottom: 3px solid #0f172a;
-        padding-bottom: 15px;
-        margin-bottom: 20px;
-    }
-    .history-box {
-        border: 2px solid #cbd5e1;
-        padding: 18px;
-        margin-bottom: 16px;
-        background-color: #f8fafc;
-        border-radius: 8px;
+    @media (min-width: 769px) {
+        [data-testid="stSidebar"] {
+            min-width: 260px;
+            max-width: 300px;
+        }
+        [data-testid="stSidebar"] .stRadio label p {
+            font-size: 15px !important;
+        }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -249,6 +238,7 @@ def parse_team_info(team_str):
         return current_team, past_teams
     return team_str, ""
 
+# 🔍 통합 팀 마스터 리스트 생성 (기본 마스터 + 시트 등록 팀 + 임시 메모 팀 합치기)
 def get_combined_teams_list(df_data):
     teams_set = set(DEFAULT_TEAM_MASTER_LIST)
     for _, r in df_data.iterrows():
@@ -267,6 +257,148 @@ def get_combined_teams_list(df_data):
 
 df = load_data()
 all_teams_master = get_combined_teams_list(df)
+
+formation_layouts = {
+    "4-3-3": [
+        {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
+        {"line": "MF LINE", "positions": ["LCM", "CDM", "RCM"]},
+        {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
+        {"line": "GK LINE", "positions": ["GK"]}
+    ],
+    "4-4-2": [
+        {"line": "FW LINE", "positions": ["ST1", "ST2"]},
+        {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
+        {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
+        {"line": "GK LINE", "positions": ["GK"]}
+    ],
+    "4-2-3-1": [
+        {"line": "FW LINE", "positions": ["ST"]},
+        {"line": "AM LINE", "positions": ["LAM", "CAM", "RAM"]},
+        {"line": "DM LINE", "positions": ["LDM", "RDM"]},
+        {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
+        {"line": "GK LINE", "positions": ["GK"]}
+    ],
+    "3-4-3": [
+        {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
+        {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
+        {"line": "DF LINE", "positions": ["LCB", "CB", "RCB"]},
+        {"line": "GK LINE", "positions": ["GK"]}
+    ],
+    "3-5-2": [
+        {"line": "FW LINE", "positions": ["ST1", "ST2"]},
+        {"line": "MF LINE", "positions": ["LWB", "LCM", "CDM", "RCM", "RWB"]},
+        {"line": "DF LINE", "positions": ["LCB", "CB", "RCB"]},
+        {"line": "GK LINE", "positions": ["GK"]}
+    ],
+    "5-3-2": [
+        {"line": "FW LINE", "positions": ["ST1", "ST2"]},
+        {"line": "MF LINE", "positions": ["LCM", "CM", "RCM"]},
+        {"line": "DF LINE", "positions": ["LWB", "LCB", "CB", "RCB", "RWB"]},
+        {"line": "GK LINE", "positions": ["GK"]}
+    ],
+    "5-4-1": [
+        {"line": "FW LINE", "positions": ["ST"]},
+        {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
+        {"line": "DF LINE", "positions": ["LWB", "LCB", "CB", "RCB", "RWB"]},
+        {"line": "GK LINE", "positions": ["GK"]}
+    ]
+}
+
+# ⚽ 모바일/PC 반응형 그라운드 피치 렌더러
+def render_pitch_graphic_from_saved(team_name, formation_name, num_dict):
+    display_team_name = team_name if team_name else "팀명 미입력"
+    layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
+    
+    rows_html = ""
+    for row in layout:
+        rows_html += f"<div style='color:#e2e8f0; font-weight:600; font-size:8px; letter-spacing: 0.5px; margin-bottom:1px; text-transform: uppercase; text-align: center;'>📍 {row['line']}</div>"
+        rows_html += "<div class='pitch-row'>"
+        for pos in row['positions']:
+            assigned_num = num_dict.get(pos, "")
+            display_num = assigned_num if assigned_num else "-"
+            rows_html += f"""
+            <div class="player-node">
+                <span class="pos-text">{pos}</span>
+                <span class="num-text">{display_num}</span>
+            </div>
+            """
+        rows_html += "</div>"
+
+    complete_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        .pitch-container {{
+            background: linear-gradient(135deg, #1b4d3e 0%, #2e8b57 50%, #227b4f 100%);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 14px;
+            padding: 8px 4px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25), inset 0 0 15px rgba(255,255,255,0.1);
+            margin-bottom: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            font-family: sans-serif;
+        }}
+        .pitch-header {{
+            text-align: center;
+            color: #38bdf8;
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            padding-bottom: 2px;
+        }}
+        .pitch-row {{
+            display: flex;
+            justify-content: center;
+            gap: 3px;
+            margin-bottom: 3px;
+            flex-wrap: nowrap;
+            width: 100%;
+        }}
+        .player-node {{
+            background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.95);
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }}
+        .pos-text {{
+            font-size: 5.5px;
+            color: #fecaca;
+            font-weight: 700;
+            line-height: 1;
+        }}
+        .num-text {{
+            font-size: 9.5px;
+            color: #ffffff;
+            font-weight: 900;
+            line-height: 1.1;
+        }}
+    </style>
+    </head>
+    <body>
+        <div class="pitch-container">
+            <div class="pitch-header">
+                🏟️ {display_team_name} <span style="color: #cbd5e1; font-size: 9px; font-weight: normal;">({formation_name})</span>
+            </div>
+            {rows_html}
+        </div>
+    </body>
+    </html>
+    """
+    import streamlit.components.v1 as components
+    components.html(complete_html, height=340, scrolling=False)
 
 display_logo()
 
@@ -292,101 +424,59 @@ menu = st.sidebar.radio("이동할 메뉴", [
 ])
 
 # ----------------------------------------------------
-# 1. 🏟️ 현장 경기 관찰 메모
+# 1. 🏟️ 현장 경기 관찰 메모 (네이버식 연관검색/자동완성 완벽 구현)
 # ----------------------------------------------------
 if menu == "🏟️ 현장 경기 관찰 메모":
     st.header("🏟️ 현장 경기 관찰 메모장")
-    st.caption("📱 화면이 꺼지거나 새로고침되어도 작성 중인 내용이 지워지지 않도록 실시간 임시 보존됩니다.")
-
-    if "draft_tournament" in st.session_state or "draft_general_memo" in st.session_state:
-        st.info("💡 **작성 중이던 메모가 안전하게 유지되고 있습니다.** (모두 지우고 새로 작성하려면 아래 '초기화' 버튼을 클릭하세요)")
-        if st.button("🧹 작성 중인 내용 완전히 초기화하기", type="secondary"):
-            for key in list(st.session_state.keys()):
-                if key.startswith("draft_") or key.startswith("home_") or key.startswith("away_") or key.startswith("text_memo_") or key.startswith("chk_memo_"):
-                    del st.session_state[key]
-            st.rerun()
+    st.caption("팀명 입력창에 'FC'나 학교이름 일부만 적어도 일치하는 팀들이 밑으로 쭈르륵 연관 검색어처럼 자동 완성됩니다!")
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
-        match_date = st.date_input("경기 일자", value=st.session_state.get("draft_match_date", datetime.today()), key="draft_match_date")
+        match_date = st.date_input("경기 일자", value=datetime.today())
     with col_m2:
-        tournament_name = st.text_input("대회 이름", value=st.session_state.get("draft_tournament", ""), placeholder="예: 금석배 U18, 대통령배 등", key="draft_tournament")
+        tournament_name = st.text_input("대회 이름", placeholder="예: 금석배 U18, 대통령배 등")
 
     st.write("---")
 
     col_t1, col_t2 = st.columns(2)
     
+    # 🔍 네이버 검색처럼 글자 입력 시 일치하는 팀들이 밑으로 쭈르륵 뜨는 연관검색 구현
     with col_t1:
         st.markdown("**🏠 홈팀 명***")
-        home_keyword = st.text_input("홈팀 검색 키워드", value=st.session_state.get("draft_home_keyword", ""), placeholder="예: FC, 매탄, 보인 등 입력", key="draft_home_keyword")
+        home_keyword = st.text_input("홈팀 검색 키워드", value="", placeholder="예: FC, 매탄, 보인 등 입력", key="home_keyword_input")
+        
+        # 키워드가 포함된 팀들만 실시간으로 필터링
         filtered_home_teams = [t for t in all_teams_master if home_keyword.strip().lower() in t.lower()] if home_keyword.strip() else all_teams_master
         
-        home_team = st.selectbox("홈팀 선택 (검색 결과)", options=["직접 입력 또는 선택하세요"] + filtered_home_teams, key="draft_home_selectbox")
+        home_team = st.selectbox(
+            "홈팀 선택 (검색 결과)",
+            options=["직접 입력 또는 선택하세요"] + filtered_home_teams,
+            key="home_team_selectbox"
+        )
         if home_team == "직접 입력 또는 선택하세요":
             home_team = home_keyword.strip()
 
-        home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="draft_home_form")
+        home_formation = st.selectbox("홈팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="home_form")
 
     with col_t2:
         st.markdown("**✈️ 어웨이팀 명***")
-        away_keyword = st.text_input("어웨이팀 검색 키워드", value=st.session_state.get("draft_away_keyword", ""), placeholder="예: 현대, 신평, FC 등 입력", key="draft_away_keyword")
+        away_keyword = st.text_input("어웨이팀 검색 키워드", value="", placeholder="예: 현대, 신평, FC 등 입력", key="away_keyword_input")
+        
         filtered_away_teams = [t for t in all_teams_master if away_keyword.strip().lower() in t.lower()] if away_keyword.strip() else all_teams_master
         
-        away_team = st.selectbox("어웨이팀 선택 (검색 결과)", options=["직접 입력 또는 선택하세요"] + filtered_away_teams, key="draft_away_selectbox")
+        away_team = st.selectbox(
+            "어웨이팀 선택 (검색 결과)",
+            options=["직접 입력 또는 선택하세요"] + filtered_away_teams,
+            key="away_team_selectbox"
+        )
         if away_team == "직접 입력 또는 선택하세요":
             away_team = away_keyword.strip()
 
-        away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="draft_away_form")
+        away_formation = st.selectbox("어웨이팀 포메이션", ["4-3-3", "4-4-2", "4-2-3-1", "3-4-3", "3-5-2", "5-3-2", "5-4-1"], key="away_form")
 
     st.write("---")
 
-    st.subheader("⚡ 포메이션별 등번호 입력 (그라운드 가로 배치)")
-
-    formation_layouts = {
-        "4-3-3": [
-            {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
-            {"line": "MF LINE", "positions": ["LCM", "CDM", "RCM"]},
-            {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
-            {"line": "GK LINE", "positions": ["GK"]}
-        ],
-        "4-4-2": [
-            {"line": "FW LINE", "positions": ["ST1", "ST2"]},
-            {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
-            {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
-            {"line": "GK LINE", "positions": ["GK"]}
-        ],
-        "4-2-3-1": [
-            {"line": "FW LINE", "positions": ["ST"]},
-            {"line": "AM LINE", "positions": ["LAM", "CAM", "RAM"]},
-            {"line": "DM LINE", "positions": ["LDM", "RDM"]},
-            {"line": "DF LINE", "positions": ["LB", "LCB", "RCB", "RB"]},
-            {"line": "GK LINE", "positions": ["GK"]}
-        ],
-        "3-4-3": [
-            {"line": "FW LINE", "positions": ["LW", "CF", "RW"]},
-            {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
-            {"line": "DF LINE", "positions": ["LCB", "CB", "RCB"]},
-            {"line": "GK LINE", "positions": ["GK"]}
-        ],
-        "3-5-2": [
-            {"line": "FW LINE", "positions": ["ST1", "ST2"]},
-            {"line": "MF LINE", "positions": ["LWB", "LCM", "CDM", "RCM", "RWB"]},
-            {"line": "DF LINE", "positions": ["LCB", "CB", "RCB"]},
-            {"line": "GK LINE", "positions": ["GK"]}
-        ],
-        "5-3-2": [
-            {"line": "FW LINE", "positions": ["ST1", "ST2"]},
-            {"line": "MF LINE", "positions": ["LCM", "CM", "RCM"]},
-            {"line": "DF LINE", "positions": ["LWB", "LCB", "CB", "RCB", "RWB"]},
-            {"line": "GK LINE", "positions": ["GK"]}
-        ],
-        "5-4-1": [
-            {"line": "FW LINE", "positions": ["ST"]},
-            {"line": "MF LINE", "positions": ["LM", "LCM", "RCM", "RM"]},
-            {"line": "DF LINE", "positions": ["LWB", "LCB", "CB", "RCB", "RWB"]},
-            {"line": "GK LINE", "positions": ["GK"]}
-        ]
-    }
+    st.subheader("⚡ 등번호 입력")
 
     def render_team_interactive_grid(team_name, formation_name, prefix):
         layout = formation_layouts.get(formation_name, formation_layouts["4-3-3"])
@@ -399,22 +489,23 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             if p not in valid_positions and k in st.session_state:
                 del st.session_state[k]
 
+        nums_dict = {}
+        for pos in valid_positions:
+            key_name = f"{prefix}_{pos}"
+            val = st.session_state.get(key_name, None)
+            val_str = str(val) if val is not None else ""
+            nums_dict[pos] = val_str
+            if val_str.strip():
+                team_entered_numbers[pos] = val_str.strip()
+
+        render_pitch_graphic_from_saved(team_name, formation_name, nums_dict)
+        
         display_sub_name = team_name.strip() if team_name.strip() else ("홈팀" if prefix == "home" else "어웨이팀")
         prefix_icon = "🏠" if prefix == "home" else "✈️"
-        
-        # 🟢 HTML 플렉스박스를 활용해 모바일에서도 가로 정렬 강제 고정
-        grid_html = f"""
-        <div style="background-color: #f8fafc; border: 2px solid #cbd5e1; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-            <div style="font-size: 16px; font-weight: 900; color: #0f172a; margin-bottom: 12px; border-bottom: 2px solid #94a3b8; padding-bottom: 6px;">
-                {prefix_icon} {display_sub_name} <span style="font-size: 13px; color: #2563eb; font-weight: 700;">({formation_name})</span>
-            </div>
-        """
-        st.markdown(grid_html, unsafe_allow_html=True)
+        st.markdown(f"**{prefix_icon} {display_sub_name}**")
 
         for row in layout:
-            st.markdown(f"<div style='font-size: 12px; font-weight: bold; color: #475569; margin-top: 10px; margin-bottom: 4px;'>📍 {row['line']}</div>", unsafe_allow_html=True)
-            
-            # 수동으로 가로 배치 HTML 및 Streamlit 입력창 결합
+            st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 6px; margin-bottom: 2px;'>{row['line']}</div>", unsafe_allow_html=True)
             cols = st.columns(len(row['positions']))
             for idx, pos in enumerate(row['positions']):
                 key_name = f"{prefix}_{pos}"
@@ -431,7 +522,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     if val_num is not None:
                         team_entered_numbers[pos] = str(int(val_num))
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.write("")
         return team_entered_numbers
 
     pitch_col1, pitch_col2 = st.columns(2)
@@ -458,7 +549,17 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         if active_home_pos:
             for pos, num in active_home_pos.items():
                 chk_key = f"chk_memo_home_{pos}"
-                is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", key=chk_key)
+                
+                matched_player_info = ""
+                official_mask = df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"
+                for _, r in df[official_mask].iterrows():
+                    r_team, _ = parse_team_info(r.get("소속팀", ""))
+                    r_num = str(r.get("등번호", "")).strip()
+                    if h_display_label.lower() in r_team.lower() and str(num) == r_num:
+                        matched_player_info = f" (👤 등록선수: {r.get('선수명')})"
+                        break
+
+                is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모{matched_player_info}", key=chk_key)
                 if is_checked:
                     text_key = f"text_memo_home_{pos}"
                     note_val = st.text_area(f"[{pos}] {num}번 세부 관찰 기록", placeholder=f"[{pos}] {num}번 선수의 플레이 장점, 특징 등을 적어주세요...", key=text_key, height=90)
@@ -473,7 +574,17 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         if active_away_pos:
             for pos, num in active_away_pos.items():
                 chk_key = f"chk_memo_away_{pos}"
-                is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", key=chk_key)
+                
+                matched_player_info = ""
+                official_mask = df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"
+                for _, r in df[official_mask].iterrows():
+                    r_team, _ = parse_team_info(r.get("소속팀", ""))
+                    r_num = str(r.get("등번호", "")).strip()
+                    if a_display_label.lower() in r_team.lower() and str(num) == r_num:
+                        matched_player_info = f" (👤 등록선수: {r.get('선수명')})"
+                        break
+
+                is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모{matched_player_info}", key=chk_key)
                 if is_checked:
                     text_key = f"text_memo_away_{pos}"
                     note_val = st.text_area(f"[{pos}] {num}번 세부 관찰 기록", placeholder=f"[{pos}] {num}번 선수의 플레이 장점, 특징 등을 적어주세요...", key=text_key, height=90)
@@ -487,9 +598,8 @@ if menu == "🏟️ 현장 경기 관찰 메모":
     st.subheader("📋 종합 메모")
     general_memo = st.text_area(
         "", 
-        value=st.session_state.get("draft_general_memo", ""),
         placeholder="[예시]\n- 교체선수\n- 경기양상\n- 스코어\n- 등",
-        key="draft_general_memo",
+        key="general_match_memo_input",
         height=140,
         label_visibility="collapsed"
     )
@@ -499,7 +609,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
         if not home_team.strip() or not away_team.strip():
             st.error("홈팀 명과 어웨이팀 명은 필수 입력 항목입니다. 팀 이름을 입력해 주세요.")
         else:
-            with st.spinner("구글 시트에 현장 메모를 저장하는 중..."):
+            with st.spinner("구글 시트에 현장 메모를 저장하고 정식 등록 선수와 자동 연동하는 중..."):
                 home_valid_positions = [pos for row in formation_layouts[home_formation] for pos in row['positions']]
                 away_valid_positions = [pos for row in formation_layouts[away_formation] for pos in row['positions']]
 
@@ -516,6 +626,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                         player_notes_formatted += f"- {p_label}:\n  {p_note}\n"
 
                 t_name_prefix = f"[{tournament_name}] " if tournament_name.strip() else ""
+                
                 timestamp_id = datetime.now().strftime('%H%M%S')
                 memo_player_name = f"{t_name_prefix}{home_team.strip()} vs {away_team.strip()} (타임:{timestamp_id})"
                 memo_team = f"{home_team.strip()} (홈) vs {away_team.strip()} (어웨이)"
@@ -547,14 +658,39 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     "작성일자": str(match_date)
                 }
 
-                updated_df = pd.concat([df, pd.DataFrame([new_memo_data])], ignore_index=True) if not df.empty else pd.DataFrame([new_memo_data])
+                working_df = df.copy()
+                if player_specific_memos:
+                    for p_label, p_note in player_specific_memos.items():
+                        is_home = "홈" in p_label
+                        target_team_str = home_team.strip() if is_home else away_team.strip()
+                        
+                        num_match = re.search(r'(\d+)번', p_label)
+                        if num_match:
+                            target_num = num_match.group(1)
+                            official_mask = working_df["진행 상태"].str.strip() != "현장 관찰 메모 (임시)"
+                            
+                            for idx, row in working_df[official_mask].iterrows():
+                                row_team, _ = parse_team_info(row.get("소속팀", ""))
+                                row_num = str(row.get("등번호", "")).strip()
+                                
+                                if target_team_str.lower() in row_team.lower() and target_num == row_num:
+                                    old_overall = str(row.get("종합 평가", ""))
+                                    t_str = str(match_date)
+                                    match_label_str = tournament_name.strip() if tournament_name.strip() else "현장 관찰"
+                                    
+                                    new_auto_note = f"\n\n[{t_str} {match_label_str} 자동 연동]\n{p_note.strip()}"
+                                    working_df.loc[idx, "종합 평가"] = (old_overall + new_auto_note).strip()
+
+                updated_df = pd.concat([working_df, pd.DataFrame([new_memo_data])], ignore_index=True) if not working_df.empty else pd.DataFrame([new_memo_data])
                 
                 if save_data_to_sheet(updated_df):
-                    for key in list(st.session_state.keys()):
-                        if key.startswith("draft_") or key.startswith("home_") or key.startswith("away_") or key.startswith("text_memo_") or key.startswith("chk_memo_"):
-                            del st.session_state[key]
+                    for p in ["LW", "CF", "RW", "ST1", "ST2", "ST", "LM", "LCM", "CM", "RCM", "RM", "LAM", "CAM", "RAM", "LDM", "RDM", "CDM", "LB", "LCB", "CB", "RCB", "RB", "LWB", "RWB", "GK"]:
+                        if f"home_{p}" in st.session_state:
+                            del st.session_state[f"home_{p}"]
+                        if f"away_{p}" in st.session_state:
+                            del st.session_state[f"away_{p}"]
                     
-                    st.success("🎉 현장 경기 관찰 메모가 연도별 시즌에 맞추어 성공적으로 저장되었습니다!")
+                    st.success("🎉 현장 경기 관찰 메모 저장 및 정식 등록 선수 관찰일지 자동 연동이 완료되었습니다!")
                     st.balloons()
 
 # ----------------------------------------------------
@@ -674,6 +810,21 @@ elif menu == "📂 경기 일지 조회":
                                 lines = clean_content.split("\n")
                                 clean_content = "\n".join([l for l in lines if not tag in l])
 
+                        st.markdown("### 🏟️ 당시 경기 그라운드 포메이션 & 등번호 시각화")
+                        p_col1, p_col2 = st.columns(2)
+                        
+                        h_team_name = "홈팀"
+                        a_team_name = "어웨이팀"
+                        if " vs " in match_teams:
+                            parts = match_teams.split(" vs ")
+                            h_team_name = parts[0].replace(" (홈)", "").strip()
+                            a_team_name = parts[1].replace(" (어웨이)", "").strip()
+
+                        with p_col1:
+                            render_pitch_graphic_from_saved(h_team_name, home_form, home_nums)
+                        with p_col2:
+                            render_pitch_graphic_from_saved(a_team_name, away_form, away_nums)
+
                         st.markdown("---")
                         st.markdown("**📝 현재 저장된 상세 관찰 기록 및 선수별 메모**")
                         st.info(clean_content)
@@ -703,9 +854,6 @@ elif menu == "📂 경기 일지 조회":
                                     parsed_pos_memos[clean_header] = clean_content_val
 
                         st.markdown("---")
-                        h_team_name = match_teams.split(" vs ")[0].replace(" (홈)", "").strip() if " vs " in match_teams else "홈팀"
-                        a_team_name = match_teams.split(" vs ")[1].replace(" (어웨이)", "").strip() if " vs " in match_teams else "어웨이팀"
-
                         with st.expander("✏️ 포메이션별 선수 체크 및 기존 메모 보존하여 이어서 수정·추가하기", expanded=True):
                             st.caption("기존에 적어둔 선수별 메모와 총평이 입력창에 깔끔하게 나타납니다. 내용을 유지한 채 안전하게 수정할 수 있습니다.")
 
@@ -720,6 +868,7 @@ elif menu == "📂 경기 일지 조회":
                                         p_label_key = f"[홈] {h_team_name} - [{pos}] {num}번"
                                         
                                         has_old_note = any(pos in k and f"{num}번" in k and "홈" in k for k in parsed_pos_memos.keys())
+                                        
                                         is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", value=has_old_note, key=chk_key)
                                         
                                         default_note_val = ""
@@ -744,6 +893,7 @@ elif menu == "📂 경기 일지 조회":
                                         p_label_key = f"[어웨이] {a_team_name} - [{pos}] {num}번"
                                         
                                         has_old_note = any(pos in k and f"{num}번" in k and "어웨이" in k for k in parsed_pos_memos.keys())
+                                        
                                         is_checked = st.checkbox(f"📌 [{pos}] {num}번 메모", value=has_old_note, key=chk_key)
                                         
                                         default_note_val = ""
@@ -835,6 +985,7 @@ elif menu == "📂 경기 일지 조회":
                         indices_to_drop = []
                         for r_idx in selected_del_rows:
                             if r_idx < len(memo_df_del):
+                                selected_row_data = memo_df_del.iloc[r_idx]
                                 orig_indices = df[(df["선수명"] == memo_df_del.iloc[r_idx]["선수명"]) & 
                                                   (df["진행 상태"] == "현장 관찰 메모 (임시)")].index
                                 if len(orig_indices) > 0:
@@ -849,11 +1000,11 @@ elif menu == "📂 경기 일지 조회":
                 st.info("💡 위 표에서 삭제할 경기 일지 행들을 마우스로 **다중 선택(Shift/Ctrl 클릭 또는 체크)**해 주세요.")
 
 # ----------------------------------------------------
-# 3. 📂 경기관찰선수리스트 (완벽한 대표팀 보고용 리포트 양식)
+# 3. 📂 경기관찰선수리스트
 # ----------------------------------------------------
 elif menu == "📂 경기관찰선수리스트":
-    st.header("📂 경기 관찰 선수 리스트 (연도별 시즌 분리)")
-    st.caption("연도(시즌)별로 팀명 + 등번호 기준 관찰 횟수와 상세 내역을 대표팀 보고용 깔끔한 리포트 양식으로 집계합니다.")
+    st.header("📂 경기 관찰 선수 리스트")
+    st.caption("현장 경기 관찰 메모에서 기록된 선수별(팀 및 등번호 기준) 관찰 횟수와 상세 내역을 확인합니다. (3회 이상 관찰된 선수는 초록색 박스로 강조됩니다)")
 
     memo_df = df[df["진행 상태"].str.strip() == "현장 관찰 메모 (임시)"].copy().reset_index(drop=True)
 
@@ -863,9 +1014,7 @@ elif menu == "📂 경기관찰선수리스트":
         observed_players_records = []
         
         for _, r in memo_df.iterrows():
-            match_date_str = str(r.get("작성일자", "-"))
-            match_year = match_date_str[:4] if len(match_date_str) >= 4 else "미분류"
-            
+            match_date = r.get("작성일자", "-")
             match_title_raw = r.get("선수명", "")
             match_title = re.sub(r' \(타임:\d+\)', '', str(match_title_raw))
             raw_content = r.get("종합 평가", "")
@@ -896,12 +1045,11 @@ elif menu == "📂 경기관찰선수리스트":
                                 num_val = pos_num_match.group(2)
                                 
                                 observed_players_records.append({
-                                    "관찰연도": match_year,
                                     "팀명": team_name_extracted,
                                     "등번호": f"{num_val}번",
                                     "포지션": pos_val,
                                     "대회/경기": match_title,
-                                    "관찰일자": match_date_str,
+                                    "관찰일자": match_date,
                                     "메모내용": content_str,
                                     "raw_content": raw_content,
                                     "match_teams": match_teams
@@ -914,177 +1062,127 @@ elif menu == "📂 경기관찰선수리스트":
         else:
             obs_df = pd.DataFrame(observed_players_records)
 
-            search_team_query = st.text_input("🔍 팀명 또는 연도 검색", placeholder="예: 2026, 매탄고 등 입력")
+            search_team_query = st.text_input("🔍 팀명 검색", placeholder="관찰된 팀명을 입력하세요 (예: 매탄고, 보인고 등)")
             if search_team_query.strip():
                 t_q = search_team_query.strip().lower()
-                obs_df = obs_df[
-                    obs_df["팀명"].str.lower().str.contains(t_q, na=False) |
-                    obs_df["관찰연도"].str.lower().str.contains(t_q, na=False)
-                ]
+                obs_df = obs_df[obs_df["팀명"].str.lower().str.contains(t_q, na=False)]
 
             if obs_df.empty:
                 st.warning("🔍 검색 조건에 일치하는 관찰 선수가 없습니다.")
             else:
-                grouped = obs_df.groupby(["관찰연도", "팀명", "등번호"]).size().reset_index(name="관찰횟수")
-                grouped = grouped.sort_values(by=["관찰연도", "관찰횟수"], ascending=[False, False]).reset_index(drop=True)
+                grouped = obs_df.groupby(["팀명", "등번호", "포지션"]).size().reset_index(name="관찰횟수")
+                grouped = grouped.sort_values(by="관찰횟수", ascending=False).reset_index(drop=True)
 
-                st.markdown("### 📊 연도별 관찰 선수 요약 목록 (대표팀 보고용 리포트 생성)")
-                st.caption("💡 표 왼쪽의 체크박스로 **원하는 선수들을 체크**한 뒤, 아래 버튼을 누르면 **기존 UI를 모두 숨기고 오직 보고용 리포트만 화면에 꽉 차게** 생성됩니다.")
+                st.markdown("### 📊 관찰 선수 요약 목록 (상세 내역과 해당 경기 피치를 보려면 아래 표에서 **선수 행을 클릭**하세요)")
                 
                 display_obs_table = grouped.copy()
-                display_obs_table.insert(0, "선택", False)
-                display_obs_table.columns = ["선택", "관찰 연도", "소속 팀명", "등번호", "누적 관찰 횟수"]
+                display_obs_table.columns = ["소속 팀명", "등번호", "포지션", "누적 관찰 횟수"]
 
-                edited_obs_table = st.data_editor(
+                obs_selection = st.dataframe(
                     display_obs_table,
                     use_container_width=True,
-                    hide_index=True,
-                    key="observed_player_multi_select_editor"
+                    selection_mode="single-row",
+                    on_select="rerun",
+                    key="observed_player_table_selection"
                 )
 
-                checked_rows = edited_obs_table[edited_obs_table["선택"] == True]
+                selected_obs_rows = obs_selection.selection.rows if hasattr(obs_selection, "selection") else []
 
-                if not checked_rows.empty:
-                    st.write("")
-                    col_info_p, col_btn_p = st.columns([3, 1])
-                    with col_info_p:
-                        st.info(f"📌 총 **{len(checked_rows)}명**의 선수가 선택되었습니다.")
-                    with col_btn_p:
-                        generate_report = st.button("📄 대표팀 보고용 리포트 뷰어 생성", type="primary", use_container_width=True)
+                if selected_obs_rows:
+                    sel_row = grouped.iloc[selected_obs_rows[0]]
+                    sel_team = sel_row["팀명"]
+                    sel_num = sel_row["등번호"]
+                    sel_pos = sel_row["포지션"]
 
-                    if generate_report or st.session_state.get("show_clean_report", False):
-                        st.session_state["show_clean_report"] = True
-                        
-                        st.markdown("---")
-                        st.markdown("""
-                        <div style="background-color: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <b style="font-size: 16px; color: #0f172a;">📋 SMC 스카우팅 공식 보고서 (A4 최적화)</b>
-                                <p style="margin: 0; font-size: 13px; color: #475569;">이 상태에서 키보드 단축키 <kbd style="background: white; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px;">Ctrl + P</kbd> (또는 <kbd style="background: white; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px;">Cmd + P</kbd>)를 누르시면 오직 보고서만 진하게 인쇄됩니다.</p>
+                    st.write("---")
+                    st.markdown(f"### 🎯 선택한 선수 관찰 경기 기록 및 포메이션 시각화: [{sel_team}] {sel_num} ({sel_pos})")
+                    
+                    selected_player_history = obs_df[(obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num) & (obs_df["포지션"] == sel_pos)]
+                    selected_player_history = selected_player_history.sort_values(by="관찰일자", ascending=False)
+
+                    for _, h_row in selected_player_history.iterrows():
+                        match_raw_content = h_row["raw_content"]
+                        match_teams_str = h_row["match_teams"]
+
+                        h_form = "4-3-3"
+                        a_form = "4-3-3"
+                        h_nums = {}
+                        a_nums = {}
+                        try:
+                            if "[META_HOME_FORM:" in match_raw_content:
+                                h_form = match_raw_content.split("[META_HOME_FORM:")[1].split("]")[0]
+                            if "[META_HOME_NUMS:" in match_raw_content:
+                                h_nums_raw = match_raw_content.split("[META_HOME_NUMS:")[1].split("]")[0]
+                                if h_nums_raw and h_nums_raw != "없음":
+                                    for item in h_nums_raw.split(","):
+                                        if ":" in item:
+                                            pk, pv = item.split(":")
+                                            h_nums[pk.strip()] = pv.strip()
+
+                            if "[META_AWAY_FORM:" in match_raw_content:
+                                a_form = match_raw_content.split("[META_AWAY_FORM:")[1].split("]")[0]
+                            if "[META_AWAY_NUMS:" in match_raw_content:
+                                a_nums_raw = match_raw_content.split("[META_AWAY_NUMS:")[1].split("]")[0]
+                                if a_nums_raw and a_nums_raw != "없음":
+                                    for item in a_nums_raw.split(","):
+                                        if ":" in item:
+                                            pk, pv = item.split(":")
+                                            a_nums[pk.strip()] = pv.strip()
+                        except Exception:
+                            pass
+
+                        h_t_name = "홈팀"
+                        a_t_name = "어웨이팀"
+                        if " vs " in match_teams_str:
+                            parts = match_teams_str.split(" vs ")
+                            h_t_name = parts[0].replace(" (홈)", "").strip()
+                            a_t_name = parts[1].replace(" (어웨이)", "").strip()
+
+                        st.markdown(f"""
+                        <div style="background-color: #f8fafc; border-left: 4px solid #2563EB; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 15px;">
+                            <div style="font-weight: bold; color: #1e293b; font-size: 15px; margin-bottom: 6px;">
+                                📅 일자: {h_row['관찰일자']} | 🏆 대회/경기: {h_row['대회/경기']}
+                            </div>
+                            <div style="color: #334155; font-size: 13px; margin-bottom: 10px;">
+                                📝 <b>관찰 메모:</b> {h_row['메모내용']}
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
 
-                        # 🌟 완벽한 대표팀 보고용 리포트 전용 양식 렌더링
-                        for _, row in checked_rows.iterrows():
-                            b_year = row["관찰 연도"]
-                            b_team = row["소속 팀명"]
-                            b_num = row["등번호"]
-                            total_obs_count = len(obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)])
-
-                            player_histories = obs_df[(obs_df["관찰연도"] == b_year) & (obs_df["팀명"] == b_team) & (obs_df["등번호"] == b_num)]
-                            player_histories = player_histories.sort_values(by="관찰일자", ascending=False)
-
-                            history_items_html = ""
-                            for _, h_row in player_histories.iterrows():
-                                p_val_display = h_row["포지션"]
-                                memo_clean = str(h_row['메모내용']).replace('\n', '<br>')
-                                history_items_html += f"""
-                                <div class="history-box">
-                                    <div style="font-weight: 900; color: #0f172a; font-size: 15px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
-                                        📅 관찰일자: {h_row['관찰일자']} &nbsp;|&nbsp; 🏆 대회: {h_row['대회/경기']} &nbsp;|&nbsp; 포지션: <span style="color: #2563eb;">{p_val_display}</span>
-                                    </div>
-                                    <div style="font-weight: 600; color: #334155; font-size: 15px; line-height: 1.7;">
-                                        {memo_clean}
-                                    </div>
-                                </div>
-                                """
-
-                            card_full_html = f"""
-                            <div class="scouting-report-card">
-                                <div class="report-header">
-                                    <div>
-                                        <div style="color: #2563eb; font-weight: 900; letter-spacing: 2px; font-size: 14px;">SUNGMUN COMPANY (SMC)</div>
-                                        <h1 style="color: #0f172a; font-size: 28px; font-weight: 900; margin: 5px 0 0 0;">PLAYER SCOUTING REPORT</h1>
-                                    </div>
-                                    <div style="text-align: right;">
-                                        <div style="font-weight: bold; color: #64748B; font-size: 13px;">시즌: {b_year}</div>
-                                        <div style="font-weight: bold; color: #64748B; font-size: 13px;">작성일: {datetime.today().strftime('%Y-%m-%d')}</div>
-                                    </div>
-                                </div>
-                                <div style="background-color: #0f172a; color: white; padding: 15px 20px; border-radius: 6px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="font-size: 18px; font-weight: 900;">소속 팀: {b_team}</span>
-                                    <span style="font-size: 18px; font-weight: 900;">등번호: {b_num}</span>
-                                    <span style="font-size: 16px; font-weight: 700; background: #3b82f6; padding: 4px 12px; border-radius: 4px;">누적 관찰: {total_obs_count}회</span>
-                                </div>
-                                <h3 style="color: #0f172a; font-size: 16px; font-weight: 900; margin-bottom: 15px;">📌 세부 관찰 히스토리 및 평가</h3>
-                                {history_items_html}
-                            </div>
-                            """
-                            st.markdown(card_full_html, unsafe_allow_html=True)
+                        st.markdown(f"<div style='font-size: 12px; font-weight: bold; color: #475569; margin-bottom: 4px;'>🏟️ [{h_row['대회/경기']}] 당시 양팀 포메이션 및 등번호 배치</div>", unsafe_allow_html=True)
+                        pitch_col1, pitch_col2 = st.columns(2)
+                        with pitch_col1:
+                            render_pitch_graphic_from_saved(h_t_name, h_form, h_nums)
+                        with pitch_col2:
+                            render_pitch_graphic_from_saved(a_t_name, a_form, a_nums)
                         
-                        if st.button("🔄 보고서 닫기 및 목록으로 돌아가기", type="secondary"):
-                            st.session_state["show_clean_report"] = False
-                            st.rerun()
+                        st.markdown("---")
 
-                st.write("---")
-
-                # 기존 1명씩 상세 조회 및 인쇄 기능 유지
-                display_single_table = grouped.copy()
-                display_single_table.columns = ["관찰 연도", "소속 팀명", "등번호", "누적 관찰 횟수"]
-                
-                single_selection = st.dataframe(
-                    display_single_table,
-                    use_container_width=True,
-                    selection_mode="single-row",
-                    on_select="rerun",
-                    key="observed_player_single_select_table"
-                )
-
-                selected_obs_rows = single_selection.selection.rows if hasattr(single_selection, "selection") else []
-
-                if selected_obs_rows:
-                    sel_row = grouped.iloc[selected_obs_rows[0]]
-                    sel_year = sel_row["관찰연도"]
-                    sel_team = sel_row["팀명"]
-                    sel_num = sel_row["등번호"]
-
-                    st.write("---")
-                    
-                    col_title, col_btn_p = st.columns([3, 1])
-                    with col_title:
-                        st.markdown(f"### 🎯 [{sel_year}시즌] {sel_team} {sel_num} 상세 관찰 히스토리")
-                    with col_btn_p:
-                        if st.button("🖨️ 보고서 인쇄 / PDF 저장", type="primary", use_container_width=True, key="single_print_btn_action"):
-                            st.components.v1.html("""
-                                <script>
-                                    window.parent.print();
-                                </script>
-                            """, height=0)
-
-                    selected_player_history = obs_df[(obs_df["관찰연도"] == sel_year) & (obs_df["팀명"] == sel_team) & (obs_df["등번호"] == sel_num)]
-                    selected_player_history = selected_player_history.sort_values(by="관찰일자", ascending=False)
-
-                    for _, h_row in selected_player_history.iterrows():
-                        p_val_display = h_row["포지션"]
-                        st.markdown(f"**📅 일자:** {h_row['관찰일자']} &nbsp;|&nbsp; **대회/경기:** {h_row['대회/경기']} &nbsp;|&nbsp; **포지션:** {p_val_display}")
-                        st.info(f"{h_row['메모내용']}")
-
-                st.markdown("### 🔥 연도별 관찰 선수 카드 모음")
+                st.markdown("### 🔥 전체 관찰 선수 카드 모음")
                 
                 for _, g_row in grouped.iterrows():
-                    g_year = g_row["관찰연도"]
                     g_team = g_row["팀명"]
                     g_num = g_row["등번호"]
+                    g_pos = g_row["포지션"]
                     g_count = g_row["관찰횟수"]
 
                     if g_count >= 3:
                         box_style = "background-color: #d1fae5; border: 2px solid #10b981; border-radius: 10px; padding: 14px; margin-bottom: 12px;"
-                        badge_html = f'<span style="background-color: #059669; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">🔥 집중 관찰 대상 ({g_count}회)</span>'
+                        badge_html = f'<span style="background-color: #059669; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">🔥 집중 관찰 대상 ({g_count}회 기록)</span>'
                     else:
                         box_style = "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px; margin-bottom: 12px;"
                         badge_html = f'<span style="background-color: #64748B; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;">관찰 횟수: {g_count}회</span>'
 
-                    player_sub_df = obs_df[(obs_df["관찰연도"] == g_year) & (obs_df["팀명"] == g_team) & (obs_df["등번호"] == g_num)]
+                    player_sub_df = obs_df[(obs_df["팀명"] == g_team) & (obs_df["등번호"] == g_num) & (obs_df["포지션"] == g_pos)]
                     
                     history_html = ""
                     for _, sub_r in player_sub_df.iterrows():
-                        history_html += f"<div style='font-size: 12px; color: #334155; margin-top: 4px;'>• [{sub_r['관찰일자']}] {sub_r['대회/경기']} <span style='color: #64748B; font-size: 11px;'>(포지션: {sub_r['포지션']})</span> — <i>{sub_r['메모내용']}</i></div>"
+                        history_html += f"<div style='font-size: 12px; color: #334155; margin-top: 4px;'>• [{sub_r['관찰일자']}] {sub_r['대회/경기']} — <i>{sub_r['메모내용']}</i></div>"
 
                     card_html = f"""
                     <div style="{box_style}">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <b style="font-size: 16px; color: #0f172a;">⚽ [{g_year}] {g_team} {g_num}</b>
+                            <b style="font-size: 16px; color: #0f172a;">⚽ [{g_team}] {g_num} ({g_pos})</b>
                             {badge_html}
                         </div>
                         {history_html}
@@ -1249,9 +1347,9 @@ elif menu == "🔍 선수 검색 및 관찰일지 조회":
                 st.markdown(f"### ⚽ [{p.get('진행 상태', '')}] {p.get('선수명', '')} 상세 관찰일지")
 
                 c1, c2, c3, c4 = st.columns(4)
-                c1.metric("소속/등번호", f"{current_team_name} / {p.get('등번호', '-')}번")
-                c2.metric("포지션/주발", f"{p.get('포지션', '-')} / {p.get('주발', '-')}")
-                c3.metric("만 나이", f"{p.get('만 나이', '-')}")
+                c1.metric("현재 소속팀 / 등번호", f"{current_team_name} / {p.get('등번호', '-')}번")
+                c2.metric("포지션 / 주발", f"{p.get('포지션', '-')} / {p.get('주발', '-')}")
+                c3.metric("나이", f"{p.get('만 나이', '-')}")
                 
                 weight_display = f"{p.get('체중(kg)')}kg" if p.get('체중(kg)') else "미입력"
                 c4.metric("피지컬", f"{p.get('신장(cm)', '-')}cm / {weight_display}")
