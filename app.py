@@ -9,33 +9,27 @@ from datetime import datetime
 st.set_page_config(page_title="선수 스카우팅 관리 시스템", page_icon="⚽", layout="wide")
 
 # ----------------------------------------------------
-# 📱 대표팀 보고용 리포트 전용 인쇄 CSS 스타일
+# 📱 모바일 포메이션 시각화 및 인쇄 공통 CSS 스타일 수정
 # ----------------------------------------------------
 st.markdown("""
     <style>
     .block-container {
         padding-top: 2rem !important;
         padding-bottom: 3rem !important;
-        padding-left: 1.5rem !important;
-        padding-right: 1.5rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
     }
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 2.5rem !important;
     }
-    [data-testid="stSidebar"] .stRadio label {
-        padding: 14px 18px !important;
-        margin-bottom: 10px !important;
-        border-radius: 12px;
-        background-color: rgba(255, 255, 255, 0.08);
-        cursor: pointer;
-    }
     
+    /* ⚽ 포메이션 번호 입력 박스 일자 나열 방지 및 그라운드 그리드 고정 */
     div[data-testid="stNumberInput"] button {
         display: none !important;
     }
     div[data-testid="stNumberInput"] input {
         text-align: center !important;
-        padding: 4px 6px !important;
+        padding: 4px 2px !important;
         font-weight: bold !important;
     }
 
@@ -331,7 +325,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
 
     st.write("---")
 
-    st.subheader("⚡ 등번호 입력")
+    st.subheader("⚡ 포메이션별 등번호 입력 (그라운드 배치)")
 
     formation_layouts = {
         "4-3-3": [
@@ -390,21 +384,19 @@ if menu == "🏟️ 현장 경기 관찰 메모":
             if p not in valid_positions and k in st.session_state:
                 del st.session_state[k]
 
-        nums_dict = {}
-        for pos in valid_positions:
-            key_name = f"{prefix}_{pos}"
-            val = st.session_state.get(key_name, None)
-            val_str = str(val) if val is not None else ""
-            nums_dict[pos] = val_str
-            if val_str.strip():
-                team_entered_numbers[pos] = val_str.strip()
-        
         display_sub_name = team_name.strip() if team_name.strip() else ("홈팀" if prefix == "home" else "어웨이팀")
         prefix_icon = "🏠" if prefix == "home" else "✈️"
-        st.markdown(f"**{prefix_icon} {display_sub_name}** ({formation_name})")
+        
+        # 🟢 그라운드 스타일 박스로 감싸서 모바일에서도 가로 정렬이 깨지지 않도록 고정
+        st.markdown(f"""
+        <div style="background-color: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 15px;">
+            <div style="font-size: 16px; font-weight: 900; color: #0f172a; margin-bottom: 12px; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px;">
+                {prefix_icon} {display_sub_name} <span style="font-size: 13px; color: #2563eb; font-weight: 700;">({formation_name})</span>
+            </div>
+        """, unsafe_allow_html=True)
 
         for row in layout:
-            st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 6px; margin-bottom: 2px;'>{row['line']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size: 11px; font-weight: bold; color: #64748B; margin-top: 8px; margin-bottom: 4px;'>📍 {row['line']}</div>", unsafe_allow_html=True)
             cols = st.columns(len(row['positions']))
             for idx, pos in enumerate(row['positions']):
                 key_name = f"{prefix}_{pos}"
@@ -421,7 +413,7 @@ if menu == "🏟️ 현장 경기 관찰 메모":
                     if val_num is not None:
                         team_entered_numbers[pos] = str(int(val_num))
 
-        st.write("")
+        st.markdown("</div>", unsafe_allow_html=True)
         return team_entered_numbers
 
     pitch_col1, pitch_col2 = st.columns(2)
